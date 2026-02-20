@@ -1,0 +1,14 @@
+[build]
+  cmd = "go build -o ./tmp/juicebox ./cmd/juicebox/"
+  bin = "./tmp/juicebox"
+  delay = 1000
+  exclude_dir = ["agent", "web", "sidecar", "deps", "node_modules", "tmp"]
+  exclude_regex = ["_test\\.go$"]
+  include_ext = ["go"]
+  kill_delay = 500
+
+[log]
+  main_only = true
+
+[misc]
+  clean_on_exit = true

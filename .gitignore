@@ -48,6 +48,9 @@ web/dist/
 # Sidecar
 /tmp/juicebox.sock
 
+# Air hot reload
+tmp/
+
 # OS
 .DS_Store
 

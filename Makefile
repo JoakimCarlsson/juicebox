@@ -6,8 +6,8 @@ install:
 	go mod tidy
 
 dev:
-	@echo "Starting Go server and Vite dev server..."
-	@(cd web && bun run dev) & (go run ./cmd/juicebox/) & wait
+	@echo "Starting Air (Go hot reload) and Vite dev server..."
+	@(cd web && bun run dev) & air & wait
 
 build: build-web
 	go build -o juicebox ./cmd/juicebox/
