@@ -88,6 +88,7 @@ async function ensureFridaServer(deviceId: string): Promise<void> {
 
   await exec(["adb", "-s", deviceId, "root"]);
   await new Promise((r) => setTimeout(r, 1000));
+  await exec(["adb", "-s", deviceId, "shell", "setenforce 0"]);
 
   console.log("starting frida-server...");
   new Deno.Command("adb", {
