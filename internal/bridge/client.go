@@ -156,3 +156,54 @@ func (c *Client) GetAppIcon(deviceId string, identifier string) ([]byte, string,
 
 	return data, icon.Format, nil
 }
+
+func (c *Client) Attach(deviceId string, identifier string) (*AttachResponse, error) {
+	raw, err := c.call("attach", map[string]string{"deviceId": deviceId, "identifier": identifier})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp AttachResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.Attach: %w", err)
+	}
+
+	return &resp, nil
+}
+
+func (c *Client) Detach(sessionId string) error {
+	_, err := c.call("detach", map[string]string{"sessionId": sessionId})
+	return err
+}
+
+func (c *Client) Subscribe(sessionId string) (net.Conn, error) {
+	conn, err := net.Dial("unix", c.socketPath)
+	if err != nil {
+		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
+	}
+
+	req := rpcRequest{
+		JSONRPC: "2.0",
+		ID:      c.nextID.Add(1),
+		Method:  "subscribe",
+		Params:  map[string]string{"sessionId": sessionId},
+	}
+
+	if err := json.NewEncoder(conn).Encode(req); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
+	}
+
+	var resp rpcResponse
+	if err := json.NewDecoder(conn).Decode(&resp); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
+	}
+
+	if resp.Error != nil {
+		conn.Close()
+		return nil, fmt.Errorf("bridge.Subscribe: %s", resp.Error.Message)
+	}
+
+	return conn, nil
+}

@@ -22,6 +22,11 @@ type AppIcon struct {
 	Data   string `json:"data"`
 }
 
+type AttachResponse struct {
+	SessionID string `json:"sessionId"`
+	PID       int    `json:"pid"`
+}
+
 type DeviceInfo struct {
 	Name     string `json:"name"`
 	ID       string `json:"id"`

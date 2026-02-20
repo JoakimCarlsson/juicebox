@@ -3,6 +3,7 @@ module github.com/joakimcarlsson/juicebox
 go 1.25.7
 
 require (
+	github.com/gorilla/websocket v1.5.3
 	github.com/joakimcarlsson/go-router/router v0.0.0
 	modernc.org/sqlite v1.46.1
 )
