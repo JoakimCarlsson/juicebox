@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, useParams } from "@tanstack/react-router"
+import { createFileRoute, Link, Outlet, useMatchRoute, useParams } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { deviceInfoQueryOptions } from "@/features/devices/queries"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,6 +11,9 @@ export const Route = createFileRoute("/devices/$deviceId")({
 function DeviceLayout() {
   const { deviceId } = useParams({ from: "/devices/$deviceId" })
   const { data: info, isLoading } = useQuery(deviceInfoQueryOptions(deviceId))
+  const matchRoute = useMatchRoute()
+  const isProcesses = matchRoute({ to: "/devices/$deviceId/processes", params: { deviceId } })
+  const activeTab = isProcesses ? "processes" : "apps"
 
   return (
     <div className="flex h-full flex-col">
@@ -33,15 +36,17 @@ function DeviceLayout() {
         ) : null}
 
         <div className="mt-3">
-          <Tabs value="apps">
+          <Tabs value={activeTab}>
             <TabsList>
               <TabsTrigger value="apps" asChild>
                 <Link to="/devices/$deviceId/apps" params={{ deviceId }}>
                   Apps
                 </Link>
               </TabsTrigger>
-              <TabsTrigger value="processes" disabled>
-                Processes
+              <TabsTrigger value="processes" asChild>
+                <Link to="/devices/$deviceId/processes" params={{ deviceId }}>
+                  Processes
+                </Link>
               </TabsTrigger>
             </TabsList>
           </Tabs>

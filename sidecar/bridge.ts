@@ -58,6 +58,19 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
         );
       }
 
+      case "listProcesses": {
+        const deviceId = req.params?.deviceId as string;
+        if (!deviceId) return fail(-32602, "missing param: deviceId");
+        const device = await frida.getDevice(deviceId);
+        const processes = await device.enumerateProcesses();
+        return ok(
+          processes.map((p) => ({
+            pid: p.pid,
+            name: p.name,
+          })),
+        );
+      }
+
       case "getDeviceInfo": {
         const deviceId = req.params?.deviceId as string;
         if (!deviceId) return fail(-32602, "missing param: deviceId");

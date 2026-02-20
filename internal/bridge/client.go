@@ -110,6 +110,20 @@ func (c *Client) ListApps(deviceId string) ([]App, error) {
 	return apps, nil
 }
 
+func (c *Client) ListProcesses(deviceId string) ([]Process, error) {
+	raw, err := c.call("listProcesses", map[string]string{"deviceId": deviceId})
+	if err != nil {
+		return nil, err
+	}
+
+	var processes []Process
+	if err := json.Unmarshal(raw, &processes); err != nil {
+		return nil, fmt.Errorf("bridge.ListProcesses: %w", err)
+	}
+
+	return processes, nil
+}
+
 func (c *Client) GetDeviceInfo(deviceId string) (*DeviceInfo, error) {
 	raw, err := c.call("getDeviceInfo", map[string]string{"deviceId": deviceId})
 	if err != nil {

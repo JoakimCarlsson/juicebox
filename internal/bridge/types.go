@@ -12,6 +12,11 @@ type App struct {
 	PID        int    `json:"pid"`
 }
 
+type Process struct {
+	PID  int    `json:"pid"`
+	Name string `json:"name"`
+}
+
 type AppIcon struct {
 	Format string `json:"format"`
 	Data   string `json:"data"`

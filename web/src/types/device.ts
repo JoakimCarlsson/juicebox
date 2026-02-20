@@ -10,6 +10,11 @@ export interface App {
   pid: number
 }
 
+export interface Process {
+  pid: number
+  name: string
+}
+
 export interface DeviceInfo {
   name: string
   id: string
