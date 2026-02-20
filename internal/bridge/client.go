@@ -1,9 +1,11 @@
 package bridge
 
 import (
+	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"sync/atomic"
 )
@@ -176,7 +178,22 @@ func (c *Client) Detach(sessionId string) error {
 	return err
 }
 
-func (c *Client) Subscribe(sessionId string) (net.Conn, error) {
+type SubscribeConn struct {
+	Reader *bufio.Reader
+	conn   net.Conn
+}
+
+func (s *SubscribeConn) Close() error {
+	return s.conn.Close()
+}
+
+func (s *SubscribeConn) Read(p []byte) (int, error) {
+	return s.Reader.Read(p)
+}
+
+var _ io.ReadCloser = (*SubscribeConn)(nil)
+
+func (c *Client) Subscribe(sessionId string) (*SubscribeConn, error) {
 	conn, err := net.Dial("unix", c.socketPath)
 	if err != nil {
 		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
@@ -194,8 +211,17 @@ func (c *Client) Subscribe(sessionId string) (net.Conn, error) {
 		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
 	}
 
+	// Use a bufio.Reader so we don't lose data buffered beyond the ack line
+	reader := bufio.NewReaderSize(conn, 1024*1024)
+
+	line, err := reader.ReadBytes('\n')
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
+	}
+
 	var resp rpcResponse
-	if err := json.NewDecoder(conn).Decode(&resp); err != nil {
+	if err := json.Unmarshal(line, &resp); err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
 	}
@@ -205,5 +231,5 @@ func (c *Client) Subscribe(sessionId string) (net.Conn, error) {
 		return nil, fmt.Errorf("bridge.Subscribe: %s", resp.Error.Message)
 	}
 
-	return conn, nil
+	return &SubscribeConn{Reader: reader, conn: conn}, nil
 }

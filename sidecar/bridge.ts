@@ -129,6 +129,7 @@ interface SessionState {
   session: frida.Session;
   script: frida.Script;
   subscribers: Set<Deno.Conn>;
+  messageBuffer: string[];
 }
 
 const sessions = new Map<string, SessionState>();
@@ -200,6 +201,7 @@ async function handleAttach(
     session,
     script,
     subscribers: new Set(),
+    messageBuffer: [],
   };
 
   sessions.set(sessionId, state);
@@ -208,14 +210,21 @@ async function handleAttach(
     const msg = _message as { type: string; payload?: unknown };
     if (msg.type === "send" && msg.payload) {
       const line = JSON.stringify(msg.payload) + "\n";
-      const encoded = new TextEncoder().encode(line);
-      for (const sub of state.subscribers) {
-        try {
-          sub.write(encoded);
-        } catch {
-          state.subscribers.delete(sub);
+      console.log(`[${sessionId}] agent:`, JSON.stringify(msg.payload).slice(0, 200));
+      if (state.subscribers.size === 0) {
+        state.messageBuffer.push(line);
+      } else {
+        const encoded = new TextEncoder().encode(line);
+        for (const sub of state.subscribers) {
+          try {
+            sub.write(encoded);
+          } catch {
+            state.subscribers.delete(sub);
+          }
         }
       }
+    } else if (msg.type === "error") {
+      console.error(`[${sessionId}] agent error:`, (msg as any).description ?? msg);
     }
   });
 
@@ -392,6 +401,16 @@ async function handleSubscribe(
 
   const ack = ok(req.id, { subscribed: true });
   await conn.write(new TextEncoder().encode(JSON.stringify(ack) + "\n"));
+
+  // flush buffered messages from before subscriber connected
+  if (state.messageBuffer.length > 0) {
+    for (const line of state.messageBuffer) {
+      try {
+        await conn.write(new TextEncoder().encode(line));
+      } catch { break; }
+    }
+    state.messageBuffer.length = 0;
+  }
 
   state.subscribers.add(conn);
 

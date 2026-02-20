@@ -5,7 +5,7 @@ install:
 	cd agent && npm install
 	go mod tidy
 
-dev:
+dev: build-agent
 	@echo "Starting Air, Vite dev server, and Frida sidecar..."
 	@(cd web && bun run dev) & $(shell go env GOPATH)/bin/air & (cd sidecar && deno task dev) & wait
 

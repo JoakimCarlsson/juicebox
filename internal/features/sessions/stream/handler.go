@@ -2,6 +2,7 @@ package stream
 
 import (
 	"bufio"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -28,19 +29,26 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
+	log.Printf("[stream] upgrading WebSocket for session %s", sessionId)
+
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
+		log.Printf("[stream] WebSocket upgrade failed: %v", err)
 		return
 	}
 	defer ws.Close()
 
-	conn, err := h.client.Subscribe(sessionId)
+	log.Printf("[stream] subscribing to session %s", sessionId)
+	sub, err := h.client.Subscribe(sessionId)
 	if err != nil {
+		log.Printf("[stream] subscribe failed: %v", err)
 		ws.WriteMessage(websocket.CloseMessage,
 			websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
 		return
 	}
-	defer conn.Close()
+	defer sub.Close()
+
+	log.Printf("[stream] connected, relaying events for session %s", sessionId)
 
 	done := make(chan struct{})
 	go func() {
@@ -52,7 +60,7 @@ func (h *Handler) Handle(c *router.Context) {
 		}
 	}()
 
-	scanner := bufio.NewScanner(conn)
+	scanner := bufio.NewScanner(sub.Reader)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 
 	for scanner.Scan() {
@@ -67,8 +75,15 @@ func (h *Handler) Handle(c *router.Context) {
 			continue
 		}
 
+		log.Printf("[stream] relaying: %s", string(line)[:min(len(line), 100)])
 		if err := ws.WriteMessage(websocket.TextMessage, line); err != nil {
+			log.Printf("[stream] WebSocket write error: %v", err)
 			return
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		log.Printf("[stream] scanner error: %v", err)
+	}
+	log.Printf("[stream] session %s stream ended", sessionId)
 }

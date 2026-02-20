@@ -48,6 +48,7 @@ function NetworkPage() {
   const { messages, connected, clear } = useSessionSocket(sessionId || null)
   const [search, setSearch] = useState("")
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [showLogs, setShowLogs] = useState(true)
 
   const httpMessages = useMemo(() => {
     return messages
@@ -56,6 +57,16 @@ function NetworkPage() {
           m.type === "http" && !!m.payload,
       )
       .map((m) => m.payload as unknown as HttpMessage)
+  }, [messages])
+
+  const logMessages = useMemo(() => {
+    return messages
+      .filter((m) => m.type === "log" || m.type === "ready")
+      .map((m) => {
+        const payload = m.payload as Record<string, unknown> | undefined
+        if (m.type === "ready") return `Agent ready (PID: ${payload?.pid})`
+        return String(payload?.message ?? JSON.stringify(payload))
+      })
   }, [messages])
 
   const filtered = useMemo(() => {
@@ -98,10 +109,27 @@ function NetworkPage() {
             </>
           )}
         </div>
+        <Button
+          variant={showLogs ? "secondary" : "ghost"}
+          size="sm"
+          onClick={() => setShowLogs(!showLogs)}
+        >
+          Logs ({logMessages.length})
+        </Button>
         <span className="text-xs text-muted-foreground">
           {filtered.length} request{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
+
+      {showLogs && logMessages.length > 0 && (
+        <div className="border-b border-border bg-muted/30 px-6 py-2 max-h-32 overflow-auto">
+          {logMessages.map((msg, i) => (
+            <div key={i} className="text-xs font-mono text-muted-foreground">
+              {msg}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto">
         {filtered.length === 0 ? (
