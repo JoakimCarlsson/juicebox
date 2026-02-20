@@ -47,6 +47,7 @@ web/dist/
 
 # Sidecar
 /tmp/juicebox.sock
+sidecar/bin/
 
 # Air hot reload
 tmp/

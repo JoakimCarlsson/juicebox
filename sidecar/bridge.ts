@@ -3,8 +3,24 @@ import { resolve } from "node:path";
 
 const SOCKET_PATH = Deno.env.get("JUICEBOX_SOCKET") ?? "/tmp/juicebox.sock";
 const AGENT_PATH = resolve(import.meta.dirname!, "../agent/dist/agent.js");
-const FRIDA_VERSION = frida.version;
-const SERVER_PATH = "/data/local/tmp/frida-server";
+const BIN_DIR = resolve(import.meta.dirname!, "bin");
+const DEVICE_SERVER_PATH = "/data/local/tmp/frida-server";
+
+async function getFridaVersion(): Promise<string> {
+  const pkgPath = resolve(
+    import.meta.dirname!,
+    "node_modules/.deno/frida@*/node_modules/frida/package.json",
+  );
+  const glob = new Deno.Command("sh", {
+    args: ["-c", `cat ${pkgPath} 2>/dev/null || cat node_modules/frida/package.json`],
+    stdout: "piped",
+    stderr: "piped",
+    cwd: import.meta.dirname!,
+  });
+  const out = await glob.output();
+  const pkg = JSON.parse(new TextDecoder().decode(out.stdout));
+  return pkg.version;
+}
 
 async function exec(cmd: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
   const p = new Deno.Command(cmd[0], {
@@ -38,35 +54,47 @@ async function ensureFridaServer(deviceId: string): Promise<void> {
     "x86": "x86",
   };
   const arch = archMap[abi] ?? abi;
+  const version = await getFridaVersion();
+  const binName = `frida-server-${version}-android-${arch}`;
+  const localBin = resolve(BIN_DIR, binName);
 
-  const url = `https://github.com/frida/frida/releases/download/${FRIDA_VERSION}/frida-server-${FRIDA_VERSION}-android-${arch}.xz`;
-  console.log(`downloading ${url}`);
+  try {
+    await Deno.stat(localBin);
+    console.log(`using cached ${binName}`);
+  } catch {
+    await Deno.mkdir(BIN_DIR, { recursive: true });
 
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`failed to download frida-server: ${resp.status}`);
+    const url = `https://github.com/frida/frida/releases/download/${version}/${binName}.xz`;
+    console.log(`downloading ${url}`);
 
-  const xzData = new Uint8Array(await resp.arrayBuffer());
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`failed to download frida-server: ${resp.status} from ${url}`);
 
-  const tmpXz = await Deno.makeTempFile({ suffix: ".xz" });
-  const tmpBin = tmpXz.replace(".xz", "");
-  await Deno.writeFile(tmpXz, xzData);
+    const xzData = new Uint8Array(await resp.arrayBuffer());
+    const tmpXz = `${localBin}.xz`;
+    await Deno.writeFile(tmpXz, xzData);
 
-  const unxz = await exec(["unxz", "-f", tmpXz]);
-  if (unxz.code !== 0) throw new Error(`unxz failed: ${unxz.stderr}`);
+    const unxz = await exec(["unxz", "-f", tmpXz]);
+    if (unxz.code !== 0) throw new Error(`unxz failed: ${unxz.stderr}`);
+
+    console.log(`cached ${binName} in sidecar/bin/`);
+  }
 
   console.log("pushing frida-server to device...");
-  const push = await exec(["adb", "-s", deviceId, "push", tmpBin, SERVER_PATH]);
+  const push = await exec(["adb", "-s", deviceId, "push", localBin, DEVICE_SERVER_PATH]);
   if (push.code !== 0) throw new Error(`adb push failed: ${push.stderr}`);
 
-  await exec(["adb", "-s", deviceId, "shell", `chmod 755 ${SERVER_PATH}`]);
+  await exec(["adb", "-s", deviceId, "shell", `chmod 755 ${DEVICE_SERVER_PATH}`]);
+
+  await exec(["adb", "-s", deviceId, "root"]);
+  await new Promise((r) => setTimeout(r, 1000));
 
   console.log("starting frida-server...");
-  const start = new Deno.Command("adb", {
-    args: ["-s", deviceId, "shell", `su -c "${SERVER_PATH} -D &"`],
+  new Deno.Command("adb", {
+    args: ["-s", deviceId, "shell", `${DEVICE_SERVER_PATH} -D &`],
     stdout: "null",
     stderr: "null",
-  });
-  start.spawn();
+  }).spawn();
 
   for (let i = 0; i < 10; i++) {
     await new Promise((r) => setTimeout(r, 500));
@@ -129,22 +157,36 @@ async function handleAttach(
   if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
   if (!identifier) return fail(req.id, -32602, "missing param: identifier");
 
+  await ensureFridaServer(deviceId);
+
+  // re-acquire device handle after potential adb root
   const device = await frida.getDevice(deviceId);
 
-  const apps = await device.enumerateApplications({
-    identifiers: [identifier],
-  });
-  const app = apps[0];
+  // try to find running app first
+  let pid: number | null = null;
+  try {
+    const apps = await device.enumerateApplications({
+      identifiers: [identifier],
+    });
+    if (apps[0] && apps[0].pid > 0) {
+      pid = apps[0].pid;
+    }
+  } catch {}
 
-  let pid: number;
-  if (app && app.pid > 0) {
-    pid = app.pid;
-  } else {
+  if (pid === null) {
     pid = await device.spawn(identifier);
     await device.resume(pid);
   }
 
-  const session = await device.attach(pid);
+  let session: Awaited<ReturnType<typeof device.attach>>;
+  try {
+    session = await device.attach(pid);
+  } catch {
+    // app may have restarted after adb root, try spawn
+    pid = await device.spawn(identifier);
+    await device.resume(pid);
+    session = await device.attach(pid);
+  }
   const agentSource = await Deno.readTextFile(AGENT_PATH);
   const script = await session.createScript(agentSource);
 
