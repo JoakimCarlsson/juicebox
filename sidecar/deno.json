@@ -4,7 +4,7 @@
     "frida": "npm:frida@^17.7.3"
   },
   "tasks": {
-    "dev": "deno run --allow-all bridge.ts",
+    "dev": "deno run --watch --allow-all bridge.ts",
     "start": "deno run --allow-all bridge.ts",
     "install": "deno install"
   },

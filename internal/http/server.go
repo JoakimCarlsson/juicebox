@@ -8,24 +8,27 @@ import (
 	"strings"
 
 	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	webAssets "github.com/joakimcarlsson/juicebox/web"
 )
 
 type Server struct {
-	router *router.Router
-	db     *db.DB
+	router       *router.Router
+	db           *db.DB
+	bridgeClient *bridge.Client
 }
 
-func NewServer(db *db.DB) *Server {
+func NewServer(db *db.DB, bridgeClient *bridge.Client) *Server {
 	r := router.New()
 
 	s := &Server{
-		router: r,
-		db:     db,
+		router:       r,
+		db:           db,
+		bridgeClient: bridgeClient,
 	}
 
-	RegisterRoutes(r, db)
+	RegisterRoutes(r, db, bridgeClient)
 	s.serveSPA(r)
 
 	return s

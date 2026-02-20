@@ -6,8 +6,8 @@ install:
 	go mod tidy
 
 dev:
-	@echo "Starting Air (Go hot reload) and Vite dev server..."
-	@(cd web && bun run dev) & air & wait
+	@echo "Starting Air, Vite dev server, and Frida sidecar..."
+	@(cd web && bun run dev) & $(shell go env GOPATH)/bin/air & (cd sidecar && deno task dev) & wait
 
 build: build-web
 	go build -o juicebox ./cmd/juicebox/
