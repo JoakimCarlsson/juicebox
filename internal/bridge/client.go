@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -121,4 +122,23 @@ func (c *Client) GetDeviceInfo(deviceId string) (*DeviceInfo, error) {
 	}
 
 	return &info, nil
+}
+
+func (c *Client) GetAppIcon(deviceId string, identifier string) ([]byte, string, error) {
+	raw, err := c.call("getAppIcon", map[string]string{"deviceId": deviceId, "identifier": identifier})
+	if err != nil {
+		return nil, "", err
+	}
+
+	var icon AppIcon
+	if err := json.Unmarshal(raw, &icon); err != nil {
+		return nil, "", fmt.Errorf("bridge.GetAppIcon: %w", err)
+	}
+
+	data, err := base64.StdEncoding.DecodeString(icon.Data)
+	if err != nil {
+		return nil, "", fmt.Errorf("bridge.GetAppIcon: %w", err)
+	}
+
+	return data, icon.Format, nil
 }

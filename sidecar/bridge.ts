@@ -74,6 +74,27 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
         });
       }
 
+      case "getAppIcon": {
+        const deviceId = req.params?.deviceId as string;
+        const identifier = req.params?.identifier as string;
+        if (!deviceId) return fail(-32602, "missing param: deviceId");
+        if (!identifier) return fail(-32602, "missing param: identifier");
+        const device = await frida.getDevice(deviceId);
+        const apps = await device.enumerateApplications({
+          identifiers: [identifier],
+          scope: "full",
+        });
+        if (apps.length === 0) return fail(-32602, "app not found");
+        const icons = apps[0].parameters?.icons as
+          | { format: string; image: Buffer }[]
+          | undefined;
+        if (!icons || icons.length === 0)
+          return fail(-32602, "no icon available");
+        const icon = icons[icons.length - 1];
+        const b64 = Buffer.from(icon.image).toString("base64");
+        return ok({ format: icon.format, data: b64 });
+      }
+
       default:
         return fail(-32601, `unknown method: ${req.method}`);
     }
@@ -84,12 +105,21 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
 }
 
 async function handleConnection(conn: Deno.Conn): Promise<void> {
-  const buf = new Uint8Array(65536);
   try {
-    const n = await conn.read(buf);
-    if (n === null) return;
+    const chunks: Uint8Array[] = [];
+    const buf = new Uint8Array(65536);
+    let n: number | null;
+    while ((n = await conn.read(buf)) !== null) {
+      chunks.push(buf.slice(0, n));
+      if (buf[n - 1] === 0x0a || buf[n - 1] === 0x7d) break;
+    }
+    if (chunks.length === 0) return;
 
-    const raw = new TextDecoder().decode(buf.subarray(0, n));
+    const raw = new TextDecoder().decode(
+      chunks.length === 1
+        ? chunks[0]
+        : new Uint8Array(chunks.reduce((acc, c) => [...acc, ...c], [] as number[])),
+    );
     const req: JsonRpcRequest = JSON.parse(raw);
     const res = await handleRequest(req);
     const encoded = new TextEncoder().encode(JSON.stringify(res) + "\n");

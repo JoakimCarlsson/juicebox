@@ -12,6 +12,11 @@ type App struct {
 	PID        int    `json:"pid"`
 }
 
+type AppIcon struct {
+	Format string `json:"format"`
+	Data   string `json:"data"`
+}
+
 type DeviceInfo struct {
 	Name     string `json:"name"`
 	ID       string `json:"id"`

@@ -52,7 +52,7 @@ function AppsPage() {
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">
           {filtered.map((app) => (
-            <AppCard key={app.identifier} app={app} />
+            <AppCard key={app.identifier} app={app} deviceId={deviceId} />
           ))}
         </div>
       )}
