@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-net --allow-read --allow-write --allow-env bridge.ts",
+    "start": "deno run --allow-net --allow-read --allow-write --allow-env bridge.ts"
+  },
+  "compilerOptions": {
+    "strict": true
+  }
+}
