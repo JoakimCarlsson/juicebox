@@ -94,25 +94,6 @@ function SessionLayout() {
             Detach
           </Button>
         </div>
-
-        <div className="mt-3">
-          <Tabs value={activeTab}>
-            <TabsList>
-              <TabsTrigger value="network" asChild>
-                <Link
-                  to="/devices/$deviceId/session/$bundleId/network"
-                  params={{ deviceId, bundleId }}
-                  search={{ sessionId }}
-                >
-                  Network
-                </Link>
-              </TabsTrigger>
-              <TabsTrigger value="console" disabled>
-                Console
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
       </div>
 
       <div className="flex-1 overflow-hidden">
