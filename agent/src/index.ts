@@ -24,12 +24,10 @@ function headersToObject(headers: any): Record<string, string> {
 }
 
 function tryUse(className: string): any | null {
-  // Try default classloader first
   try {
     return Java.use(className);
   } catch (_) {}
 
-  // Search all classloaders
   let found: any = null;
   Java.enumerateClassLoaders({
     onMatch(loader: any) {
@@ -264,7 +262,6 @@ function hookCronet(): void {
 Java.perform(function () {
   send({ type: "ready", payload: { pid: Process.id } });
 
-  // Enumerate loaded classes to understand what HTTP lib the app uses
   var loaded = Java.enumerateLoadedClassesSync();
   var httpClasses: string[] = [];
   for (var i = 0; i < loaded.length; i++) {
