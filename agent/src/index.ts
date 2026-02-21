@@ -30,7 +30,7 @@ function tryUse(className: string): any | null {
   // Search all classloaders
   let found: any = null;
   Java.enumerateClassLoaders({
-    onMatch(loader) {
+    onMatch(loader: any) {
       if (found) return;
       try {
         const factory = Java.classFactory;
