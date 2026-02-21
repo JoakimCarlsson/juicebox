@@ -164,31 +164,9 @@ async function handleAttach(
   // re-acquire device handle after potential adb root
   const device = await frida.getDevice(deviceId);
 
-  // try to find running app first
-  let pid: number | null = null;
-  try {
-    const apps = await device.enumerateApplications({
-      identifiers: [identifier],
-    });
-    if (apps[0] && apps[0].pid > 0) {
-      pid = apps[0].pid;
-    }
-  } catch {}
-
-  if (pid === null) {
-    pid = await device.spawn(identifier);
-    await device.resume(pid);
-  }
-
-  let session: Awaited<ReturnType<typeof device.attach>>;
-  try {
-    session = await device.attach(pid);
-  } catch {
-    // app may have restarted after adb root, try spawn
-    pid = await device.spawn(identifier);
-    await device.resume(pid);
-    session = await device.attach(pid);
-  }
+  const pid = await device.spawn(identifier);
+  const session = await device.attach(pid);
+  await device.resume(pid);
   const agentSource = await Deno.readTextFile(AGENT_PATH);
   const script = await session.createScript(agentSource);
 

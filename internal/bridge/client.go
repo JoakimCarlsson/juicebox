@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"sync/atomic"
+	"time"
 )
 
 type Client struct {
@@ -194,7 +195,15 @@ func (s *SubscribeConn) Read(p []byte) (int, error) {
 var _ io.ReadCloser = (*SubscribeConn)(nil)
 
 func (c *Client) Subscribe(sessionId string) (*SubscribeConn, error) {
-	conn, err := net.Dial("unix", c.socketPath)
+	var conn net.Conn
+	var err error
+	for range 5 {
+		conn, err = net.Dial("unix", c.socketPath)
+		if err == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
 	}
