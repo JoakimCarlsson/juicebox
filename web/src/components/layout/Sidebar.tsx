@@ -6,8 +6,50 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ThemeToggle } from "@/components/layout/ThemeToggle"
-import { devicesQueryOptions } from "@/features/devices/queries"
+import { devicesQueryOptions, deviceInfoQueryOptions } from "@/features/devices/queries"
 import { cn } from "@/lib/utils"
+import type { Device } from "@/types/device"
+
+function DeviceItem({ device, active }: { device: Device; active: boolean }) {
+  const { data: info } = useQuery({
+    ...deviceInfoQueryOptions(device.id),
+    enabled: active,
+  })
+
+  const subtitle = info
+    ? [
+        info.platform,
+        info.arch,
+        info.os && typeof info.os === "object" && "version" in info.os
+          ? `Android ${info.os.version}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" \u00B7 ")
+    : null
+
+  return (
+    <Link
+      to="/devices/$deviceId"
+      params={{ deviceId: device.id }}
+      className={cn(
+        "flex items-start gap-2 rounded-md px-2 py-2 text-sm transition-colors",
+        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        active && "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
+      )}
+    >
+      <Smartphone className="h-4 w-4 shrink-0 mt-0.5" />
+      <div className="min-w-0">
+        <span className="block truncate">{device.name}</span>
+        {active && subtitle && (
+          <span className="block truncate text-[11px] font-normal text-muted-foreground">
+            {subtitle}
+          </span>
+        )}
+      </div>
+    </Link>
+  )
+}
 
 export function Sidebar() {
   const { deviceId } = useParams({ strict: false })
@@ -54,20 +96,11 @@ export function Sidebar() {
         ) : (
           <div className="space-y-1 py-1">
             {devices?.map((device) => (
-              <Link
+              <DeviceItem
                 key={device.id}
-                to="/devices/$deviceId"
-                params={{ deviceId: device.id }}
-                className={cn(
-                  "flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
-                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  deviceId === device.id &&
-                    "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
-                )}
-              >
-                <Smartphone className="h-4 w-4 shrink-0" />
-                <span className="truncate">{device.name}</span>
-              </Link>
+                device={device}
+                active={deviceId === device.id}
+              />
             ))}
           </div>
         )}
