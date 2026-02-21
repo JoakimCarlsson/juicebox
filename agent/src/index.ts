@@ -103,6 +103,13 @@ function hookOkHttp3(): void {
           const response = (this as any)[methodName]();
           const duration = Date.now() - startTime;
 
+          try {
+            var sentRequest = response.request();
+            reqHeaders = headersToObject(sentRequest.headers());
+            url = sentRequest.url().toString();
+            method = sentRequest.method();
+          } catch (_) {}
+
           let responseBody: string | null = null;
           let responseBodySize = 0;
 

@@ -194,11 +194,9 @@ async function handleAttach(
       } else {
         const encoded = new TextEncoder().encode(line);
         for (const sub of state.subscribers) {
-          try {
-            sub.write(encoded);
-          } catch {
+          sub.write(encoded).catch(() => {
             state.subscribers.delete(sub);
-          }
+          });
         }
       }
     } else if (msg.type === "error") {
