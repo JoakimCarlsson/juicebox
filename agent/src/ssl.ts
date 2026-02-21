@@ -9,12 +9,16 @@ export interface SslExports {
   sslFree: NativePointer;
 }
 
+const SKIP_MODULES = /^lib(javacrypto|conscrypt_jni|conscrypt_gmscore_jni)\b/i;
+
 export function findSslExports(): SslExports[] {
   const results: SslExports[] = [];
   const seen = new Set<string>();
 
   const modules = Process.enumerateModules();
   for (const mod of modules) {
+    if (SKIP_MODULES.test(mod.name)) continue;
+
     const sslRead = mod.findExportByName("SSL_read");
     const sslWrite = mod.findExportByName("SSL_write");
 
@@ -47,11 +51,12 @@ function safeReadBytes(buf: NativePointer, size: number): Uint8Array | null {
 export function hookSsl(exports: SslExports): void {
   Interceptor.attach(exports.sslWrite, {
     onEnter(args) {
-      const num = args[2].toInt32();
-      if (num <= 0) return;
-
-      const key = args[0].toString();
       try {
+        if (args[0].isNull() || args[1].isNull()) return;
+        const num = args[2].toInt32();
+        if (num <= 0) return;
+
+        const key = args[0].toString();
         const readSize = num < MAX_READ_SIZE ? num : MAX_READ_SIZE;
         const data = safeReadBytes(args[1], readSize);
         if (data) onWrite(key, data, num);
@@ -61,10 +66,16 @@ export function hookSsl(exports: SslExports): void {
 
   Interceptor.attach(exports.sslRead, {
     onEnter(args) {
-      this.ssl = args[0].toString();
-      this.buf = args[1];
+      try {
+        if (args[0].isNull() || args[1].isNull()) return;
+        this.ssl = args[0].toString();
+        this.buf = args[1];
+      } catch (_) {
+        this.ssl = null;
+      }
     },
     onLeave(retval) {
+      if (!this.ssl) return;
       const bytesRead = retval.toInt32();
       if (bytesRead <= 0) return;
 
@@ -82,6 +93,7 @@ export function hookSsl(exports: SslExports): void {
   Interceptor.attach(exports.sslFree, {
     onEnter(args) {
       try {
+        if (args[0].isNull()) return;
         onFree(args[0].toString());
       } catch (_) {}
     },

@@ -166,7 +166,6 @@ async function handleAttach(
 
   const pid = await device.spawn(identifier);
   const session = await device.attach(pid);
-  await device.resume(pid);
   const agentSource = await Deno.readTextFile(AGENT_PATH);
   const script = await session.createScript(agentSource);
 
@@ -221,6 +220,7 @@ async function handleAttach(
   });
 
   await script.load();
+  await device.resume(pid);
   console.log(`attached to ${identifier} (pid ${pid}), session ${sessionId}`);
 
   return ok(req.id, { sessionId, pid });
