@@ -1,9 +1,10 @@
-import { createFileRoute, useParams } from "@tanstack/react-router"
+import { createFileRoute, Link, useParams } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { Search } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppCard } from "@/components/devices/AppCard"
 import { appsQueryOptions } from "@/features/devices/queries"
 
@@ -28,7 +29,25 @@ function AppsPage() {
   }, [apps, search])
 
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div className="flex h-full flex-col">
+      <div className="border-b border-border px-6 py-3">
+        <Tabs value="apps">
+          <TabsList>
+            <TabsTrigger value="apps" asChild>
+              <Link to="/devices/$deviceId/apps" params={{ deviceId }}>
+                Apps
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="processes" asChild>
+              <Link to="/devices/$deviceId/processes" params={{ deviceId }}>
+                Processes
+              </Link>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <div className="flex flex-col gap-4 overflow-auto p-6">
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -56,6 +75,7 @@ function AppsPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   )
 }
