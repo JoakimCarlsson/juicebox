@@ -1,5 +1,6 @@
 import { HpackDecoder } from "./hpack";
 import { encodeBody } from "./encoding";
+import { decompressBody } from "./decompress";
 
 const FRAME_HEADER_SIZE = 9;
 const MAX_BODY_BYTES = 65536;
@@ -117,10 +118,20 @@ function emitH2Message(stream: H2Stream): void {
     if (!k.startsWith(":")) responseHeaders[k] = stream.responseHeaders[k];
   }
 
+  const contentEncoding = responseHeaders["content-encoding"] ?? "";
+  let responseBody: Uint8Array | null = stream.responseBody;
+  if (contentEncoding) {
+    const decompressed = decompressBody(stream.responseBody, contentEncoding);
+    if (decompressed !== stream.responseBody) {
+      responseBody = decompressed;
+      delete responseHeaders["content-encoding"];
+    }
+  }
+
   const reqCt = requestHeaders["content-type"] ?? "";
   const resCt = responseHeaders["content-type"] ?? "";
   const reqEncoded = encodeBody(stream.requestBody, reqCt);
-  const resEncoded = encodeBody(stream.responseBody, resCt);
+  const resEncoded = encodeBody(responseBody, resCt);
 
   send({
     type: "http",

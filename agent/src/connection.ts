@@ -10,6 +10,7 @@ import {
 } from "./http";
 import { onH2Write, onH2Read, onH2Free } from "./h2";
 import { encodeBody } from "./encoding";
+import { decompressBody } from "./decompress";
 
 const MAX_BODY_BYTES = 65536;
 
@@ -104,10 +105,20 @@ function emitHttpMessage(conn: Connection): void {
     }
   }
 
+  const contentEncoding = responseHeaders["content-encoding"] ?? "";
+  let responseBody: Uint8Array | null = conn.responseBody;
+  if (contentEncoding) {
+    const decompressed = decompressBody(conn.responseBody, contentEncoding);
+    if (decompressed !== conn.responseBody) {
+      responseBody = decompressed;
+      delete responseHeaders["content-encoding"];
+    }
+  }
+
   const reqCt = conn.requestHead.headers["content-type"] ?? "";
   const resCt = conn.responseHead?.headers["content-type"] ?? "";
   const reqEncoded = encodeBody(conn.requestBody, reqCt);
-  const resEncoded = encodeBody(conn.responseBody, resCt);
+  const resEncoded = encodeBody(responseBody, resCt);
 
   send({
     type: "http",
