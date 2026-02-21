@@ -174,13 +174,57 @@ function BodyViewer({
   body,
   headers,
   size,
+  encoding,
 }: {
   body: string
   headers: Record<string, string>
   size?: number
+  encoding?: "text" | "base64"
 }) {
   const contentType =
     headers["content-type"] ?? headers["Content-Type"] ?? ""
+
+  if (encoding === "base64" && contentType.startsWith("image/")) {
+    const mimeType = contentType.split(";")[0].trim()
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-1.5">
+          <Badge variant="secondary" className="text-[10px]">
+            {formatBytes(size ?? 0)}
+          </Badge>
+          <Badge variant="secondary" className="text-[10px]">
+            {mimeType}
+          </Badge>
+        </div>
+        <div className="rounded bg-muted/30 p-3 flex items-center justify-center">
+          <img
+            src={`data:${mimeType};base64,${body}`}
+            alt="Response image"
+            className="max-h-80 max-w-full object-contain rounded"
+          />
+        </div>
+      </div>
+    )
+  }
+
+  if (encoding === "base64") {
+    const mimeType = contentType.split(";")[0].trim() || "binary"
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-1.5">
+          <Badge variant="secondary" className="text-[10px]">
+            {formatBytes(size ?? 0)}
+          </Badge>
+          <Badge variant="secondary" className="text-[10px]">
+            {mimeType}
+          </Badge>
+        </div>
+        <div className="rounded bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+          Binary data ({formatBytes(size ?? 0)})
+        </div>
+      </div>
+    )
+  }
 
   // Try JSON
   if (
@@ -298,6 +342,7 @@ function RequestDetail({ message }: { message: HttpMessage | null }) {
               body={message.requestBody}
               headers={message.requestHeaders}
               size={message.requestBodySize}
+              encoding={message.requestBodyEncoding}
             />
           </div>
         )}
@@ -348,6 +393,7 @@ function RequestDetail({ message }: { message: HttpMessage | null }) {
               body={message.responseBody}
               headers={message.responseHeaders}
               size={message.responseBodySize}
+              encoding={message.responseBodyEncoding}
             />
           </div>
         )}

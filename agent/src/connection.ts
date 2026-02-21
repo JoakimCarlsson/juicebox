@@ -9,6 +9,7 @@ import {
   containsChunkedEnd,
 } from "./http";
 import { onH2Write, onH2Read, onH2Free } from "./h2";
+import { encodeBody } from "./encoding";
 
 const MAX_BODY_BYTES = 65536;
 
@@ -84,15 +85,6 @@ function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
   return result;
 }
 
-function bodyToString(body: Uint8Array | null): string | null {
-  if (!body || body.length === 0) return null;
-  let s = "";
-  for (let i = 0; i < body.length; i++) {
-    s += String.fromCharCode(body[i]);
-  }
-  return s;
-}
-
 function emitHttpMessage(conn: Connection): void {
   if (!conn.requestHead) return;
 
@@ -112,6 +104,11 @@ function emitHttpMessage(conn: Connection): void {
     }
   }
 
+  const reqCt = conn.requestHead.headers["content-type"] ?? "";
+  const resCt = conn.responseHead?.headers["content-type"] ?? "";
+  const reqEncoded = encodeBody(conn.requestBody, reqCt);
+  const resEncoded = encodeBody(conn.responseBody, resCt);
+
   send({
     type: "http",
     payload: {
@@ -119,11 +116,13 @@ function emitHttpMessage(conn: Connection): void {
       method: conn.requestHead.method,
       url,
       requestHeaders,
-      requestBody: bodyToString(conn.requestBody),
+      requestBody: reqEncoded.body,
+      requestBodyEncoding: reqEncoded.encoding,
       requestBodySize: conn.requestBodyRead,
       statusCode: conn.responseHead?.statusCode ?? 0,
       responseHeaders,
-      responseBody: bodyToString(conn.responseBody),
+      responseBody: resEncoded.body,
+      responseBodyEncoding: resEncoded.encoding,
       responseBodySize: conn.responseBodyRead,
       duration,
       timestamp: Date.now(),

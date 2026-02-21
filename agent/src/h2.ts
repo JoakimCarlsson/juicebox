@@ -1,4 +1,5 @@
 import { HpackDecoder } from "./hpack";
+import { encodeBody } from "./encoding";
 
 const FRAME_HEADER_SIZE = 9;
 const MAX_BODY_BYTES = 65536;
@@ -53,15 +54,6 @@ function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
   result.set(a, 0);
   result.set(b, a.length);
   return result;
-}
-
-function bodyToString(body: Uint8Array): string | null {
-  if (body.length === 0) return null;
-  let s = "";
-  for (let i = 0; i < body.length; i++) {
-    s += String.fromCharCode(body[i]);
-  }
-  return s;
 }
 
 function getOrCreateH2(ssl: string): H2Connection {
@@ -125,6 +117,11 @@ function emitH2Message(stream: H2Stream): void {
     if (!k.startsWith(":")) responseHeaders[k] = stream.responseHeaders[k];
   }
 
+  const reqCt = requestHeaders["content-type"] ?? "";
+  const resCt = responseHeaders["content-type"] ?? "";
+  const reqEncoded = encodeBody(stream.requestBody, reqCt);
+  const resEncoded = encodeBody(stream.responseBody, resCt);
+
   send({
     type: "http",
     payload: {
@@ -132,11 +129,13 @@ function emitH2Message(stream: H2Stream): void {
       method,
       url,
       requestHeaders,
-      requestBody: bodyToString(stream.requestBody),
+      requestBody: reqEncoded.body,
+      requestBodyEncoding: reqEncoded.encoding,
       requestBodySize: stream.requestBodySize,
       statusCode,
       responseHeaders,
-      responseBody: bodyToString(stream.responseBody),
+      responseBody: resEncoded.body,
+      responseBodyEncoding: resEncoded.encoding,
       responseBodySize: stream.responseBodySize,
       duration,
       timestamp: Date.now(),

@@ -9,10 +9,12 @@ export interface HttpMessage {
   url: string
   requestHeaders: Record<string, string>
   requestBody?: string | null
+  requestBodyEncoding?: "text" | "base64"
   requestBodySize?: number
   statusCode: number
   responseHeaders: Record<string, string>
   responseBody?: string | null
+  responseBodyEncoding?: "text" | "base64"
   responseBodySize?: number
   duration?: number
   timestamp: number
