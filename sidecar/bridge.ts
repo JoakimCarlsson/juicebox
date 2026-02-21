@@ -187,7 +187,6 @@ async function handleAttach(
     const msg = _message as { type: string; payload?: unknown };
     if (msg.type === "send" && msg.payload) {
       const line = JSON.stringify(msg.payload) + "\n";
-      console.log(`[${sessionId}] agent:`, JSON.stringify(msg.payload).slice(0, 200));
       if (state.subscribers.size === 0) {
         state.messageBuffer.push(line);
       } else {

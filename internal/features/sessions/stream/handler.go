@@ -29,8 +29,6 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
-	log.Printf("[stream] upgrading WebSocket for session %s", sessionId)
-
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Printf("[stream] WebSocket upgrade failed: %v", err)
@@ -38,7 +36,6 @@ func (h *Handler) Handle(c *router.Context) {
 	}
 	defer ws.Close()
 
-	log.Printf("[stream] subscribing to session %s", sessionId)
 	sub, err := h.client.Subscribe(sessionId)
 	if err != nil {
 		log.Printf("[stream] subscribe failed: %v", err)
@@ -47,8 +44,6 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 	defer sub.Close()
-
-	log.Printf("[stream] connected, relaying events for session %s", sessionId)
 
 	done := make(chan struct{})
 	go func() {
@@ -75,7 +70,6 @@ func (h *Handler) Handle(c *router.Context) {
 			continue
 		}
 
-		log.Printf("[stream] relaying: %s", string(line)[:min(len(line), 100)])
 		if err := ws.WriteMessage(websocket.TextMessage, line); err != nil {
 			log.Printf("[stream] WebSocket write error: %v", err)
 			return
@@ -85,5 +79,4 @@ func (h *Handler) Handle(c *router.Context) {
 	if err := scanner.Err(); err != nil {
 		log.Printf("[stream] scanner error: %v", err)
 	}
-	log.Printf("[stream] session %s stream ended", sessionId)
 }

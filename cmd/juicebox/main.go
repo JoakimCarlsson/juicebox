@@ -26,7 +26,6 @@ func main() {
 
 	srv := apphttp.NewServer(database, bridgeClient)
 
-	log.Println("juicebox listening on :8080")
 	if err := http.ListenAndServe(":8080", srv.Router()); err != nil {
 		log.Fatal(err)
 	}
