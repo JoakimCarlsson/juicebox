@@ -2,8 +2,7 @@
   "version": "5",
   "specifiers": {
     "npm:frida-compile@19.0.4": "19.0.4",
-    "npm:frida-compile@^19.0.4": "19.0.4",
-    "npm:frida-java-bridge@^7.0.12": "7.0.12"
+    "npm:frida-compile@^19.0.4": "19.0.4"
   },
   "npm": {
     "balanced-match@4.0.3": {
@@ -80,9 +79,6 @@
         "frida"
       ],
       "bin": true
-    },
-    "frida-java-bridge@7.0.12": {
-      "integrity": "sha512-xpoTFPQkUjNMeRnyZ6rUj/APlYGWpKEv5iekOk4lQeDcv9fv8J/s3ETjTRdSfyZ8/aPv9r8+oBmsxN2gCHRTqg=="
     },
     "frida@17.7.3": {
       "integrity": "sha512-hldU+VsipYecq3JzQqz6+Qaa4PE3VdOcUvf14pn/zAKxN/Ds/sptSbEGVea4Fx+oFiTgYOEsFf+4zcvb8qctjA==",
@@ -243,8 +239,7 @@
   },
   "workspace": {
     "dependencies": [
-      "npm:frida-compile@^19.0.4",
-      "npm:frida-java-bridge@^7.0.12"
+      "npm:frida-compile@^19.0.4"
     ]
   }
 }

@@ -1,7 +1,6 @@
 {
   "nodeModulesDir": "auto",
   "imports": {
-    "frida-java-bridge": "npm:frida-java-bridge@^7.0.12",
     "frida-compile": "npm:frida-compile@^19.0.4"
   },
   "tasks": {
