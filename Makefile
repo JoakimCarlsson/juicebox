@@ -2,7 +2,7 @@
 
 install:
 	cd web && bun install
-	cd agent && npm install
+	cd agent && deno install --allow-scripts=npm:frida
 	go mod tidy
 
 dev: build-agent
@@ -16,7 +16,7 @@ build-web:
 	cd web && bun run build
 
 build-agent:
-	cd agent && npm run build
+	cd agent && deno task build
 
 sidecar:
 	cd sidecar && deno task dev

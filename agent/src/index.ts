@@ -1,3 +1,5 @@
+/// <reference types="npm:@types/frida-gum" />
+
 import Java from "frida-java-bridge";
 
 const MAX_BODY_BYTES = 65536;
