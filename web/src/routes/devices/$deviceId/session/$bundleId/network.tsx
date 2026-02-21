@@ -603,7 +603,6 @@ function NetworkPage() {
   const { messages, connected, clear } = useSessionSocket(sessionId || null)
   const [search, setSearch] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showLogs, setShowLogs] = useState(false)
 
   const httpMessages = useMemo(() => {
     return messages
@@ -612,16 +611,6 @@ function NetworkPage() {
           m.type === "http" && !!m.payload,
       )
       .map((m) => m.payload as unknown as HttpMessage)
-  }, [messages])
-
-  const logMessages = useMemo(() => {
-    return messages
-      .filter((m) => m.type === "log" || m.type === "ready")
-      .map((m) => {
-        const payload = m.payload as Record<string, unknown> | undefined
-        if (m.type === "ready") return `Agent ready (PID: ${payload?.pid})`
-        return String(payload?.message ?? JSON.stringify(payload))
-      })
   }, [messages])
 
   const filtered = useMemo(() => {
@@ -657,14 +646,6 @@ function NetworkPage() {
           <Trash2 className="mr-1.5 h-3 w-3" />
           Clear
         </Button>
-        <Button
-          variant={showLogs ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8"
-          onClick={() => setShowLogs(!showLogs)}
-        >
-          Logs ({logMessages.length})
-        </Button>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {connected ? (
             <>
@@ -682,17 +663,6 @@ function NetworkPage() {
           {filtered.length} request{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
-
-      {/* Logs panel */}
-      {showLogs && logMessages.length > 0 && (
-        <div className="border-b border-border bg-muted/30 px-4 py-2 max-h-28 overflow-auto">
-          {logMessages.map((msg, i) => (
-            <div key={i} className="text-[11px] font-mono text-muted-foreground">
-              {msg}
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Master-detail */}
       <div className="flex-1 min-h-0">

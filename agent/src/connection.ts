@@ -150,7 +150,6 @@ export function onWrite(ssl: string, data: Uint8Array, fullSize: number): void {
   if (conn.state === "idle") {
     if (isHttp2Preface(data)) {
       conn.http2 = true;
-      send({ type: "log", payload: { message: "detected HTTP/2 connection on " + ssl } });
       return;
     }
 
