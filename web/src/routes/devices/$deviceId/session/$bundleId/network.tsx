@@ -1,9 +1,21 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router"
-import { useMemo, useState } from "react"
-import { Search, Trash2, Wifi, WifiOff } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  ChevronDown,
+  ChevronRight,
+  Search,
+  Trash2,
+  Wifi,
+  WifiOff,
+} from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable"
 import { useSessionSocket } from "@/hooks/useSessionSocket"
 import type { HttpMessage } from "@/types/session"
 import { cn } from "@/lib/utils"
@@ -16,6 +28,30 @@ export const Route = createFileRoute(
   }),
   component: NetworkPage,
 })
+
+// --- Utilities ---
+
+function parseUrl(raw: string): { host: string; path: string } {
+  try {
+    const u = new URL(raw)
+    return { host: u.host, path: u.pathname + u.search }
+  } catch {
+    return { host: raw, path: "" }
+  }
+}
+
+function formatBytes(bytes: number): string {
+  if (!bytes || bytes === 0) return "0 B"
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function formatDuration(ms?: number): string {
+  if (ms === undefined || ms === 0) return "—"
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(2)}s`
+}
 
 function statusColor(code: number): string {
   if (code >= 200 && code < 300) return "text-green-600 dark:text-green-400"
@@ -41,14 +77,395 @@ function methodColor(method: string): string {
   }
 }
 
+// --- Sub-components ---
+
+function HeadersTable({ headers }: { headers: Record<string, string> }) {
+  const entries = Object.entries(headers)
+  if (entries.length === 0) return null
+
+  return (
+    <div className="rounded border border-border overflow-hidden">
+      {entries.map(([key, value]) => (
+        <div
+          key={key}
+          className="flex border-b border-border last:border-0"
+        >
+          <span className="w-48 shrink-0 bg-muted/30 px-3 py-1.5 text-xs font-mono font-medium text-muted-foreground truncate">
+            {key}
+          </span>
+          <span className="flex-1 px-3 py-1.5 text-xs font-mono break-all">
+            {value}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function JsonRenderer({
+  value,
+  indent = 0,
+}: {
+  value: unknown
+  indent?: number
+}) {
+  const pad = "  ".repeat(indent)
+  const innerPad = "  ".repeat(indent + 1)
+
+  if (value === null) return <span className="text-orange-500">null</span>
+  if (typeof value === "boolean")
+    return <span className="text-orange-500">{String(value)}</span>
+  if (typeof value === "number")
+    return <span className="text-blue-500">{value}</span>
+  if (typeof value === "string")
+    return (
+      <span className="text-green-600 dark:text-green-400">
+        &quot;{value}&quot;
+      </span>
+    )
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <span>{"[]"}</span>
+    return (
+      <span>
+        {"[\n"}
+        {value.map((item, i) => (
+          <span key={i}>
+            {innerPad}
+            <JsonRenderer value={item} indent={indent + 1} />
+            {i < value.length - 1 ? "," : ""}
+            {"\n"}
+          </span>
+        ))}
+        {pad}
+        {"]"}
+      </span>
+    )
+  }
+
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+    if (entries.length === 0) return <span>{"{}"}</span>
+    return (
+      <span>
+        {"{\n"}
+        {entries.map(([key, val], i) => (
+          <span key={key}>
+            {innerPad}
+            <span className="text-purple-600 dark:text-purple-400">
+              &quot;{key}&quot;
+            </span>
+            {": "}
+            <JsonRenderer value={val} indent={indent + 1} />
+            {i < entries.length - 1 ? "," : ""}
+            {"\n"}
+          </span>
+        ))}
+        {pad}
+        {"}"}
+      </span>
+    )
+  }
+
+  return <span>{String(value)}</span>
+}
+
+function BodyViewer({
+  body,
+  headers,
+  size,
+}: {
+  body: string
+  headers: Record<string, string>
+  size?: number
+}) {
+  const contentType =
+    headers["content-type"] ?? headers["Content-Type"] ?? ""
+
+  // Try JSON
+  if (
+    contentType.includes("json") ||
+    body.trimStart().startsWith("{") ||
+    body.trimStart().startsWith("[")
+  ) {
+    try {
+      const parsed = JSON.parse(body)
+      return (
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <Badge variant="secondary" className="text-[10px]">
+              {formatBytes(size ?? body.length)}
+            </Badge>
+            <Badge variant="secondary" className="text-[10px]">
+              JSON
+            </Badge>
+          </div>
+          <pre className="rounded bg-muted/30 p-3 overflow-auto max-h-96 text-xs font-mono whitespace-pre">
+            <JsonRenderer value={parsed} />
+          </pre>
+        </div>
+      )
+    } catch {
+      // Fall through to raw
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-1.5">
+        <Badge variant="secondary" className="text-[10px]">
+          {formatBytes(size ?? body.length)}
+        </Badge>
+      </div>
+      <pre className="rounded bg-muted/30 p-3 overflow-auto max-h-96 text-xs font-mono whitespace-pre-wrap break-all">
+        {body}
+      </pre>
+    </div>
+  )
+}
+
+function CollapsibleSection({
+  title,
+  badge,
+  defaultOpen = true,
+  children,
+}: {
+  title: string
+  badge?: React.ReactNode
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <div className="border-b border-border last:border-0">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors"
+      >
+        {open ? (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        )}
+        {title}
+        {badge}
+      </button>
+      {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
+    </div>
+  )
+}
+
+function RequestDetail({ message }: { message: HttpMessage | null }) {
+  if (!message) {
+    return (
+      <div className="flex h-full items-center justify-center text-muted-foreground">
+        <p className="text-sm">Select a request to view details</p>
+      </div>
+    )
+  }
+
+  const hasReqHeaders = Object.keys(message.requestHeaders).length > 0
+  const hasResHeaders = Object.keys(message.responseHeaders).length > 0
+
+  return (
+    <div className="h-full overflow-auto">
+      {/* Request Section */}
+      <CollapsibleSection title="REQUEST" badge={
+        <Badge variant="secondary" className={cn("font-mono text-xs ml-1", methodColor(message.method))}>
+          {message.method}
+        </Badge>
+      }>
+        <div className="rounded bg-muted/50 px-3 py-2 font-mono text-xs break-all text-foreground">
+          {message.url}
+        </div>
+
+        {hasReqHeaders && (
+          <div>
+            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">
+              Headers
+            </h4>
+            <HeadersTable headers={message.requestHeaders} />
+          </div>
+        )}
+
+        {message.requestBody && (
+          <div>
+            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">
+              Body
+            </h4>
+            <BodyViewer
+              body={message.requestBody}
+              headers={message.requestHeaders}
+              size={message.requestBodySize}
+            />
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* Response Section */}
+      <CollapsibleSection
+        title="RESPONSE"
+        badge={
+          message.statusCode ? (
+            <Badge variant="secondary" className={cn("font-mono text-xs ml-1", statusColor(message.statusCode))}>
+              {message.statusCode}
+            </Badge>
+          ) : undefined
+        }
+      >
+        <div className="flex items-center gap-3">
+          <span className={cn("text-sm font-mono font-semibold", statusColor(message.statusCode))}>
+            {message.statusCode || "—"}
+          </span>
+          {message.duration !== undefined && message.duration > 0 && (
+            <span className="text-xs text-muted-foreground font-mono">
+              {formatDuration(message.duration)}
+            </span>
+          )}
+          {(message.responseBodySize ?? 0) > 0 && (
+            <span className="text-xs text-muted-foreground font-mono">
+              {formatBytes(message.responseBodySize ?? 0)}
+            </span>
+          )}
+        </div>
+
+        {hasResHeaders && (
+          <div>
+            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">
+              Headers
+            </h4>
+            <HeadersTable headers={message.responseHeaders} />
+          </div>
+        )}
+
+        {message.responseBody && (
+          <div>
+            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">
+              Body
+            </h4>
+            <BodyViewer
+              body={message.responseBody}
+              headers={message.responseHeaders}
+              size={message.responseBodySize}
+            />
+          </div>
+        )}
+      </CollapsibleSection>
+    </div>
+  )
+}
+
+function RequestList({
+  messages,
+  selectedId,
+  onSelect,
+}: {
+  messages: HttpMessage[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  const listRef = useRef<HTMLDivElement>(null)
+  const isAtBottom = useRef(true)
+
+  const handleScroll = useCallback(() => {
+    const el = listRef.current
+    if (!el) return
+    isAtBottom.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 30
+  }, [])
+
+  useEffect(() => {
+    if (isAtBottom.current && listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight
+    }
+  }, [messages.length])
+
+  return (
+    <div
+      ref={listRef}
+      onScroll={handleScroll}
+      className="h-full overflow-auto"
+    >
+      <table className="w-full">
+        <thead className="sticky top-0 bg-background z-10">
+          <tr className="border-b border-border">
+            <th className="px-3 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground w-16">
+              Method
+            </th>
+            <th className="px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground w-14">
+              Status
+            </th>
+            <th className="px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Host
+            </th>
+            <th className="px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Path
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {messages.map((msg) => {
+            const { host, path } = parseUrl(msg.url)
+            return (
+              <tr
+                key={msg.id}
+                onClick={() => onSelect(msg.id)}
+                className={cn(
+                  "cursor-pointer border-b border-border transition-colors hover:bg-muted/50",
+                  selectedId === msg.id && "bg-accent",
+                )}
+              >
+                <td className="px-3 py-1.5">
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "font-mono text-[10px] px-1.5 py-0",
+                      methodColor(msg.method),
+                    )}
+                  >
+                    {msg.method}
+                  </Badge>
+                </td>
+                <td className="px-2 py-1.5">
+                  <span
+                    className={cn(
+                      "text-xs font-mono font-medium",
+                      statusColor(msg.statusCode),
+                    )}
+                  >
+                    {msg.statusCode || "—"}
+                  </span>
+                </td>
+                <td className="px-2 py-1.5 max-w-0">
+                  <span className="block truncate text-xs font-mono text-foreground">
+                    {host}
+                  </span>
+                </td>
+                <td className="px-2 py-1.5 max-w-0">
+                  <span className="block truncate text-xs font-mono text-muted-foreground">
+                    {path}
+                  </span>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// --- Main Page ---
+
 function NetworkPage() {
   const { sessionId } = useSearch({
     from: "/devices/$deviceId/session/$bundleId/network",
   })
   const { messages, connected, clear } = useSessionSocket(sessionId || null)
   const [search, setSearch] = useState("")
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [showLogs, setShowLogs] = useState(true)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [showLogs, setShowLogs] = useState(false)
 
   const httpMessages = useMemo(() => {
     return messages
@@ -80,60 +497,69 @@ function NetworkPage() {
     )
   }, [httpMessages, search])
 
+  const selectedMessage = useMemo(() => {
+    if (!selectedId) return null
+    return filtered.find((m) => m.id === selectedId) ?? null
+  }, [filtered, selectedId])
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-6 py-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 border-b border-border px-4 py-2">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Filter by URL, method, or status..."
+            placeholder="Filter requests..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-8 h-8 text-xs"
           />
         </div>
-        <Button variant="ghost" size="sm" onClick={clear}>
-          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+        <Button variant="ghost" size="sm" className="h-8" onClick={clear}>
+          <Trash2 className="mr-1.5 h-3 w-3" />
           Clear
         </Button>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {connected ? (
-            <>
-              <Wifi className="h-3.5 w-3.5 text-green-500" />
-              Connected
-            </>
-          ) : (
-            <>
-              <WifiOff className="h-3.5 w-3.5 text-red-500" />
-              Disconnected
-            </>
-          )}
-        </div>
         <Button
           variant={showLogs ? "secondary" : "ghost"}
           size="sm"
+          className="h-8"
           onClick={() => setShowLogs(!showLogs)}
         >
           Logs ({logMessages.length})
         </Button>
-        <span className="text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {connected ? (
+            <>
+              <Wifi className="h-3 w-3 text-green-500" />
+              <span>Connected</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-3 w-3 text-red-500" />
+              <span>Disconnected</span>
+            </>
+          )}
+        </div>
+        <span className="text-xs text-muted-foreground ml-auto">
           {filtered.length} request{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
 
+      {/* Logs panel */}
       {showLogs && logMessages.length > 0 && (
-        <div className="border-b border-border bg-muted/30 px-6 py-2 max-h-32 overflow-auto">
+        <div className="border-b border-border bg-muted/30 px-4 py-2 max-h-28 overflow-auto">
           {logMessages.map((msg, i) => (
-            <div key={i} className="text-xs font-mono text-muted-foreground">
+            <div key={i} className="text-[11px] font-mono text-muted-foreground">
               {msg}
             </div>
           ))}
         </div>
       )}
 
-      <div className="flex-1 overflow-auto">
+      {/* Master-detail */}
+      <div className="flex-1 min-h-0">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-20 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center gap-2 h-full text-muted-foreground">
             <Wifi className="h-8 w-8 opacity-30" />
             <p className="text-sm">
               {httpMessages.length === 0
@@ -142,110 +568,19 @@ function NetworkPage() {
             </p>
           </div>
         ) : (
-          <table className="w-full">
-            <thead className="sticky top-0 bg-background">
-              <tr className="border-b border-border">
-                <th className="px-6 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground w-20">
-                  Method
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  URL
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground w-20">
-                  Status
-                </th>
-                <th className="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground w-24">
-                  Time
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((msg) => (
-                <tr
-                  key={msg.id}
-                  onClick={() =>
-                    setExpandedId(expandedId === msg.id ? null : msg.id)
-                  }
-                  className={cn(
-                    "cursor-pointer border-b border-border transition-colors hover:bg-muted/50",
-                    expandedId === msg.id && "bg-muted/30",
-                  )}
-                >
-                  <td className="px-6 py-2">
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        "font-mono text-xs",
-                        methodColor(msg.method),
-                      )}
-                    >
-                      {msg.method}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-2 max-w-0">
-                    <span className="block truncate text-sm text-foreground font-mono">
-                      {msg.url}
-                    </span>
-                    {expandedId === msg.id && (
-                      <div className="mt-2 space-y-2 pb-2">
-                        {Object.keys(msg.requestHeaders).length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">
-                              Request Headers
-                            </p>
-                            <div className="rounded bg-muted/50 p-2 text-xs font-mono">
-                              {Object.entries(msg.requestHeaders).map(
-                                ([k, v]) => (
-                                  <div key={k}>
-                                    <span className="text-muted-foreground">
-                                      {k}:
-                                    </span>{" "}
-                                    {v}
-                                  </div>
-                                ),
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        {Object.keys(msg.responseHeaders).length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">
-                              Response Headers
-                            </p>
-                            <div className="rounded bg-muted/50 p-2 text-xs font-mono">
-                              {Object.entries(msg.responseHeaders).map(
-                                ([k, v]) => (
-                                  <div key={k}>
-                                    <span className="text-muted-foreground">
-                                      {k}:
-                                    </span>{" "}
-                                    {v}
-                                  </div>
-                                ),
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    <span
-                      className={cn(
-                        "text-sm font-mono font-medium",
-                        statusColor(msg.statusCode),
-                      )}
-                    >
-                      {msg.statusCode || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-right text-xs text-muted-foreground font-mono">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <ResizablePanelGroup orientation="horizontal">
+            <ResizablePanel defaultSize={40} minSize={20}>
+              <RequestList
+                messages={filtered}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+              />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={60} minSize={30}>
+              <RequestDetail message={selectedMessage} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         )}
       </div>
     </div>

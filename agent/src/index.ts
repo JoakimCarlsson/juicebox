@@ -1,5 +1,7 @@
 import Java from "frida-java-bridge";
 
+const MAX_BODY_BYTES = 65536;
+
 let requestCounter = 0;
 
 function generateId(): string {
@@ -67,6 +69,8 @@ function hookOkHttp3(): void {
           let url = "unknown";
           let method = "UNKNOWN";
           let reqHeaders: Record<string, string> = {};
+          let requestBody: string | null = null;
+          let requestBodySize = 0;
 
           try {
             const request = this.getOriginalRequest
@@ -75,9 +79,46 @@ function hookOkHttp3(): void {
             url = request.url().toString();
             method = request.method();
             reqHeaders = headersToObject(request.headers());
+
+            try {
+              var body = request.body();
+              if (body !== null) {
+                var OkioBuffer = Java.use("okio.Buffer");
+                var okBuf = OkioBuffer.$new();
+                body.writeTo(okBuf);
+                var fullSize: number = Number(okBuf.size());
+                requestBodySize = fullSize;
+                if (fullSize > 0) {
+                  var readSize: number = fullSize < MAX_BODY_BYTES ? fullSize : MAX_BODY_BYTES;
+                  var bytes = okBuf.readByteArray(readSize);
+                  var JavaString = Java.use("java.lang.String");
+                  requestBody = JavaString.$new(bytes, "UTF-8").toString();
+                }
+                okBuf.close();
+              }
+            } catch (_) {}
           } catch (_) {}
 
+          const startTime = Date.now();
           const response = (this as any)[methodName]();
+          const duration = Date.now() - startTime;
+
+          let responseBody: string | null = null;
+          let responseBodySize = 0;
+
+          try {
+            var cl: number = Number(response.body().contentLength());
+            responseBodySize = cl > 0 ? cl : 0;
+
+            var peeked = response.peekBody(
+              Java.use("java.lang.Long").parseLong(String(MAX_BODY_BYTES))
+            );
+            responseBody = peeked.string().toString();
+
+            if (responseBodySize === 0 && responseBody && responseBody.length > 0) {
+              responseBodySize = responseBody.length;
+            }
+          } catch (_) {}
 
           try {
             send({
@@ -87,8 +128,13 @@ function hookOkHttp3(): void {
                 method,
                 url,
                 requestHeaders: reqHeaders,
+                requestBody,
+                requestBodySize,
                 statusCode: response.code(),
                 responseHeaders: headersToObject(response.headers()),
+                responseBody,
+                responseBodySize,
+                duration,
                 timestamp: Date.now(),
               },
             });
@@ -100,8 +146,13 @@ function hookOkHttp3(): void {
                 method,
                 url,
                 requestHeaders: reqHeaders,
+                requestBody: null,
+                requestBodySize: 0,
                 statusCode: 0,
                 responseHeaders: {},
+                responseBody: null,
+                responseBodySize: 0,
+                duration,
                 timestamp: Date.now(),
               },
             });

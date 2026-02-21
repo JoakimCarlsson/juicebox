@@ -8,8 +8,13 @@ export interface HttpMessage {
   method: string
   url: string
   requestHeaders: Record<string, string>
+  requestBody?: string | null
+  requestBodySize?: number
   statusCode: number
   responseHeaders: Record<string, string>
+  responseBody?: string | null
+  responseBodySize?: number
+  duration?: number
   timestamp: number
 }
 
