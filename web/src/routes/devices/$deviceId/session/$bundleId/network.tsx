@@ -170,22 +170,118 @@ function JsonRenderer({
   return <span>{String(value)}</span>
 }
 
+const TEXT_TYPES = /text\/|json|xml|html|javascript|css|csv|svg|yaml|toml|plain|urlencoded/i
+
+function b64ToBytes(b64: string): Uint8Array {
+  const binStr = atob(b64)
+  const bytes = new Uint8Array(binStr.length)
+  for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i)
+  return bytes
+}
+
+async function decompressBytes(
+  bytes: Uint8Array,
+  encoding: string,
+): Promise<Uint8Array> {
+  let format: string | null = null
+  if (encoding === "gzip" || encoding === "x-gzip") format = "gzip"
+  else if (encoding === "deflate") format = "deflate"
+  if (!format) return bytes
+  try {
+    const ds = new DecompressionStream(format as "gzip" | "deflate")
+    const writer = ds.writable.getWriter()
+    writer.write(bytes)
+    writer.close()
+    const reader = ds.readable.getReader()
+    const chunks: Uint8Array[] = []
+    let totalLen = 0
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      chunks.push(value)
+      totalLen += value.length
+    }
+    const result = new Uint8Array(totalLen)
+    let offset = 0
+    for (const c of chunks) {
+      result.set(c, offset)
+      offset += c.length
+    }
+    return result
+  } catch {
+    return bytes
+  }
+}
+
+function useDecodedBody(
+  body: string,
+  headers: Record<string, string>,
+): { decoded: string | null; isImage: boolean; imageDataUri: string | null; loading: boolean } {
+  const contentType = headers["content-type"] ?? headers["Content-Type"] ?? ""
+  const contentEncoding = (headers["content-encoding"] ?? headers["Content-Encoding"] ?? "").trim().toLowerCase()
+  const mimeType = contentType.split(";")[0].trim().toLowerCase()
+  const isImage = mimeType.startsWith("image/")
+  const isText = TEXT_TYPES.test(contentType)
+
+  const [decoded, setDecoded] = useState<string | null>(null)
+  const [imageDataUri, setImageDataUri] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const raw = b64ToBytes(body)
+        const bytes = await decompressBytes(raw, contentEncoding)
+
+        if (cancelled) return
+
+        if (isImage) {
+          const b64 = btoa(String.fromCharCode(...bytes))
+          setImageDataUri(`data:${mimeType};base64,${b64}`)
+          setDecoded(null)
+        } else if (isText || !contentType) {
+          setDecoded(new TextDecoder("utf-8", { fatal: false }).decode(bytes))
+          setImageDataUri(null)
+        } else {
+          setDecoded(null)
+          setImageDataUri(null)
+        }
+      } catch {
+        setDecoded(null)
+        setImageDataUri(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [body, contentEncoding, isImage, isText, mimeType, contentType])
+
+  return { decoded, isImage, imageDataUri, loading }
+}
+
 function BodyViewer({
   body,
   headers,
   size,
-  encoding,
 }: {
   body: string
   headers: Record<string, string>
   size?: number
-  encoding?: "text" | "base64"
 }) {
-  const contentType =
-    headers["content-type"] ?? headers["Content-Type"] ?? ""
+  const contentType = headers["content-type"] ?? headers["Content-Type"] ?? ""
+  const mimeType = contentType.split(";")[0].trim() || "unknown"
+  const { decoded, isImage, imageDataUri, loading } = useDecodedBody(body, headers)
 
-  if (encoding === "base64" && contentType.startsWith("image/")) {
-    const mimeType = contentType.split(";")[0].trim()
+  if (loading) {
+    return (
+      <div className="rounded bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+        Decoding...
+      </div>
+    )
+  }
+
+  if (isImage && imageDataUri) {
     return (
       <div>
         <div className="flex items-center gap-2 mb-1.5">
@@ -198,7 +294,7 @@ function BodyViewer({
         </div>
         <div className="rounded bg-muted/30 p-3 flex items-center justify-center">
           <img
-            src={`data:${mimeType};base64,${body}`}
+            src={imageDataUri}
             alt="Response image"
             className="max-h-80 max-w-full object-contain rounded"
           />
@@ -207,63 +303,61 @@ function BodyViewer({
     )
   }
 
-  if (encoding === "base64") {
-    const mimeType = contentType.split(";")[0].trim() || "binary"
+  if (decoded !== null) {
+    if (
+      contentType.includes("json") ||
+      decoded.trimStart().startsWith("{") ||
+      decoded.trimStart().startsWith("[")
+    ) {
+      try {
+        const parsed = JSON.parse(decoded)
+        return (
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Badge variant="secondary" className="text-[10px]">
+                {formatBytes(size ?? decoded.length)}
+              </Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                JSON
+              </Badge>
+            </div>
+            <pre className="rounded bg-muted/30 p-3 overflow-auto max-h-96 text-xs font-mono whitespace-pre">
+              <JsonRenderer value={parsed} />
+            </pre>
+          </div>
+        )
+      } catch {
+        // Fall through to raw
+      }
+    }
+
     return (
       <div>
         <div className="flex items-center gap-2 mb-1.5">
           <Badge variant="secondary" className="text-[10px]">
-            {formatBytes(size ?? 0)}
-          </Badge>
-          <Badge variant="secondary" className="text-[10px]">
-            {mimeType}
+            {formatBytes(size ?? decoded.length)}
           </Badge>
         </div>
-        <div className="rounded bg-muted/30 p-4 text-center text-sm text-muted-foreground">
-          Binary data ({formatBytes(size ?? 0)})
-        </div>
+        <pre className="rounded bg-muted/30 p-3 overflow-auto max-h-96 text-xs font-mono whitespace-pre-wrap break-all">
+          {decoded}
+        </pre>
       </div>
     )
-  }
-
-  // Try JSON
-  if (
-    contentType.includes("json") ||
-    body.trimStart().startsWith("{") ||
-    body.trimStart().startsWith("[")
-  ) {
-    try {
-      const parsed = JSON.parse(body)
-      return (
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <Badge variant="secondary" className="text-[10px]">
-              {formatBytes(size ?? body.length)}
-            </Badge>
-            <Badge variant="secondary" className="text-[10px]">
-              JSON
-            </Badge>
-          </div>
-          <pre className="rounded bg-muted/30 p-3 overflow-auto max-h-96 text-xs font-mono whitespace-pre">
-            <JsonRenderer value={parsed} />
-          </pre>
-        </div>
-      )
-    } catch {
-      // Fall through to raw
-    }
   }
 
   return (
     <div>
       <div className="flex items-center gap-2 mb-1.5">
         <Badge variant="secondary" className="text-[10px]">
-          {formatBytes(size ?? body.length)}
+          {formatBytes(size ?? 0)}
+        </Badge>
+        <Badge variant="secondary" className="text-[10px]">
+          {mimeType}
         </Badge>
       </div>
-      <pre className="rounded bg-muted/30 p-3 overflow-auto max-h-96 text-xs font-mono whitespace-pre-wrap break-all">
-        {body}
-      </pre>
+      <div className="rounded bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+        Binary data ({formatBytes(size ?? 0)})
+      </div>
     </div>
   )
 }
@@ -342,7 +436,6 @@ function RequestDetail({ message }: { message: HttpMessage | null }) {
               body={message.requestBody}
               headers={message.requestHeaders}
               size={message.requestBodySize}
-              encoding={message.requestBodyEncoding}
             />
           </div>
         )}
@@ -393,7 +486,6 @@ function RequestDetail({ message }: { message: HttpMessage | null }) {
               body={message.responseBody}
               headers={message.responseHeaders}
               size={message.responseBodySize}
-              encoding={message.responseBodyEncoding}
             />
           </div>
         )}

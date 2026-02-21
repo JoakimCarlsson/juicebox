@@ -1,6 +1,6 @@
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-export function base64Encode(data: Uint8Array): string {
+function base64Encode(data: Uint8Array): string {
   let result = "";
   const len = data.length;
   let i = 0;
@@ -17,32 +17,15 @@ export function base64Encode(data: Uint8Array): string {
   return result;
 }
 
-const TEXT_TYPES = /text\/|json|xml|html|javascript|css|csv|svg|yaml|toml|plain|urlencoded/i;
-
-function isTextContentType(contentType: string): boolean {
-  return TEXT_TYPES.test(contentType);
-}
-
-function bodyToString(body: Uint8Array): string {
-  let s = "";
-  for (let i = 0; i < body.length; i++) {
-    s += String.fromCharCode(body[i]);
-  }
-  return s;
-}
-
 export interface EncodedBody {
   body: string | null;
-  encoding: "text" | "base64";
+  encoding: "base64";
 }
 
 export function encodeBody(
   raw: Uint8Array | null,
-  contentType: string,
+  _contentType: string,
 ): EncodedBody {
-  if (!raw || raw.length === 0) return { body: null, encoding: "text" };
-  if (isTextContentType(contentType)) {
-    return { body: bodyToString(raw), encoding: "text" };
-  }
+  if (!raw || raw.length === 0) return { body: null, encoding: "base64" };
   return { body: base64Encode(raw), encoding: "base64" };
 }
