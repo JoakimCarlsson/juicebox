@@ -29,8 +29,6 @@ export const Route = createFileRoute(
   component: NetworkPage,
 })
 
-// --- Utilities ---
-
 function parseUrl(raw: string): { host: string; path: string } {
   try {
     const u = new URL(raw)
@@ -76,8 +74,6 @@ function methodColor(method: string): string {
       return "bg-muted text-muted-foreground"
   }
 }
-
-// --- Sub-components ---
 
 function HeadersTable({ headers }: { headers: Record<string, string> }) {
   const entries = Object.entries(headers)
@@ -327,7 +323,6 @@ function BodyViewer({
           </div>
         )
       } catch {
-        // Fall through to raw
       }
     }
 
@@ -408,7 +403,6 @@ function RequestDetail({ message }: { message: HttpMessage | null }) {
 
   return (
     <div className="h-full overflow-auto">
-      {/* Request Section */}
       <CollapsibleSection title="REQUEST" badge={
         <Badge variant="secondary" className={cn("font-mono text-xs ml-1", methodColor(message.method))}>
           {message.method}
@@ -441,7 +435,6 @@ function RequestDetail({ message }: { message: HttpMessage | null }) {
         )}
       </CollapsibleSection>
 
-      {/* Response Section */}
       <CollapsibleSection
         title="RESPONSE"
         badge={
@@ -594,8 +587,6 @@ function RequestList({
   )
 }
 
-// --- Main Page ---
-
 function NetworkPage() {
   const { sessionId } = useSearch({
     from: "/devices/$deviceId/session/$bundleId/network",
@@ -631,7 +622,6 @@ function NetworkPage() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Toolbar */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-2">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -664,7 +654,6 @@ function NetworkPage() {
         </span>
       </div>
 
-      {/* Master-detail */}
       <div className="flex-1 min-h-0">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 h-full text-muted-foreground">
