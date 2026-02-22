@@ -3,6 +3,7 @@
 import type { AgentModule } from "../types";
 
 declare const Java: {
+  available: boolean;
   perform(fn: () => void): void;
   use(className: string): any;
   registerClass(spec: {
@@ -134,6 +135,10 @@ interface BypassJavaResult {
 
 function bypassJava(): BypassJavaResult {
   if (_javaApplied) return { alreadyApplied: true };
+
+  if (typeof Java === "undefined" || !Java.available) {
+    return { alreadyApplied: false };
+  }
 
   const results: BypassJavaResult = { alreadyApplied: false };
 

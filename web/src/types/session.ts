@@ -36,3 +36,13 @@ export interface LogEntry {
   source: string
   message: string
 }
+
+export interface LogcatEntry {
+  id: string
+  timestamp: string
+  pid: number
+  tid: number
+  level: "V" | "D" | "I" | "W" | "E" | "F"
+  tag: string
+  message: string
+}

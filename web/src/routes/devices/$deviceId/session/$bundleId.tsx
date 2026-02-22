@@ -2,6 +2,7 @@ import {
   createFileRoute,
   Link,
   Outlet,
+  useLocation,
   useNavigate,
   useParams,
   useSearch,
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SessionStatusReporter } from "@/components/layout/SessionStatusReporter"
 import { detachSession } from "@/features/sessions/api"
+import { SessionMessageProvider } from "@/contexts/SessionMessageContext"
 import { ArrowLeft, Unplug, Globe, FileText, Code } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
@@ -25,7 +27,7 @@ export const Route = createFileRoute(
 
 const tabs = [
   { value: "network", label: "Network", icon: Globe, enabled: true },
-  { value: "logs", label: "Logs", icon: FileText, enabled: false },
+  { value: "logs", label: "Logs", icon: FileText, enabled: true },
   { value: "hooks", label: "Hooks", icon: Code, enabled: false },
 ]
 
@@ -37,6 +39,8 @@ function SessionLayout() {
     from: "/devices/$deviceId/session/$bundleId",
   })
   const navigate = useNavigate()
+  const location = useLocation()
+  const activeTab = location.pathname.split("/").pop() || "network"
   const [detaching, setDetaching] = useState(false)
 
   async function handleDetach() {
@@ -52,6 +56,7 @@ function SessionLayout() {
   }
 
   return (
+    <SessionMessageProvider sessionId={sessionId}>
     <div className="flex h-full flex-col">
       <SessionStatusReporter sessionId={sessionId} bundleId={bundleId} />
 
@@ -96,7 +101,7 @@ function SessionLayout() {
       <div className="flex items-center border-b border-border px-2 h-9">
         {tabs.map((tab) => {
           const Icon = tab.icon
-          const isActive = tab.value === "network"
+          const isActive = tab.value === activeTab
           return (
             <Link
               key={tab.value}
@@ -130,5 +135,6 @@ function SessionLayout() {
         <Outlet />
       </div>
     </div>
+    </SessionMessageProvider>
   )
 }

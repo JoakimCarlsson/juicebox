@@ -9,6 +9,7 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/adb"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
+	"github.com/joakimcarlsson/juicebox/internal/logcat"
 	"github.com/joakimcarlsson/juicebox/internal/proxy"
 )
 
@@ -22,6 +23,7 @@ type Session struct {
 	BridgeSession string
 	Proxy         *proxy.Proxy
 	ProxyPort     int
+	Logcat        *logcat.Streamer
 }
 
 type Manager struct {
@@ -119,6 +121,22 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 
 	go m.bridgeSubscribeForward(sess)
 
+	logcatLogger := slog.With("device_id", deviceId, "source", "logcat", "session_id", sess.ID)
+	lc := logcat.NewStreamer(deviceId, sess.PID, func(entry *logcat.Entry) {
+		data, err := devicehub.Marshal("logcat", sess.ID, entry)
+		if err != nil {
+			logcatLogger.Error("marshal logcat entry", "error", err)
+			return
+		}
+		hub.Broadcast(data)
+	}, logcatLogger)
+
+	if err := lc.Start(); err != nil {
+		logger.Warn("logcat start failed (non-fatal)", "error", err)
+	} else {
+		sess.Logcat = lc
+	}
+
 	logger = logger.With("session_id", sess.ID)
 	logger.Info("attached", "bundle", bundleId, "pid", sess.PID)
 
@@ -144,6 +162,10 @@ func (m *Manager) Detach(sessionId string) error {
 
 	if err := m.bridge.Detach(sess.BridgeSession); err != nil {
 		logger.Warn("bridge detach error", "error", err)
+	}
+
+	if sess.Logcat != nil {
+		sess.Logcat.Stop()
 	}
 
 	adb.ClearProxy(sess.DeviceID)
