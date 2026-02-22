@@ -1,4 +1,4 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ChevronDown,
@@ -15,7 +15,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable"
-import { useSessionSocket } from "@/hooks/useSessionSocket"
+import { useSessionMessages } from "@/contexts/SessionMessageContext"
 import type { HttpMessage } from "@/types/session"
 import { cn } from "@/lib/utils"
 
@@ -604,21 +604,22 @@ function RequestList({
 }
 
 function NetworkPage() {
-  const { sessionId } = useSearch({
-    from: "/devices/$deviceId/session/$bundleId/network",
-  })
-  const { messages, clear } = useSessionSocket(sessionId || null)
+  const { messages } = useSessionMessages()
   const [search, setSearch] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [clearIndex, setClearIndex] = useState(0)
+
+  const clear = useCallback(() => setClearIndex(messages.length), [messages.length])
 
   const httpMessages = useMemo(() => {
     return messages
+      .slice(clearIndex)
       .filter(
         (m): m is { type: "http"; payload: HttpMessage } =>
           m.type === "http" && !!m.payload,
       )
       .map((m) => m.payload as unknown as HttpMessage)
-  }, [messages])
+  }, [messages, clearIndex])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return httpMessages

@@ -31,6 +31,8 @@ export function EventLogProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     return subscribe(null, (envelope) => {
+      if (envelope.type === "logcat") return
+
       const entry: EventLogEntry = {
         id: nextId.current++,
         timestamp: Date.now(),

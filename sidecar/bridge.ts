@@ -200,11 +200,11 @@ async function handleAttach(
     } else if (msg.type === "error") {
       const description = (msg as any).description ?? String(msg);
       console.error(`[${sessionId}] agent error:`, description);
-      const errLine = JSON.stringify({ type: "agent-error", payload: { message: description } }) + "\n";
-      const errEncoded = new TextEncoder().encode(errLine);
+      const errLine = JSON.stringify({ type: "log", payload: { level: "error", source: "agent", message: description } }) + "\n";
       if (state.subscribers.size === 0) {
         state.messageBuffer.push(errLine);
       } else {
+        const errEncoded = new TextEncoder().encode(errLine);
         for (const sub of state.subscribers) {
           sub.write(errEncoded).catch(() => {
             state.subscribers.delete(sub);
@@ -237,7 +237,7 @@ async function handleAttach(
   } catch (err) {
     const description = err instanceof Error ? err.message : String(err);
     console.error(`[${sessionId}] ssl bypass failed:`, err);
-    const errLine = JSON.stringify({ type: "agent-error", payload: { message: `ssl bypass failed: ${description}` } }) + "\n";
+    const errLine = JSON.stringify({ type: "log", payload: { level: "error", source: "agent", message: `ssl bypass failed: ${description}` } }) + "\n";
     if (state.subscribers.size === 0) {
       state.messageBuffer.push(errLine);
     } else {

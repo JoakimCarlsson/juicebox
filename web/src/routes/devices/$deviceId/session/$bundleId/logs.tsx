@@ -1,9 +1,9 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Search, Trash2, FileText, ArrowDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { useSessionSocket } from "@/hooks/useSessionSocket"
+import { useSessionMessages } from "@/contexts/SessionMessageContext"
 import type { LogcatEntry } from "@/types/session"
 import { cn } from "@/lib/utils"
 
@@ -32,24 +32,25 @@ const ALL_LEVELS = ["V", "D", "I", "W", "E", "F"] as const
 const MAX_ENTRIES = 10000
 
 function LogsPage() {
-  const { sessionId } = useSearch({
-    from: "/devices/$deviceId/session/$bundleId/logs",
-  })
-  const { messages, clear } = useSessionSocket(sessionId || null)
+  const { messages } = useSessionMessages()
   const [search, setSearch] = useState("")
+  const [clearIndex, setClearIndex] = useState(0)
   const [activeLevels, setActiveLevels] = useState<Set<string>>(
     new Set(["D", "I", "W", "E", "F"]),
   )
 
+  const clear = useCallback(() => setClearIndex(messages.length), [messages.length])
+
   const logcatMessages = useMemo(() => {
     const all = messages
+      .slice(clearIndex)
       .filter(
         (m): m is { type: "logcat"; payload: LogcatEntry } =>
           m.type === "logcat" && !!m.payload,
       )
       .map((m) => m.payload as unknown as LogcatEntry)
     return all.length > MAX_ENTRIES ? all.slice(all.length - MAX_ENTRIES) : all
-  }, [messages])
+  }, [messages, clearIndex])
 
   const filtered = useMemo(() => {
     return logcatMessages.filter((entry) => {

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SessionStatusReporter } from "@/components/layout/SessionStatusReporter"
 import { detachSession } from "@/features/sessions/api"
+import { SessionMessageProvider } from "@/contexts/SessionMessageContext"
 import { ArrowLeft, Unplug, Globe, FileText, Code } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
@@ -55,6 +56,7 @@ function SessionLayout() {
   }
 
   return (
+    <SessionMessageProvider sessionId={sessionId}>
     <div className="flex h-full flex-col">
       <SessionStatusReporter sessionId={sessionId} bundleId={bundleId} />
 
@@ -133,5 +135,6 @@ function SessionLayout() {
         <Outlet />
       </div>
     </div>
+    </SessionMessageProvider>
   )
 }
