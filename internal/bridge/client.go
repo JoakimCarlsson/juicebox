@@ -179,6 +179,29 @@ func (c *Client) Detach(sessionId string) error {
 	return err
 }
 
+func (c *Client) AgentInvoke(sessionId, namespace, method string, args []any) (json.RawMessage, error) {
+	return c.call("agentInvoke", map[string]any{
+		"sessionId": sessionId,
+		"namespace": namespace,
+		"method":    method,
+		"args":      args,
+	})
+}
+
+func (c *Client) AgentInterfaces(sessionId string) (map[string][]string, error) {
+	raw, err := c.call("agentInterfaces", map[string]string{"sessionId": sessionId})
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string][]string
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, fmt.Errorf("bridge.AgentInterfaces: %w", err)
+	}
+
+	return result, nil
+}
+
 type SubscribeConn struct {
 	Reader *bufio.Reader
 	conn   net.Conn
