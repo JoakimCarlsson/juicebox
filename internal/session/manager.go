@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/joakimcarlsson/juicebox/internal/adb"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/logcat"
 	"github.com/joakimcarlsson/juicebox/internal/proxy"
@@ -24,21 +26,26 @@ type Session struct {
 	Proxy         *proxy.Proxy
 	ProxyPort     int
 	Logcat        *logcat.Streamer
+	StartedAt     int64
 }
 
 type Manager struct {
 	certManager *proxy.CertManager
 	bridge      *bridge.Client
 	hubManager  *devicehub.Manager
+	database    *db.DB
+	writer      *db.AsyncWriter
 	mu          sync.RWMutex
 	sessions    map[string]*Session
 }
 
-func NewManager(cm *proxy.CertManager, bridgeClient *bridge.Client, hubManager *devicehub.Manager) *Manager {
+func NewManager(cm *proxy.CertManager, bridgeClient *bridge.Client, hubManager *devicehub.Manager, database *db.DB, writer *db.AsyncWriter) *Manager {
 	return &Manager{
 		certManager: cm,
 		bridge:      bridgeClient,
 		hubManager:  hubManager,
+		database:    database,
+		writer:      writer,
 		sessions:    make(map[string]*Session),
 	}
 }
@@ -70,6 +77,12 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 			return
 		}
 		hub.Broadcast(data)
+
+		if msg.Type == "http" {
+			if httpMsg, ok := msg.Payload.(proxy.HttpMessage); ok {
+				m.writer.WriteHttpMessage(httpMessageToRow(sess.ID, &httpMsg))
+			}
+		}
 	}, proxyLogger)
 
 	port, err := p.Start()
@@ -114,6 +127,17 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 	sess.ID = bridgeResp.SessionID
 	sess.PID = bridgeResp.PID
 	sess.BridgeSession = bridgeResp.SessionID
+	sess.StartedAt = time.Now().UnixMilli()
+
+	if err := m.database.InsertSession(&db.SessionRow{
+		ID:        sess.ID,
+		DeviceID:  sess.DeviceID,
+		BundleID:  sess.BundleID,
+		PID:       sess.PID,
+		StartedAt: sess.StartedAt,
+	}); err != nil {
+		logger.Error("failed to persist session", "error", err)
+	}
 
 	m.mu.Lock()
 	m.sessions[sess.ID] = sess
@@ -129,6 +153,17 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 			return
 		}
 		hub.Broadcast(data)
+
+		m.writer.WriteLogcatEntry(&db.LogcatEntryRow{
+			ID:        entry.ID,
+			SessionID: sess.ID,
+			Timestamp: entry.Timestamp,
+			PID:       entry.PID,
+			TID:       entry.TID,
+			Level:     string(entry.Level),
+			Tag:       entry.Tag,
+			Message:   entry.Message,
+		})
 	}, logcatLogger)
 
 	if err := lc.Start(); err != nil {
@@ -155,10 +190,17 @@ func (m *Manager) Detach(sessionId string) error {
 	m.mu.Unlock()
 
 	if !ok {
+		if err := m.database.EndSession(sessionId, time.Now().UnixMilli()); err != nil {
+			slog.Error("failed to end session in db", "error", err, "session_id", sessionId)
+		}
 		return m.bridge.Detach(sessionId)
 	}
 
 	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sessionId)
+
+	if err := m.database.EndSession(sessionId, time.Now().UnixMilli()); err != nil {
+		logger.Error("failed to end session in db", "error", err)
+	}
 
 	if err := m.bridge.Detach(sess.BridgeSession); err != nil {
 		logger.Warn("bridge detach error", "error", err)
@@ -220,5 +262,28 @@ func (m *Manager) bridgeSubscribeForward(sess *Session) {
 			continue
 		}
 		hub.Broadcast(data)
+	}
+}
+
+func httpMessageToRow(sessionID string, msg *proxy.HttpMessage) *db.HttpMessageRow {
+	reqHeaders, _ := json.Marshal(msg.RequestHeaders)
+	respHeaders, _ := json.Marshal(msg.ResponseHeaders)
+
+	return &db.HttpMessageRow{
+		ID:                   msg.ID,
+		SessionID:            sessionID,
+		Method:               msg.Method,
+		URL:                  msg.URL,
+		RequestHeaders:       string(reqHeaders),
+		RequestBody:          msg.RequestBody,
+		RequestBodyEncoding:  msg.RequestBodyEncoding,
+		RequestBodySize:      msg.RequestBodySize,
+		StatusCode:           msg.StatusCode,
+		ResponseHeaders:      string(respHeaders),
+		ResponseBody:         msg.ResponseBody,
+		ResponseBodyEncoding: msg.ResponseBodyEncoding,
+		ResponseBodySize:     msg.ResponseBodySize,
+		Duration:             msg.Duration,
+		Timestamp:            msg.Timestamp,
 	}
 }

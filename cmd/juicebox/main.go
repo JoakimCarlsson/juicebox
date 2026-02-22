@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/db"
@@ -22,6 +23,19 @@ func main() {
 	}
 	defer database.Close()
 
+	if err := database.Migrate(); err != nil {
+		log.Fatal("migration failed: ", err)
+	}
+
+	if n, err := database.CloseOrphanedSessions(time.Now().UnixMilli()); err != nil {
+		slog.Warn("failed to close orphaned sessions", "error", err)
+	} else if n > 0 {
+		slog.Info("closed orphaned sessions", "count", n)
+	}
+
+	writer := db.NewAsyncWriter(database, 4096)
+	defer writer.Close()
+
 	socketPath := os.Getenv("JUICEBOX_SOCKET")
 	if socketPath == "" {
 		socketPath = "/tmp/juicebox.sock"
@@ -38,7 +52,7 @@ func main() {
 
 	slog.Info("CA certificate ready", "path", certManager.CAPEMPath())
 
-	manager := session.NewManager(certManager, bridgeClient, hubManager)
+	manager := session.NewManager(certManager, bridgeClient, hubManager, database, writer)
 
 	srv := apphttp.NewServer(database, bridgeClient, manager, hubManager)
 
