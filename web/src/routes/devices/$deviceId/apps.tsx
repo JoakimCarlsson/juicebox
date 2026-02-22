@@ -46,11 +46,6 @@ function AppsPage() {
                 Processes
               </Link>
             </TabsTrigger>
-            <TabsTrigger value="sessions" asChild>
-              <Link to="/devices/$deviceId/sessions" params={{ deviceId }}>
-                Sessions
-              </Link>
-            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
