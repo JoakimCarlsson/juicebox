@@ -37,6 +37,19 @@ export async function fetchSessions(
   return res.json()
 }
 
+export async function fetchSessionsForApp(
+  deviceId: string,
+  bundleId: string,
+  limit = 50,
+  offset = 0,
+): Promise<SessionsResponse> {
+  const res = await fetch(
+    `/api/v1/devices/${deviceId}/sessions?bundleId=${encodeURIComponent(bundleId)}&limit=${limit}&offset=${offset}`,
+  )
+  if (!res.ok) throw new Error("Failed to fetch sessions")
+  return res.json()
+}
+
 export async function fetchSessionMessages(
   sessionId: string,
   limit = 500,

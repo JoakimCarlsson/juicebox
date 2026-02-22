@@ -24,14 +24,27 @@ func (h *Handler) Handle(c *router.Context) {
 
 	limit := c.QueryIntDefault("limit", 50)
 	offset := c.QueryIntDefault("offset", 0)
+	bundleId := c.QueryDefault("bundleId", "")
 
-	sessions, err := h.db.ListSessions(deviceId, limit, offset)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
+	var sessions []db.SessionRow
+	var total int
+	var err error
+
+	if bundleId != "" {
+		sessions, err = h.db.ListSessionsByBundle(deviceId, bundleId, limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		total, err = h.db.CountSessionsByBundle(deviceId, bundleId)
+	} else {
+		sessions, err = h.db.ListSessions(deviceId, limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		total, err = h.db.CountSessions(deviceId)
 	}
-
-	total, err := h.db.CountSessions(deviceId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

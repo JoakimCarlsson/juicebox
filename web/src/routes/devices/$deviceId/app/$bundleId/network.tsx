@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useSearch } from "@tanstack/react-router"
 import { useCallback, useMemo, useState } from "react"
 import { Search, Trash2, Wifi } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -12,17 +12,22 @@ import { useSessionMessages } from "@/contexts/SessionMessageContext"
 import type { HttpMessage } from "@/types/session"
 import { RequestList } from "@/components/network/RequestList"
 import { RequestDetail } from "@/components/network/RequestDetail"
+import { NoSessionEmptyState } from "@/components/sessions/NoSessionEmptyState"
 
 export const Route = createFileRoute(
-  "/devices/$deviceId/session/$bundleId/network",
+  "/devices/$deviceId/app/$bundleId/network",
 )({
   validateSearch: (search: Record<string, unknown>) => ({
     sessionId: (search.sessionId as string) ?? "",
+    historicalSessionId: (search.historicalSessionId as string) ?? "",
   }),
   component: NetworkPage,
 })
 
 function NetworkPage() {
+  const { sessionId } = useSearch({
+    from: "/devices/$deviceId/app/$bundleId/network",
+  })
   const { messages } = useSessionMessages()
   const [search, setSearch] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -55,6 +60,10 @@ function NetworkPage() {
     if (!selectedId) return null
     return filtered.find((m) => m.id === selectedId) ?? null
   }, [filtered, selectedId])
+
+  if (!sessionId) {
+    return <NoSessionEmptyState />
+  }
 
   return (
     <div className="flex h-full flex-col">

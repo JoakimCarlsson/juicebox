@@ -2,7 +2,6 @@ import { useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { Badge } from "@/components/ui/badge"
 import type { App } from "@/types/device"
-import { attachApp } from "@/features/sessions/api"
 import { cn } from "@/lib/utils"
 
 const colors = [
@@ -27,26 +26,17 @@ interface AppCardProps {
 
 export function AppCard({ app, deviceId }: AppCardProps) {
   const [imgError, setImgError] = useState(false)
-  const [attaching, setAttaching] = useState(false)
   const navigate = useNavigate()
   const initial = app.name.charAt(0).toUpperCase()
   const isRunning = app.pid > 0
   const iconUrl = `/api/v1/devices/${deviceId}/icon/${app.identifier}`
 
-  async function handleClick() {
-    if (attaching) return
-    setAttaching(true)
-    try {
-      const { sessionId } = await attachApp(deviceId, app.identifier)
-      navigate({
-        to: "/devices/$deviceId/session/$bundleId",
-        params: { deviceId, bundleId: app.identifier },
-        search: { sessionId },
-      })
-    } catch (err) {
-      console.error("Failed to attach:", err)
-      setAttaching(false)
-    }
+  function handleClick() {
+    navigate({
+      to: "/devices/$deviceId/app/$bundleId",
+      params: { deviceId, bundleId: app.identifier },
+      search: { sessionId: "", historicalSessionId: "" },
+    })
   }
 
   return (
@@ -55,7 +45,6 @@ export function AppCard({ app, deviceId }: AppCardProps) {
       className={cn(
         "group flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-border bg-card p-4",
         "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
-        attaching && "opacity-50 pointer-events-none",
       )}
     >
       {imgError ? (

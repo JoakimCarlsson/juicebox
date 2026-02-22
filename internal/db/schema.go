@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     ended_at   INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_device ON sessions(device_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sessions_device_bundle ON sessions(device_id, bundle_id, started_at DESC);
 
 CREATE TABLE IF NOT EXISTS http_messages (
     id                     TEXT PRIMARY KEY,

@@ -14,11 +14,13 @@ const SessionMessageContext = createContext<SessionMessageContextValue | null>(
 
 interface SessionMessageProviderProps {
   sessionId: string
+  historicalSessionId?: string
   children: React.ReactNode
 }
 
 export function SessionMessageProvider({
   sessionId,
+  historicalSessionId,
   children,
 }: SessionMessageProviderProps) {
   const { subscribe, connected } = useDeviceSocket()
@@ -27,10 +29,18 @@ export function SessionMessageProvider({
   const seenIds = useRef(new Set<string>())
 
   useEffect(() => {
-    if (connected && !prevConnected.current && sessionId) {
+    if (!sessionId) {
+      setMessages([])
+      seenIds.current = new Set()
+    }
+  }, [sessionId])
+
+  useEffect(() => {
+    const sourceId = historicalSessionId || sessionId
+    if (connected && !prevConnected.current && sourceId) {
       Promise.all([
-        fetchSessionMessages(sessionId).catch(() => null),
-        fetchSessionLogs(sessionId).catch(() => null),
+        fetchSessionMessages(sourceId).catch(() => null),
+        fetchSessionLogs(sourceId).catch(() => null),
       ]).then(([msgResp, logResp]) => {
         const historical: AgentMessage[] = []
 
@@ -72,7 +82,7 @@ export function SessionMessageProvider({
       })
     }
     prevConnected.current = connected
-  }, [connected, sessionId])
+  }, [connected, sessionId, historicalSessionId])
 
   useEffect(() => {
     if (!sessionId) return

@@ -15,10 +15,11 @@ import { Route as DevicesDeviceIdIndexRouteImport } from './routes/devices/$devi
 import { Route as DevicesDeviceIdSessionsRouteImport } from './routes/devices/$deviceId/sessions'
 import { Route as DevicesDeviceIdProcessesRouteImport } from './routes/devices/$deviceId/processes'
 import { Route as DevicesDeviceIdAppsRouteImport } from './routes/devices/$deviceId/apps'
-import { Route as DevicesDeviceIdSessionBundleIdRouteImport } from './routes/devices/$deviceId/session/$bundleId'
-import { Route as DevicesDeviceIdSessionBundleIdIndexRouteImport } from './routes/devices/$deviceId/session/$bundleId/index'
-import { Route as DevicesDeviceIdSessionBundleIdNetworkRouteImport } from './routes/devices/$deviceId/session/$bundleId/network'
-import { Route as DevicesDeviceIdSessionBundleIdLogsRouteImport } from './routes/devices/$deviceId/session/$bundleId/logs'
+import { Route as DevicesDeviceIdAppBundleIdRouteImport } from './routes/devices/$deviceId/app/$bundleId'
+import { Route as DevicesDeviceIdAppBundleIdIndexRouteImport } from './routes/devices/$deviceId/app/$bundleId/index'
+import { Route as DevicesDeviceIdAppBundleIdNetworkRouteImport } from './routes/devices/$deviceId/app/$bundleId/network'
+import { Route as DevicesDeviceIdAppBundleIdLogsRouteImport } from './routes/devices/$deviceId/app/$bundleId/logs'
+import { Route as DevicesDeviceIdAppBundleIdHomeRouteImport } from './routes/devices/$deviceId/app/$bundleId/home'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -51,29 +52,35 @@ const DevicesDeviceIdAppsRoute = DevicesDeviceIdAppsRouteImport.update({
   path: '/apps',
   getParentRoute: () => DevicesDeviceIdRoute,
 } as any)
-const DevicesDeviceIdSessionBundleIdRoute =
-  DevicesDeviceIdSessionBundleIdRouteImport.update({
-    id: '/session/$bundleId',
-    path: '/session/$bundleId',
+const DevicesDeviceIdAppBundleIdRoute =
+  DevicesDeviceIdAppBundleIdRouteImport.update({
+    id: '/app/$bundleId',
+    path: '/app/$bundleId',
     getParentRoute: () => DevicesDeviceIdRoute,
   } as any)
-const DevicesDeviceIdSessionBundleIdIndexRoute =
-  DevicesDeviceIdSessionBundleIdIndexRouteImport.update({
+const DevicesDeviceIdAppBundleIdIndexRoute =
+  DevicesDeviceIdAppBundleIdIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => DevicesDeviceIdSessionBundleIdRoute,
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
   } as any)
-const DevicesDeviceIdSessionBundleIdNetworkRoute =
-  DevicesDeviceIdSessionBundleIdNetworkRouteImport.update({
+const DevicesDeviceIdAppBundleIdNetworkRoute =
+  DevicesDeviceIdAppBundleIdNetworkRouteImport.update({
     id: '/network',
     path: '/network',
-    getParentRoute: () => DevicesDeviceIdSessionBundleIdRoute,
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
   } as any)
-const DevicesDeviceIdSessionBundleIdLogsRoute =
-  DevicesDeviceIdSessionBundleIdLogsRouteImport.update({
+const DevicesDeviceIdAppBundleIdLogsRoute =
+  DevicesDeviceIdAppBundleIdLogsRouteImport.update({
     id: '/logs',
     path: '/logs',
-    getParentRoute: () => DevicesDeviceIdSessionBundleIdRoute,
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdHomeRoute =
+  DevicesDeviceIdAppBundleIdHomeRouteImport.update({
+    id: '/home',
+    path: '/home',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -83,10 +90,11 @@ export interface FileRoutesByFullPath {
   '/devices/$deviceId/processes': typeof DevicesDeviceIdProcessesRoute
   '/devices/$deviceId/sessions': typeof DevicesDeviceIdSessionsRoute
   '/devices/$deviceId/': typeof DevicesDeviceIdIndexRoute
-  '/devices/$deviceId/session/$bundleId': typeof DevicesDeviceIdSessionBundleIdRouteWithChildren
-  '/devices/$deviceId/session/$bundleId/logs': typeof DevicesDeviceIdSessionBundleIdLogsRoute
-  '/devices/$deviceId/session/$bundleId/network': typeof DevicesDeviceIdSessionBundleIdNetworkRoute
-  '/devices/$deviceId/session/$bundleId/': typeof DevicesDeviceIdSessionBundleIdIndexRoute
+  '/devices/$deviceId/app/$bundleId': typeof DevicesDeviceIdAppBundleIdRouteWithChildren
+  '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
+  '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
+  '/devices/$deviceId/app/$bundleId/network': typeof DevicesDeviceIdAppBundleIdNetworkRoute
+  '/devices/$deviceId/app/$bundleId/': typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,9 +102,10 @@ export interface FileRoutesByTo {
   '/devices/$deviceId/processes': typeof DevicesDeviceIdProcessesRoute
   '/devices/$deviceId/sessions': typeof DevicesDeviceIdSessionsRoute
   '/devices/$deviceId': typeof DevicesDeviceIdIndexRoute
-  '/devices/$deviceId/session/$bundleId/logs': typeof DevicesDeviceIdSessionBundleIdLogsRoute
-  '/devices/$deviceId/session/$bundleId/network': typeof DevicesDeviceIdSessionBundleIdNetworkRoute
-  '/devices/$deviceId/session/$bundleId': typeof DevicesDeviceIdSessionBundleIdIndexRoute
+  '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
+  '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
+  '/devices/$deviceId/app/$bundleId/network': typeof DevicesDeviceIdAppBundleIdNetworkRoute
+  '/devices/$deviceId/app/$bundleId': typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -106,10 +115,11 @@ export interface FileRoutesById {
   '/devices/$deviceId/processes': typeof DevicesDeviceIdProcessesRoute
   '/devices/$deviceId/sessions': typeof DevicesDeviceIdSessionsRoute
   '/devices/$deviceId/': typeof DevicesDeviceIdIndexRoute
-  '/devices/$deviceId/session/$bundleId': typeof DevicesDeviceIdSessionBundleIdRouteWithChildren
-  '/devices/$deviceId/session/$bundleId/logs': typeof DevicesDeviceIdSessionBundleIdLogsRoute
-  '/devices/$deviceId/session/$bundleId/network': typeof DevicesDeviceIdSessionBundleIdNetworkRoute
-  '/devices/$deviceId/session/$bundleId/': typeof DevicesDeviceIdSessionBundleIdIndexRoute
+  '/devices/$deviceId/app/$bundleId': typeof DevicesDeviceIdAppBundleIdRouteWithChildren
+  '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
+  '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
+  '/devices/$deviceId/app/$bundleId/network': typeof DevicesDeviceIdAppBundleIdNetworkRoute
+  '/devices/$deviceId/app/$bundleId/': typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -120,10 +130,11 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/processes'
     | '/devices/$deviceId/sessions'
     | '/devices/$deviceId/'
-    | '/devices/$deviceId/session/$bundleId'
-    | '/devices/$deviceId/session/$bundleId/logs'
-    | '/devices/$deviceId/session/$bundleId/network'
-    | '/devices/$deviceId/session/$bundleId/'
+    | '/devices/$deviceId/app/$bundleId'
+    | '/devices/$deviceId/app/$bundleId/home'
+    | '/devices/$deviceId/app/$bundleId/logs'
+    | '/devices/$deviceId/app/$bundleId/network'
+    | '/devices/$deviceId/app/$bundleId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -131,9 +142,10 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/processes'
     | '/devices/$deviceId/sessions'
     | '/devices/$deviceId'
-    | '/devices/$deviceId/session/$bundleId/logs'
-    | '/devices/$deviceId/session/$bundleId/network'
-    | '/devices/$deviceId/session/$bundleId'
+    | '/devices/$deviceId/app/$bundleId/home'
+    | '/devices/$deviceId/app/$bundleId/logs'
+    | '/devices/$deviceId/app/$bundleId/network'
+    | '/devices/$deviceId/app/$bundleId'
   id:
     | '__root__'
     | '/'
@@ -142,10 +154,11 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/processes'
     | '/devices/$deviceId/sessions'
     | '/devices/$deviceId/'
-    | '/devices/$deviceId/session/$bundleId'
-    | '/devices/$deviceId/session/$bundleId/logs'
-    | '/devices/$deviceId/session/$bundleId/network'
-    | '/devices/$deviceId/session/$bundleId/'
+    | '/devices/$deviceId/app/$bundleId'
+    | '/devices/$deviceId/app/$bundleId/home'
+    | '/devices/$deviceId/app/$bundleId/logs'
+    | '/devices/$deviceId/app/$bundleId/network'
+    | '/devices/$deviceId/app/$bundleId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,56 +210,63 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevicesDeviceIdAppsRouteImport
       parentRoute: typeof DevicesDeviceIdRoute
     }
-    '/devices/$deviceId/session/$bundleId': {
-      id: '/devices/$deviceId/session/$bundleId'
-      path: '/session/$bundleId'
-      fullPath: '/devices/$deviceId/session/$bundleId'
-      preLoaderRoute: typeof DevicesDeviceIdSessionBundleIdRouteImport
+    '/devices/$deviceId/app/$bundleId': {
+      id: '/devices/$deviceId/app/$bundleId'
+      path: '/app/$bundleId'
+      fullPath: '/devices/$deviceId/app/$bundleId'
+      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdRouteImport
       parentRoute: typeof DevicesDeviceIdRoute
     }
-    '/devices/$deviceId/session/$bundleId/': {
-      id: '/devices/$deviceId/session/$bundleId/'
+    '/devices/$deviceId/app/$bundleId/': {
+      id: '/devices/$deviceId/app/$bundleId/'
       path: '/'
-      fullPath: '/devices/$deviceId/session/$bundleId/'
-      preLoaderRoute: typeof DevicesDeviceIdSessionBundleIdIndexRouteImport
-      parentRoute: typeof DevicesDeviceIdSessionBundleIdRoute
+      fullPath: '/devices/$deviceId/app/$bundleId/'
+      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdIndexRouteImport
+      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
     }
-    '/devices/$deviceId/session/$bundleId/network': {
-      id: '/devices/$deviceId/session/$bundleId/network'
+    '/devices/$deviceId/app/$bundleId/network': {
+      id: '/devices/$deviceId/app/$bundleId/network'
       path: '/network'
-      fullPath: '/devices/$deviceId/session/$bundleId/network'
-      preLoaderRoute: typeof DevicesDeviceIdSessionBundleIdNetworkRouteImport
-      parentRoute: typeof DevicesDeviceIdSessionBundleIdRoute
+      fullPath: '/devices/$deviceId/app/$bundleId/network'
+      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdNetworkRouteImport
+      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
     }
-    '/devices/$deviceId/session/$bundleId/logs': {
-      id: '/devices/$deviceId/session/$bundleId/logs'
+    '/devices/$deviceId/app/$bundleId/logs': {
+      id: '/devices/$deviceId/app/$bundleId/logs'
       path: '/logs'
-      fullPath: '/devices/$deviceId/session/$bundleId/logs'
-      preLoaderRoute: typeof DevicesDeviceIdSessionBundleIdLogsRouteImport
-      parentRoute: typeof DevicesDeviceIdSessionBundleIdRoute
+      fullPath: '/devices/$deviceId/app/$bundleId/logs'
+      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdLogsRouteImport
+      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
+    }
+    '/devices/$deviceId/app/$bundleId/home': {
+      id: '/devices/$deviceId/app/$bundleId/home'
+      path: '/home'
+      fullPath: '/devices/$deviceId/app/$bundleId/home'
+      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdHomeRouteImport
+      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
     }
   }
 }
 
-interface DevicesDeviceIdSessionBundleIdRouteChildren {
-  DevicesDeviceIdSessionBundleIdLogsRoute: typeof DevicesDeviceIdSessionBundleIdLogsRoute
-  DevicesDeviceIdSessionBundleIdNetworkRoute: typeof DevicesDeviceIdSessionBundleIdNetworkRoute
-  DevicesDeviceIdSessionBundleIdIndexRoute: typeof DevicesDeviceIdSessionBundleIdIndexRoute
+interface DevicesDeviceIdAppBundleIdRouteChildren {
+  DevicesDeviceIdAppBundleIdHomeRoute: typeof DevicesDeviceIdAppBundleIdHomeRoute
+  DevicesDeviceIdAppBundleIdLogsRoute: typeof DevicesDeviceIdAppBundleIdLogsRoute
+  DevicesDeviceIdAppBundleIdNetworkRoute: typeof DevicesDeviceIdAppBundleIdNetworkRoute
+  DevicesDeviceIdAppBundleIdIndexRoute: typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
 
-const DevicesDeviceIdSessionBundleIdRouteChildren: DevicesDeviceIdSessionBundleIdRouteChildren =
+const DevicesDeviceIdAppBundleIdRouteChildren: DevicesDeviceIdAppBundleIdRouteChildren =
   {
-    DevicesDeviceIdSessionBundleIdLogsRoute:
-      DevicesDeviceIdSessionBundleIdLogsRoute,
-    DevicesDeviceIdSessionBundleIdNetworkRoute:
-      DevicesDeviceIdSessionBundleIdNetworkRoute,
-    DevicesDeviceIdSessionBundleIdIndexRoute:
-      DevicesDeviceIdSessionBundleIdIndexRoute,
+    DevicesDeviceIdAppBundleIdHomeRoute: DevicesDeviceIdAppBundleIdHomeRoute,
+    DevicesDeviceIdAppBundleIdLogsRoute: DevicesDeviceIdAppBundleIdLogsRoute,
+    DevicesDeviceIdAppBundleIdNetworkRoute:
+      DevicesDeviceIdAppBundleIdNetworkRoute,
+    DevicesDeviceIdAppBundleIdIndexRoute: DevicesDeviceIdAppBundleIdIndexRoute,
   }
 
-const DevicesDeviceIdSessionBundleIdRouteWithChildren =
-  DevicesDeviceIdSessionBundleIdRoute._addFileChildren(
-    DevicesDeviceIdSessionBundleIdRouteChildren,
+const DevicesDeviceIdAppBundleIdRouteWithChildren =
+  DevicesDeviceIdAppBundleIdRoute._addFileChildren(
+    DevicesDeviceIdAppBundleIdRouteChildren,
   )
 
 interface DevicesDeviceIdRouteChildren {
@@ -254,7 +274,7 @@ interface DevicesDeviceIdRouteChildren {
   DevicesDeviceIdProcessesRoute: typeof DevicesDeviceIdProcessesRoute
   DevicesDeviceIdSessionsRoute: typeof DevicesDeviceIdSessionsRoute
   DevicesDeviceIdIndexRoute: typeof DevicesDeviceIdIndexRoute
-  DevicesDeviceIdSessionBundleIdRoute: typeof DevicesDeviceIdSessionBundleIdRouteWithChildren
+  DevicesDeviceIdAppBundleIdRoute: typeof DevicesDeviceIdAppBundleIdRouteWithChildren
 }
 
 const DevicesDeviceIdRouteChildren: DevicesDeviceIdRouteChildren = {
@@ -262,8 +282,7 @@ const DevicesDeviceIdRouteChildren: DevicesDeviceIdRouteChildren = {
   DevicesDeviceIdProcessesRoute: DevicesDeviceIdProcessesRoute,
   DevicesDeviceIdSessionsRoute: DevicesDeviceIdSessionsRoute,
   DevicesDeviceIdIndexRoute: DevicesDeviceIdIndexRoute,
-  DevicesDeviceIdSessionBundleIdRoute:
-    DevicesDeviceIdSessionBundleIdRouteWithChildren,
+  DevicesDeviceIdAppBundleIdRoute: DevicesDeviceIdAppBundleIdRouteWithChildren,
 }
 
 const DevicesDeviceIdRouteWithChildren = DevicesDeviceIdRoute._addFileChildren(

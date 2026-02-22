@@ -223,6 +223,32 @@ func (d *DB) CountLogcatEntries(sessionID string) (int, error) {
 	return count, nil
 }
 
+func (d *DB) ListSessionsByBundle(deviceID, bundleID string, limit, offset int) ([]SessionRow, error) {
+	rows, err := d.Conn.Query(
+		`SELECT id, device_id, bundle_id, pid, started_at, ended_at
+		 FROM sessions WHERE device_id = ? AND bundle_id = ?
+		 ORDER BY started_at DESC LIMIT ? OFFSET ?`,
+		deviceID, bundleID, limit, offset,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("db.ListSessionsByBundle: %w", err)
+	}
+	defer rows.Close()
+	return scanSessions(rows)
+}
+
+func (d *DB) CountSessionsByBundle(deviceID, bundleID string) (int, error) {
+	var count int
+	err := d.Conn.QueryRow(
+		`SELECT COUNT(*) FROM sessions WHERE device_id = ? AND bundle_id = ?`,
+		deviceID, bundleID,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("db.CountSessionsByBundle: %w", err)
+	}
+	return count, nil
+}
+
 func (d *DB) CloseOrphanedSessions(endedAt int64) (int64, error) {
 	res, err := d.Conn.Exec(`UPDATE sessions SET ended_at = ? WHERE ended_at IS NULL`, endedAt)
 	if err != nil {
