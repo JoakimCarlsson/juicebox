@@ -57,7 +57,7 @@ export function Sidebar() {
   const { data: devices, isLoading, isRefetching } = useQuery(devicesQueryOptions())
 
   return (
-    <div className="flex h-screen w-60 flex-col border-r border-border bg-sidebar">
+    <div className="flex h-full w-48 flex-col border-r border-border bg-sidebar shrink-0">
       <div className="flex items-center gap-2 px-4 py-4">
         <span className="text-lg font-bold tracking-tight text-sidebar-foreground">
           Juicebox

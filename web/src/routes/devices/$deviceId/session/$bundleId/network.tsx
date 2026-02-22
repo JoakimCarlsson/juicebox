@@ -6,7 +6,6 @@ import {
   Search,
   Trash2,
   Wifi,
-  WifiOff,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -608,7 +607,7 @@ function NetworkPage() {
   const { sessionId } = useSearch({
     from: "/devices/$deviceId/session/$bundleId/network",
   })
-  const { messages, connected, clear } = useSessionSocket(sessionId || null)
+  const { messages, clear } = useSessionSocket(sessionId || null)
   const [search, setSearch] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -653,19 +652,6 @@ function NetworkPage() {
           <Trash2 className="mr-1.5 h-3 w-3" />
           Clear
         </Button>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {connected ? (
-            <>
-              <Wifi className="h-3 w-3 text-green-500" />
-              <span>Connected</span>
-            </>
-          ) : (
-            <>
-              <WifiOff className="h-3 w-3 text-red-500" />
-              <span>Disconnected</span>
-            </>
-          )}
-        </div>
         <span className="text-xs text-muted-foreground ml-auto">
           {filtered.length} request{filtered.length !== 1 ? "s" : ""}
         </span>
