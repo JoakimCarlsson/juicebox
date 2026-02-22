@@ -257,7 +257,6 @@ func decompressBody(data []byte, encoding string) []byte {
 	}
 
 	enc := strings.ToLower(strings.TrimSpace(encoding))
-	log.Printf("[proxy] decompressBody: encoding=%q len=%d", enc, len(data))
 
 	switch enc {
 	case "gzip":
@@ -291,7 +290,6 @@ func decompressBody(data []byte, encoding string) []byte {
 		}
 		return out
 	default:
-		log.Printf("[proxy] unknown/empty encoding, not decompressing")
 		return data
 	}
 }
