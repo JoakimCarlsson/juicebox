@@ -3,13 +3,12 @@ package http
 import (
 	"io/fs"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 	webAssets "github.com/joakimcarlsson/juicebox/web"
 )
 
@@ -17,18 +16,20 @@ type Server struct {
 	router       *router.Router
 	db           *db.DB
 	bridgeClient *bridge.Client
+	manager      *session.Manager
 }
 
-func NewServer(db *db.DB, bridgeClient *bridge.Client) *Server {
+func NewServer(db *db.DB, bridgeClient *bridge.Client, manager *session.Manager) *Server {
 	r := router.New()
 
 	s := &Server{
 		router:       r,
 		db:           db,
 		bridgeClient: bridgeClient,
+		manager:      manager,
 	}
 
-	RegisterRoutes(r, db, bridgeClient)
+	RegisterRoutes(r, db, bridgeClient, manager)
 	s.serveSPA(r)
 
 	return s
@@ -65,25 +66,5 @@ func (s *Server) serveSPA(r *router.Router) {
 
 		c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 		c.Writer.Write(index)
-	})
-}
-
-func serveSPAFromDisk(r *router.Router, dir string) {
-	r.GET("/{filepath...}", func(c *router.Context) {
-		fp := c.Param("filepath")
-		fullPath := filepath.Join(dir, fp)
-
-		if !strings.HasPrefix(filepath.Clean(fullPath), filepath.Clean(dir)) {
-			c.JSON(http.StatusForbidden, map[string]string{"error": "access denied"})
-			return
-		}
-
-		info, err := os.Stat(fullPath)
-		if err != nil || info.IsDir() {
-			c.File(filepath.Join(dir, "index.html"))
-			return
-		}
-
-		c.File(fullPath)
 	})
 }

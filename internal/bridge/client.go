@@ -1,11 +1,14 @@
 package bridge
 
 import (
+	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"sync/atomic"
+	"time"
 )
 
 type Client struct {
@@ -155,4 +158,87 @@ func (c *Client) GetAppIcon(deviceId string, identifier string) ([]byte, string,
 	}
 
 	return data, icon.Format, nil
+}
+
+func (c *Client) Attach(deviceId string, identifier string) (*AttachResponse, error) {
+	raw, err := c.call("attach", map[string]string{"deviceId": deviceId, "identifier": identifier})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp AttachResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.Attach: %w", err)
+	}
+
+	return &resp, nil
+}
+
+func (c *Client) Detach(sessionId string) error {
+	_, err := c.call("detach", map[string]string{"sessionId": sessionId})
+	return err
+}
+
+type SubscribeConn struct {
+	Reader *bufio.Reader
+	conn   net.Conn
+}
+
+func (s *SubscribeConn) Close() error {
+	return s.conn.Close()
+}
+
+func (s *SubscribeConn) Read(p []byte) (int, error) {
+	return s.Reader.Read(p)
+}
+
+var _ io.ReadCloser = (*SubscribeConn)(nil)
+
+func (c *Client) Subscribe(sessionId string) (*SubscribeConn, error) {
+	var conn net.Conn
+	var err error
+	for range 5 {
+		conn, err = net.Dial("unix", c.socketPath)
+		if err == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
+	}
+
+	req := rpcRequest{
+		JSONRPC: "2.0",
+		ID:      c.nextID.Add(1),
+		Method:  "subscribe",
+		Params:  map[string]string{"sessionId": sessionId},
+	}
+
+	if err := json.NewEncoder(conn).Encode(req); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
+	}
+
+	// Use a bufio.Reader so we don't lose data buffered beyond the ack line
+	reader := bufio.NewReaderSize(conn, 1024*1024)
+
+	line, err := reader.ReadBytes('\n')
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
+	}
+
+	var resp rpcResponse
+	if err := json.Unmarshal(line, &resp); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("bridge.Subscribe: %w", err)
+	}
+
+	if resp.Error != nil {
+		conn.Close()
+		return nil, fmt.Errorf("bridge.Subscribe: %s", resp.Error.Message)
+	}
+
+	return &SubscribeConn{Reader: reader, conn: conn}, nil
 }
