@@ -8,6 +8,7 @@ import (
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 	webAssets "github.com/joakimcarlsson/juicebox/web"
 )
@@ -17,9 +18,10 @@ type Server struct {
 	db           *db.DB
 	bridgeClient *bridge.Client
 	manager      *session.Manager
+	hubManager   *devicehub.Manager
 }
 
-func NewServer(db *db.DB, bridgeClient *bridge.Client, manager *session.Manager) *Server {
+func NewServer(db *db.DB, bridgeClient *bridge.Client, manager *session.Manager, hubManager *devicehub.Manager) *Server {
 	r := router.New()
 
 	s := &Server{
@@ -27,9 +29,10 @@ func NewServer(db *db.DB, bridgeClient *bridge.Client, manager *session.Manager)
 		db:           db,
 		bridgeClient: bridgeClient,
 		manager:      manager,
+		hubManager:   hubManager,
 	}
 
-	RegisterRoutes(r, db, bridgeClient, manager)
+	RegisterRoutes(r, db, bridgeClient, manager, hubManager)
 	s.serveSPA(r)
 
 	return s

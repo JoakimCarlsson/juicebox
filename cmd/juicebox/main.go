@@ -7,6 +7,7 @@ import (
 
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	apphttp "github.com/joakimcarlsson/juicebox/internal/http"
 	"github.com/joakimcarlsson/juicebox/internal/proxy"
 	"github.com/joakimcarlsson/juicebox/internal/session"
@@ -32,9 +33,10 @@ func main() {
 	}
 	log.Printf("CA certificate: %s", certManager.CAPEMPath())
 
-	manager := session.NewManager(certManager, bridgeClient)
+	hubManager := devicehub.NewManager()
+	manager := session.NewManager(certManager, bridgeClient, hubManager)
 
-	srv := apphttp.NewServer(database, bridgeClient, manager)
+	srv := apphttp.NewServer(database, bridgeClient, manager, hubManager)
 
 	if err := http.ListenAndServe(":8080", srv.Router()); err != nil {
 		log.Fatal(err)

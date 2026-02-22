@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import type { AgentMessage } from "@/types/session"
+import { useCallback, useEffect, useState } from "react"
+import { useDeviceSocket } from "@/contexts/DeviceSocketContext"
+import type { AgentMessage, DeviceEnvelope } from "@/types/session"
 
 interface UseSessionSocketReturn {
   messages: AgentMessage[]
@@ -10,9 +11,8 @@ interface UseSessionSocketReturn {
 export function useSessionSocket(
   sessionId: string | null,
 ): UseSessionSocketReturn {
+  const { subscribe, connected } = useDeviceSocket()
   const [messages, setMessages] = useState<AgentMessage[]>([])
-  const [connected, setConnected] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
 
   const clear = useCallback(() => {
     setMessages([])
@@ -21,36 +21,16 @@ export function useSessionSocket(
   useEffect(() => {
     if (!sessionId) return
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-    const ws = new WebSocket(
-      `${protocol}//${window.location.host}/api/v1/ws/sessions/${sessionId}`,
-    )
-    wsRef.current = ws
+    const unsub = subscribe(null, (envelope: DeviceEnvelope) => {
+      if (envelope.sessionId !== sessionId) return
+      setMessages((prev) => [
+        ...prev,
+        { type: envelope.type, payload: envelope.payload },
+      ])
+    })
 
-    ws.onopen = () => {
-      setConnected(true)
-    }
-
-    ws.onmessage = (event) => {
-      try {
-        const msg: AgentMessage = JSON.parse(event.data)
-        setMessages((prev) => [...prev, msg])
-      } catch {}
-    }
-
-    ws.onclose = () => {
-      setConnected(false)
-    }
-
-    ws.onerror = () => {
-      setConnected(false)
-    }
-
-    return () => {
-      ws.close()
-      wsRef.current = null
-    }
-  }, [sessionId])
+    return unsub
+  }, [subscribe, sessionId])
 
   return { messages, connected, clear }
 }

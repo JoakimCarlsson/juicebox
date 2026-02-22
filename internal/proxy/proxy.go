@@ -87,7 +87,6 @@ func (p *Proxy) serve() {
 			case <-p.done:
 				return
 			default:
-				log.Printf("[proxy] accept error: %v", err)
 				continue
 			}
 		}
@@ -106,11 +105,8 @@ func (p *Proxy) handleConn(conn net.Conn) {
 	br := bufio.NewReader(conn)
 	req, err := http.ReadRequest(br)
 	if err != nil {
-		log.Printf("[proxy] read request error: %v", err)
 		return
 	}
-
-	log.Printf("[proxy] %s %s", req.Method, req.Host)
 
 	if req.Method == http.MethodConnect {
 		p.handleConnect(conn, req)
@@ -130,7 +126,6 @@ func (p *Proxy) handleConnect(clientConn net.Conn, connectReq *http.Request) {
 
 	cert, err := p.certManager.GetCert(hostname)
 	if err != nil {
-		log.Printf("[proxy] cert error for %s: %v", hostname, err)
 		return
 	}
 
@@ -140,11 +135,8 @@ func (p *Proxy) handleConnect(clientConn net.Conn, connectReq *http.Request) {
 	defer tlsConn.Close()
 
 	if err := tlsConn.Handshake(); err != nil {
-		log.Printf("[proxy] TLS handshake FAILED for %s: %v", hostname, err)
 		return
 	}
-
-	log.Printf("[proxy] TLS handshake OK for %s", hostname)
 
 	br := bufio.NewReader(tlsConn)
 	for {
@@ -192,7 +184,6 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 
 	resp, err := p.transport.RoundTrip(req)
 	if err != nil {
-		log.Printf("[proxy] roundtrip error %s %s: %v", req.Method, req.URL, err)
 		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n"))
 		return
 	}

@@ -6,9 +6,9 @@ import (
 	"log"
 	"sync"
 
-	"github.com/gorilla/websocket"
 	"github.com/joakimcarlsson/juicebox/internal/adb"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/proxy"
 )
 
@@ -22,55 +22,21 @@ type Session struct {
 	BridgeSession string
 	Proxy         *proxy.Proxy
 	ProxyPort     int
-
-	mu            sync.Mutex
-	subscribers   map[*websocket.Conn]struct{}
-	messageBuffer [][]byte
-}
-
-func (s *Session) addSubscriber(ws *websocket.Conn) [][]byte {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.subscribers[ws] = struct{}{}
-	buffered := s.messageBuffer
-	s.messageBuffer = nil
-	return buffered
-}
-
-func (s *Session) removeSubscriber(ws *websocket.Conn) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.subscribers, ws)
-}
-
-func (s *Session) broadcast(data []byte) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if len(s.subscribers) == 0 {
-		s.messageBuffer = append(s.messageBuffer, data)
-		return
-	}
-
-	for ws := range s.subscribers {
-		if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-			delete(s.subscribers, ws)
-			ws.Close()
-		}
-	}
 }
 
 type Manager struct {
 	certManager *proxy.CertManager
 	bridge      *bridge.Client
+	hubManager  *devicehub.Manager
 	mu          sync.RWMutex
 	sessions    map[string]*Session
 }
 
-func NewManager(cm *proxy.CertManager, bridgeClient *bridge.Client) *Manager {
+func NewManager(cm *proxy.CertManager, bridgeClient *bridge.Client, hubManager *devicehub.Manager) *Manager {
 	return &Manager{
 		certManager: cm,
 		bridge:      bridgeClient,
+		hubManager:  hubManager,
 		sessions:    make(map[string]*Session),
 	}
 }
@@ -86,18 +52,19 @@ type AttachResult struct {
 
 func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 	sess := &Session{
-		DeviceID:    deviceId,
-		BundleID:    bundleId,
-		subscribers: make(map[*websocket.Conn]struct{}),
+		DeviceID: deviceId,
+		BundleID: bundleId,
 	}
 
+	hub := m.hubManager.GetOrCreate(deviceId)
+
 	p := proxy.NewProxy(m.certManager, func(msg proxy.AgentMessage) {
-		data, err := proxy.MarshalMessage(msg)
+		data, err := devicehub.Marshal(msg.Type, sess.ID, msg.Payload)
 		if err != nil {
 			log.Printf("[manager] marshal error: %v", err)
 			return
 		}
-		sess.broadcast(data)
+		hub.Broadcast(data)
 	})
 
 	port, err := p.Start()
@@ -145,6 +112,8 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 	m.sessions[sess.ID] = sess
 	m.mu.Unlock()
 
+	go m.bridgeSubscribeForward(sess)
+
 	log.Printf("[manager] attached %s (pid %d), session %s", bundleId, sess.PID, sess.ID)
 
 	return &AttachResult{
@@ -174,12 +143,6 @@ func (m *Manager) Detach(sessionId string) error {
 
 	sess.Proxy.Stop()
 
-	sess.mu.Lock()
-	for ws := range sess.subscribers {
-		ws.Close()
-	}
-	sess.mu.Unlock()
-
 	log.Printf("[manager] detached session %s", sessionId)
 	return nil
 }
@@ -190,39 +153,15 @@ func (m *Manager) GetSession(sessionId string) *Session {
 	return m.sessions[sessionId]
 }
 
-func (m *Manager) Subscribe(sessionId string, ws *websocket.Conn) error {
-	sess := m.GetSession(sessionId)
-	if sess == nil {
-		return fmt.Errorf("session not found: %s", sessionId)
-	}
-
-	buffered := sess.addSubscriber(ws)
-	for _, data := range buffered {
-		if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-			sess.removeSubscriber(ws)
-			return err
-		}
-	}
-
-	go m.bridgeSubscribeForward(sessionId, sess)
-
-	for {
-		if _, _, err := ws.ReadMessage(); err != nil {
-			break
-		}
-	}
-
-	sess.removeSubscriber(ws)
-	return nil
-}
-
-func (m *Manager) bridgeSubscribeForward(sessionId string, sess *Session) {
-	sub, err := m.bridge.Subscribe(sessionId)
+func (m *Manager) bridgeSubscribeForward(sess *Session) {
+	sub, err := m.bridge.Subscribe(sess.ID)
 	if err != nil {
-		log.Printf("[manager] bridge subscribe error for %s: %v", sessionId, err)
+		log.Printf("[manager] bridge subscribe error for %s: %v", sess.ID, err)
 		return
 	}
 	defer sub.Close()
+
+	hub := m.hubManager.GetOrCreate(sess.DeviceID)
 
 	buf := make([]byte, 1024*1024)
 	for {
@@ -237,10 +176,17 @@ func (m *Manager) bridgeSubscribeForward(sessionId string, sess *Session) {
 		}
 
 		var msg struct {
-			Type string `json:"type"`
+			Type    string          `json:"type"`
+			Payload json.RawMessage `json:"payload"`
 		}
-		if json.Unmarshal(line, &msg) == nil && msg.Type == "http" {
-			sess.broadcast(append([]byte{}, line...))
+		if err := json.Unmarshal(line, &msg); err != nil || msg.Type == "" {
+			continue
 		}
+
+		data, err := devicehub.Marshal(msg.Type, sess.ID, msg.Payload)
+		if err != nil {
+			continue
+		}
+		hub.Broadcast(data)
 	}
 }

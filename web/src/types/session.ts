@@ -24,3 +24,9 @@ export interface AgentMessage {
   type: string
   payload?: unknown
 }
+
+export interface DeviceEnvelope {
+  type: string
+  sessionId?: string
+  payload?: unknown
+}
