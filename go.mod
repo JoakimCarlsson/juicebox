@@ -5,6 +5,7 @@ go 1.25.7
 require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/joakimcarlsson/ai v0.0.0
 	github.com/joakimcarlsson/go-router/router v0.0.0
 	go.opentelemetry.io/contrib/bridges/otelslog v0.15.0
 	go.opentelemetry.io/otel v1.40.0
@@ -48,3 +49,5 @@ require (
 )
 
 replace github.com/joakimcarlsson/go-router/router => ./deps/go-router/router
+
+replace github.com/joakimcarlsson/ai => ./deps/ai

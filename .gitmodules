@@ -1,3 +1,6 @@
 [submodule "deps/go-router"]
 	path = deps/go-router
 	url = https://github.com/JoakimCarlsson/go-router.git
+[submodule "deps/ai"]
+	path = deps/ai
+	url = https://github.com/JoakimCarlsson/ai.git
