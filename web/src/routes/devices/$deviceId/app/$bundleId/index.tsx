@@ -1,24 +1,24 @@
 import { createFileRoute, Navigate, useParams, useSearch } from "@tanstack/react-router"
 
 export const Route = createFileRoute(
-  "/devices/$deviceId/session/$bundleId/",
+  "/devices/$deviceId/app/$bundleId/",
 )({
   validateSearch: (search: Record<string, unknown>) => ({
     sessionId: (search.sessionId as string) ?? "",
   }),
-  component: SessionIndex,
+  component: AppIndex,
 })
 
-function SessionIndex() {
+function AppIndex() {
   const { deviceId, bundleId } = useParams({
-    from: "/devices/$deviceId/session/$bundleId/",
+    from: "/devices/$deviceId/app/$bundleId/",
   })
   const { sessionId } = useSearch({
-    from: "/devices/$deviceId/session/$bundleId/",
+    from: "/devices/$deviceId/app/$bundleId/",
   })
   return (
     <Navigate
-      to="/devices/$deviceId/session/$bundleId/network"
+      to="/devices/$deviceId/app/$bundleId/home"
       params={{ deviceId, bundleId }}
       search={{ sessionId }}
     />

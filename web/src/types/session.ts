@@ -46,3 +46,30 @@ export interface LogcatEntry {
   tag: string
   message: string
 }
+
+export interface SessionSummary {
+  id: string
+  deviceId: string
+  bundleId: string
+  pid: number
+  name: string
+  startedAt: number
+  endedAt: number | null
+  httpCount: number
+  logcatCount: number
+}
+
+export interface SessionsResponse {
+  sessions: SessionSummary[]
+  total: number
+}
+
+export interface MessagesResponse {
+  messages: HttpMessage[]
+  total: number
+}
+
+export interface LogsResponse {
+  entries: LogcatEntry[]
+  total: number
+}

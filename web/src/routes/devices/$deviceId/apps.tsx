@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppCard } from "@/components/devices/AppCard"
+import { SessionPickerDialog } from "@/components/sessions/SessionPickerDialog"
 import { appsQueryOptions } from "@/features/devices/queries"
+import type { App } from "@/types/device"
 
 export const Route = createFileRoute("/devices/$deviceId/apps")({
   component: AppsPage,
@@ -16,6 +18,7 @@ function AppsPage() {
   const { deviceId } = useParams({ from: "/devices/$deviceId/apps" })
   const { data: apps, isLoading } = useQuery(appsQueryOptions(deviceId))
   const [search, setSearch] = useState("")
+  const [selectedApp, setSelectedApp] = useState<App | null>(null)
 
   const filtered = useMemo(() => {
     if (!apps) return []
@@ -71,11 +74,17 @@ function AppsPage() {
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">
           {filtered.map((app) => (
-            <AppCard key={app.identifier} app={app} deviceId={deviceId} />
+            <AppCard key={app.identifier} app={app} deviceId={deviceId} onSelect={setSelectedApp} />
           ))}
         </div>
       )}
       </div>
+
+      <SessionPickerDialog
+        app={selectedApp}
+        deviceId={deviceId}
+        onClose={() => setSelectedApp(null)}
+      />
     </div>
   )
 }

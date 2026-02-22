@@ -40,14 +40,9 @@ function isLogEntry(payload: unknown): payload is LogEntry {
 }
 
 function getProblemsCount(entries: EventLogEntry[]): number {
-  return entries.filter((e) => {
-    if (e.envelope.type === "log" && isLogEntry(e.envelope.payload)) {
-      return e.envelope.payload.level === "error"
-    }
-    return (
-      e.envelope.type === "agent-error" || e.envelope.type === "crash"
-    )
-  }).length
+  return entries.filter(
+    (e) => e.envelope.type === "agent-error" || e.envelope.type === "crash",
+  ).length
 }
 
 function formatTime(timestamp: number): string {
@@ -202,14 +197,9 @@ function ProblemsTab() {
 
   const problems = useMemo(
     () =>
-      entries.filter((e) => {
-        if (e.envelope.type === "log" && isLogEntry(e.envelope.payload)) {
-          return e.envelope.payload.level === "error"
-        }
-        return (
-          e.envelope.type === "agent-error" || e.envelope.type === "crash"
-        )
-      }),
+      entries.filter(
+        (e) => e.envelope.type === "agent-error" || e.envelope.type === "crash",
+      ),
     [entries],
   )
 

@@ -7,40 +7,40 @@ import {
   useParams,
   useSearch,
 } from "@tanstack/react-router"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SessionStatusReporter } from "@/components/layout/SessionStatusReporter"
 import { detachSession } from "@/features/sessions/api"
 import { SessionMessageProvider } from "@/contexts/SessionMessageContext"
-import { ArrowLeft, Unplug, Globe, FileText, Code } from "lucide-react"
+import { ArrowLeft, Unplug, Home, Globe, FileText, Code } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute(
-  "/devices/$deviceId/session/$bundleId",
+  "/devices/$deviceId/app/$bundleId",
 )({
   validateSearch: (search: Record<string, unknown>) => ({
     sessionId: (search.sessionId as string) ?? "",
   }),
-  component: SessionLayout,
+  component: AppLayout,
 })
 
 const tabs = [
-  { value: "network", label: "Network", icon: Globe, enabled: true },
-  { value: "logs", label: "Logs", icon: FileText, enabled: true },
-  { value: "hooks", label: "Hooks", icon: Code, enabled: false },
+  { value: "home", label: "Home", icon: Home, enabled: true, to: "/devices/$deviceId/app/$bundleId/home" as const },
+  { value: "network", label: "Network", icon: Globe, enabled: true, to: "/devices/$deviceId/app/$bundleId/network" as const },
+  { value: "logs", label: "Logs", icon: FileText, enabled: true, to: "/devices/$deviceId/app/$bundleId/logs" as const },
+  { value: "hooks", label: "Hooks", icon: Code, enabled: false, to: "/devices/$deviceId/app/$bundleId/network" as const },
 ]
 
-function SessionLayout() {
+function AppLayout() {
   const { deviceId, bundleId } = useParams({
-    from: "/devices/$deviceId/session/$bundleId",
+    from: "/devices/$deviceId/app/$bundleId",
   })
   const { sessionId } = useSearch({
-    from: "/devices/$deviceId/session/$bundleId",
+    from: "/devices/$deviceId/app/$bundleId",
   })
   const navigate = useNavigate()
   const location = useLocation()
-  const activeTab = location.pathname.split("/").pop() || "network"
+  const activeTab = location.pathname.split("/").pop() || "home"
   const [detaching, setDetaching] = useState(false)
 
   async function handleDetach() {
@@ -49,6 +49,7 @@ function SessionLayout() {
     try {
       await detachSession(sessionId)
     } catch {}
+    setDetaching(false)
     navigate({
       to: "/devices/$deviceId/apps",
       params: { deviceId },
@@ -58,7 +59,7 @@ function SessionLayout() {
   return (
     <SessionMessageProvider sessionId={sessionId}>
     <div className="flex h-full flex-col">
-      <SessionStatusReporter sessionId={sessionId} bundleId={bundleId} />
+      {sessionId && <SessionStatusReporter sessionId={sessionId} bundleId={bundleId} />}
 
       <div className="border-b border-border px-4 py-2">
         <div className="flex items-center justify-between">
@@ -79,22 +80,18 @@ function SessionLayout() {
             <span className="text-sm font-semibold text-foreground">
               {bundleId}
             </span>
-            <Badge
-              variant="secondary"
-              className="bg-green-500/15 text-green-600 dark:text-green-400 text-xs"
-            >
-              Attached
-            </Badge>
           </div>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleDetach}
-            disabled={detaching}
-          >
-            <Unplug className="mr-1.5 h-3.5 w-3.5" />
-            Detach
-          </Button>
+          {sessionId && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDetach}
+              disabled={detaching}
+            >
+              <Unplug className="mr-1.5 h-3.5 w-3.5" />
+              Detach
+            </Button>
+          )}
         </div>
       </div>
 
@@ -105,11 +102,7 @@ function SessionLayout() {
           return (
             <Link
               key={tab.value}
-              to={
-                tab.enabled
-                  ? `/devices/$deviceId/session/$bundleId/${tab.value}`
-                  : undefined
-              }
+              to={tab.enabled ? tab.to : undefined!}
               params={{ deviceId, bundleId }}
               search={{ sessionId }}
               className={cn(

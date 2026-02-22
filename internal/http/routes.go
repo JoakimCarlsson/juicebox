@@ -15,6 +15,6 @@ func RegisterRoutes(r *router.Router, db *db.DB, bridgeClient *bridge.Client, ma
 	r.Group("/api/v1", func(api *router.Router) {
 		system.RegisterRoutes(api, db)
 		devices.RegisterRoutes(api, bridgeClient, hubManager)
-		sessions.RegisterRoutes(api, manager)
+		sessions.RegisterRoutes(api, manager, db)
 	})
 }
