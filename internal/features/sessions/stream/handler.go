@@ -1,13 +1,12 @@
 package stream
 
 import (
-	"bufio"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
 	"github.com/joakimcarlsson/go-router/router"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 var upgrader = websocket.Upgrader{
@@ -15,11 +14,11 @@ var upgrader = websocket.Upgrader{
 }
 
 type Handler struct {
-	client *bridge.Client
+	manager *session.Manager
 }
 
-func NewHandler(client *bridge.Client) *Handler {
-	return &Handler{client: client}
+func NewHandler(manager *session.Manager) *Handler {
+	return &Handler{manager: manager}
 }
 
 func (h *Handler) Handle(c *router.Context) {
@@ -36,47 +35,7 @@ func (h *Handler) Handle(c *router.Context) {
 	}
 	defer ws.Close()
 
-	sub, err := h.client.Subscribe(sessionId)
-	if err != nil {
-		log.Printf("[stream] subscribe failed: %v", err)
-		ws.WriteMessage(websocket.CloseMessage,
-			websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
-		return
-	}
-	defer sub.Close()
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		for {
-			if _, _, err := ws.ReadMessage(); err != nil {
-				return
-			}
-		}
-	}()
-
-	scanner := bufio.NewScanner(sub.Reader)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-
-	for scanner.Scan() {
-		select {
-		case <-done:
-			return
-		default:
-		}
-
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
-		}
-
-		if err := ws.WriteMessage(websocket.TextMessage, line); err != nil {
-			log.Printf("[stream] WebSocket write error: %v", err)
-			return
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Printf("[stream] scanner error: %v", err)
+	if err := h.manager.Subscribe(sessionId, ws); err != nil {
+		log.Printf("[stream] subscribe error: %v", err)
 	}
 }

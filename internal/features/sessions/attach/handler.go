@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/joakimcarlsson/go-router/router"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type Handler struct {
-	client *bridge.Client
+	manager *session.Manager
 }
 
-func NewHandler(client *bridge.Client) *Handler {
-	return &Handler{client: client}
+func NewHandler(manager *session.Manager) *Handler {
+	return &Handler{manager: manager}
 }
 
 func (h *Handler) Handle(c *router.Context) {
@@ -24,7 +24,7 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
-	resp, err := h.client.Attach(deviceId, bundleId)
+	resp, err := h.manager.Attach(deviceId, bundleId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
