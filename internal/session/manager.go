@@ -3,7 +3,7 @@ package session
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/joakimcarlsson/juicebox/internal/adb"
@@ -51,6 +51,8 @@ type AttachResult struct {
 }
 
 func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
+	logger := slog.With("device_id", deviceId, "source", "manager")
+
 	sess := &Session{
 		DeviceID: deviceId,
 		BundleID: bundleId,
@@ -58,14 +60,15 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 
 	hub := m.hubManager.GetOrCreate(deviceId)
 
+	proxyLogger := slog.With("device_id", deviceId, "source", "proxy")
 	p := proxy.NewProxy(m.certManager, func(msg proxy.AgentMessage) {
 		data, err := devicehub.Marshal(msg.Type, sess.ID, msg.Payload)
 		if err != nil {
-			log.Printf("[manager] marshal error: %v", err)
+			logger.Error("marshal error", "error", err)
 			return
 		}
 		hub.Broadcast(data)
-	})
+	}, proxyLogger)
 
 	port, err := p.Start()
 	if err != nil {
@@ -74,22 +77,24 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 	sess.Proxy = p
 	sess.ProxyPort = port
 
-	log.Printf("[manager] proxy started on port %d for %s", port, bundleId)
+	logger.Info("proxy started", "port", port, "bundle", bundleId)
 
+	logger.Info("installing CA certificate")
 	if err := adb.InstallCACert(deviceId, m.certManager.CAPEMPath()); err != nil {
-		log.Printf("[manager] CA cert install failed: %v", err)
+		logger.Error("CA cert install failed", "error", err)
 		p.Stop()
 		return nil, fmt.Errorf("manager: install ca cert: %w", err)
 	}
+	logger.Info("CA cert installed via tmpfs overlay")
 
 	if err := adb.ReversePort(deviceId, deviceProxyPort, port); err != nil {
-		log.Printf("[manager] adb reverse failed: %v", err)
+		logger.Error("adb reverse failed", "error", err)
 		p.Stop()
 		return nil, fmt.Errorf("manager: adb reverse: %w", err)
 	}
 
 	if err := adb.SetProxy(deviceId, "127.0.0.1", deviceProxyPort); err != nil {
-		log.Printf("[manager] set proxy failed: %v", err)
+		logger.Error("set proxy failed", "error", err)
 		adb.RemoveReverse(deviceId, deviceProxyPort)
 		p.Stop()
 		return nil, fmt.Errorf("manager: set proxy: %w", err)
@@ -97,7 +102,7 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 
 	bridgeResp, err := m.bridge.Attach(deviceId, bundleId)
 	if err != nil {
-		log.Printf("[manager] bridge attach failed: %v", err)
+		logger.Error("bridge attach failed", "error", err)
 		adb.ClearProxy(deviceId)
 		adb.RemoveReverse(deviceId, deviceProxyPort)
 		p.Stop()
@@ -114,7 +119,8 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 
 	go m.bridgeSubscribeForward(sess)
 
-	log.Printf("[manager] attached %s (pid %d), session %s", bundleId, sess.PID, sess.ID)
+	logger = logger.With("session_id", sess.ID)
+	logger.Info("attached", "bundle", bundleId, "pid", sess.PID)
 
 	return &AttachResult{
 		SessionID: sess.ID,
@@ -134,8 +140,10 @@ func (m *Manager) Detach(sessionId string) error {
 		return m.bridge.Detach(sessionId)
 	}
 
+	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sessionId)
+
 	if err := m.bridge.Detach(sess.BridgeSession); err != nil {
-		log.Printf("[manager] bridge detach error: %v", err)
+		logger.Warn("bridge detach error", "error", err)
 	}
 
 	adb.ClearProxy(sess.DeviceID)
@@ -143,7 +151,7 @@ func (m *Manager) Detach(sessionId string) error {
 
 	sess.Proxy.Stop()
 
-	log.Printf("[manager] detached session %s", sessionId)
+	logger.Info("detached session")
 	return nil
 }
 
@@ -154,9 +162,11 @@ func (m *Manager) GetSession(sessionId string) *Session {
 }
 
 func (m *Manager) bridgeSubscribeForward(sess *Session) {
+	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sess.ID)
+
 	sub, err := m.bridge.Subscribe(sess.ID)
 	if err != nil {
-		log.Printf("[manager] bridge subscribe error for %s: %v", sess.ID, err)
+		logger.Error("bridge subscribe failed", "error", err)
 		return
 	}
 	defer sub.Close()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	apphttp "github.com/joakimcarlsson/juicebox/internal/http"
+	"github.com/joakimcarlsson/juicebox/internal/otel"
 	"github.com/joakimcarlsson/juicebox/internal/proxy"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
@@ -31,9 +33,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("CA certificate: %s", certManager.CAPEMPath())
-
 	hubManager := devicehub.NewManager()
+	otel.SetupLogger("juicebox", "info", "json", hubManager)
+
+	slog.Info("CA certificate ready", "path", certManager.CAPEMPath())
+
 	manager := session.NewManager(certManager, bridgeClient, hubManager)
 
 	srv := apphttp.NewServer(database, bridgeClient, manager, hubManager)

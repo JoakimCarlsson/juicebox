@@ -30,3 +30,9 @@ export interface DeviceEnvelope {
   sessionId?: string
   payload?: unknown
 }
+
+export interface LogEntry {
+  level: "info" | "warn" | "error"
+  source: string
+  message: string
+}

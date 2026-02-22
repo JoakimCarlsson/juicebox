@@ -2,16 +2,19 @@ import {
   useBottomPanel,
   type PanelTab,
 } from "@/contexts/BottomPanelContext"
+import { useEventLog, type EventLogEntry } from "@/contexts/EventLogContext"
+import type { LogEntry } from "@/types/session"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   ChevronDown,
   ChevronUp,
   Terminal,
-  FileText,
   AlertTriangle,
+  Trash2,
+  CheckCircle2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useEffect, useMemo, useRef } from "react"
 
 const tabs: { value: PanelTab; label: string; icon: React.ReactNode }[] = [
   {
@@ -20,19 +23,46 @@ const tabs: { value: PanelTab; label: string; icon: React.ReactNode }[] = [
     icon: <Terminal className="mr-1.5 h-3 w-3" />,
   },
   {
-    value: "output",
-    label: "Output",
-    icon: <FileText className="mr-1.5 h-3 w-3" />,
-  },
-  {
     value: "problems",
     label: "Problems",
     icon: <AlertTriangle className="mr-1.5 h-3 w-3" />,
   },
 ]
 
+function isLogEntry(payload: unknown): payload is LogEntry {
+  if (!payload || typeof payload !== "object") return false
+  const p = payload as Record<string, unknown>
+  return (
+    typeof p.level === "string" &&
+    typeof p.source === "string" &&
+    typeof p.message === "string"
+  )
+}
+
+function getProblemsCount(entries: EventLogEntry[]): number {
+  return entries.filter((e) => {
+    if (e.envelope.type === "log" && isLogEntry(e.envelope.payload)) {
+      return e.envelope.payload.level === "error"
+    }
+    return (
+      e.envelope.type === "agent-error" || e.envelope.type === "crash"
+    )
+  }).length
+}
+
+function formatTime(timestamp: number): string {
+  const d = new Date(timestamp)
+  const h = d.getHours().toString().padStart(2, "0")
+  const m = d.getMinutes().toString().padStart(2, "0")
+  const s = d.getSeconds().toString().padStart(2, "0")
+  const ms = d.getMilliseconds().toString().padStart(3, "0")
+  return `${h}:${m}:${s}.${ms}`
+}
+
 export function BottomPanel() {
   const { isOpen, activeTab, setActiveTab, toggle } = useBottomPanel()
+  const { entries, clear } = useEventLog()
+  const problemsCount = getProblemsCount(entries)
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -52,52 +82,172 @@ export function BottomPanel() {
             >
               {tab.icon}
               {tab.label}
+              {tab.value === "problems" && problemsCount > 0 && (
+                <span className="ml-1.5 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-medium leading-none text-destructive-foreground">
+                  {problemsCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={toggle}
-        >
-          {isOpen ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronUp className="h-3.5 w-3.5" />
-          )}
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={clear}
+            title="Clear"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={toggle}
+          >
+            {isOpen ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronUp className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-auto">
         {activeTab === "console" && <ConsoleTab />}
-        {activeTab === "output" && <OutputTab />}
         {activeTab === "problems" && <ProblemsTab />}
-      </ScrollArea>
+      </div>
     </div>
   )
 }
 
 function ConsoleTab() {
-  return (
-    <div className="p-3 font-mono text-xs text-muted-foreground">
-      <p>Console output will appear here...</p>
-    </div>
-  )
-}
+  const { entries } = useEventLog()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const autoScrollRef = useRef(true)
 
-function OutputTab() {
+  const logEntries = useMemo(
+    () =>
+      entries.filter(
+        (e) => e.envelope.type === "log" && isLogEntry(e.envelope.payload),
+      ),
+    [entries],
+  )
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    function handleScroll() {
+      if (!el) return
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 32
+      autoScrollRef.current = atBottom
+    }
+
+    el.addEventListener("scroll", handleScroll)
+    return () => el.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  useEffect(() => {
+    if (autoScrollRef.current && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [logEntries])
+
+  if (logEntries.length === 0) {
+    return (
+      <div className="p-3 font-mono text-xs text-muted-foreground">
+        No log entries.
+      </div>
+    )
+  }
+
   return (
-    <div className="p-3 font-mono text-xs text-muted-foreground">
-      <p>Output will appear here...</p>
+    <div ref={scrollRef} className="h-full overflow-auto">
+      <div className="font-mono text-xs">
+        {logEntries.map((entry) => {
+          const payload = entry.envelope.payload as LogEntry
+          return (
+            <div
+              key={entry.id}
+              className={cn(
+                "flex items-start gap-2 px-3 py-0.5 border-l-2",
+                payload.level === "error" &&
+                  "bg-red-500/10 border-l-red-500 text-red-700 dark:text-red-300",
+                payload.level === "warn" &&
+                  "bg-amber-500/10 border-l-amber-500 text-amber-700 dark:text-amber-300",
+                payload.level === "info" &&
+                  "border-l-transparent text-foreground",
+              )}
+            >
+              <span className="shrink-0 text-muted-foreground">
+                {formatTime(entry.timestamp)}
+              </span>
+              <span className="shrink-0 text-muted-foreground w-16 truncate">
+                {payload.source}
+              </span>
+              <span className="break-all">{payload.message}</span>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
 
 function ProblemsTab() {
+  const { entries } = useEventLog()
+
+  const problems = useMemo(
+    () =>
+      entries.filter((e) => {
+        if (e.envelope.type === "log" && isLogEntry(e.envelope.payload)) {
+          return e.envelope.payload.level === "error"
+        }
+        return (
+          e.envelope.type === "agent-error" || e.envelope.type === "crash"
+        )
+      }),
+    [entries],
+  )
+
+  if (problems.length === 0) {
+    return (
+      <div className="flex items-center gap-2 p-3 font-mono text-xs text-muted-foreground">
+        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+        No problems detected.
+      </div>
+    )
+  }
+
   return (
-    <div className="p-3 font-mono text-xs text-muted-foreground">
-      <p>No problems detected.</p>
+    <div className="font-mono text-xs">
+      {problems.map((entry) => {
+        const payload = entry.envelope.payload
+        const source = isLogEntry(payload) ? payload.source : entry.envelope.type
+        const message = isLogEntry(payload)
+          ? payload.message
+          : typeof payload === "object" && payload
+            ? JSON.stringify(payload)
+            : String(payload)
+
+        return (
+          <div
+            key={entry.id}
+            className="flex items-start gap-2 px-3 py-0.5 border-l-2 bg-red-500/10 border-l-red-500 text-red-700 dark:text-red-300"
+          >
+            <span className="shrink-0 text-muted-foreground">
+              {formatTime(entry.timestamp)}
+            </span>
+            <span className="shrink-0 text-muted-foreground w-16 truncate">
+              {source}
+            </span>
+            <span className="break-all">{message}</span>
+          </div>
+        )
+      })}
     </div>
   )
 }

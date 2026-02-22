@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -26,16 +26,18 @@ type MessageSink func(AgentMessage)
 type Proxy struct {
 	certManager *CertManager
 	sink        MessageSink
+	logger      *slog.Logger
 	listener    net.Listener
 	transport   *http.Transport
 	done        chan struct{}
 	wg          sync.WaitGroup
 }
 
-func NewProxy(cm *CertManager, sink MessageSink) *Proxy {
+func NewProxy(cm *CertManager, sink MessageSink, logger *slog.Logger) *Proxy {
 	return &Proxy{
 		certManager: cm,
 		sink:        sink,
+		logger:      logger,
 		transport: &http.Transport{
 			TLSClientConfig: &tls.Config{},
 			MaxIdleConns:    100,
@@ -216,7 +218,7 @@ func (p *Proxy) emitMessage(req *http.Request, reqBody []byte, resp *http.Respon
 	}
 
 	reqCapture := reqBody
-	respCapture := decompressBody(respBody, resp.Header.Get("Content-Encoding"))
+	respCapture := p.decompressBody(respBody, resp.Header.Get("Content-Encoding"))
 
 	if len(reqCapture) > maxBodyBytes {
 		reqCapture = reqCapture[:maxBodyBytes]
@@ -251,7 +253,7 @@ func (p *Proxy) emitMessage(req *http.Request, reqBody []byte, resp *http.Respon
 	p.sink(msg)
 }
 
-func decompressBody(data []byte, encoding string) []byte {
+func (p *Proxy) decompressBody(data []byte, encoding string) []byte {
 	if len(data) == 0 {
 		return data
 	}
@@ -262,13 +264,13 @@ func decompressBody(data []byte, encoding string) []byte {
 	case "gzip":
 		r, err := gzip.NewReader(bytes.NewReader(data))
 		if err != nil {
-			log.Printf("[proxy] gzip.NewReader error: %v", err)
+			p.logger.Error("gzip reader error", "error", err)
 			return data
 		}
 		defer r.Close()
 		out, err := io.ReadAll(io.LimitReader(r, maxTotalBodyRead))
 		if err != nil {
-			log.Printf("[proxy] gzip read error: %v", err)
+			p.logger.Error("gzip read error", "error", err)
 			return data
 		}
 		return out
@@ -277,7 +279,7 @@ func decompressBody(data []byte, encoding string) []byte {
 		defer r.Close()
 		out, err := io.ReadAll(io.LimitReader(r, maxTotalBodyRead))
 		if err != nil {
-			log.Printf("[proxy] deflate read error: %v", err)
+			p.logger.Error("deflate read error", "error", err)
 			return data
 		}
 		return out
@@ -285,7 +287,7 @@ func decompressBody(data []byte, encoding string) []byte {
 		r := brotli.NewReader(bytes.NewReader(data))
 		out, err := io.ReadAll(io.LimitReader(r, maxTotalBodyRead))
 		if err != nil {
-			log.Printf("[proxy] brotli read error: %v", err)
+			p.logger.Error("brotli read error", "error", err)
 			return data
 		}
 		return out

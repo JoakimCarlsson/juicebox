@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { DeviceSocketProvider } from "@/contexts/DeviceSocketContext"
+import { EventLogProvider } from "@/contexts/EventLogContext"
 import { BottomPanelProvider, useBottomPanel } from "@/contexts/BottomPanelContext"
 import { StatusReporter } from "@/components/layout/StatusReporter"
 import { BottomPanel } from "@/components/layout/BottomPanel"
@@ -23,9 +24,11 @@ function DeviceLayout() {
   return (
     <DeviceSocketProvider deviceId={deviceId}>
       <StatusReporter deviceId={deviceId} deviceName={deviceName} />
-      <BottomPanelProvider>
-        <DeviceLayoutInner />
-      </BottomPanelProvider>
+      <EventLogProvider>
+        <BottomPanelProvider>
+          <DeviceLayoutInner />
+        </BottomPanelProvider>
+      </EventLogProvider>
     </DeviceSocketProvider>
   )
 }
