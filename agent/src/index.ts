@@ -1,225 +1,76 @@
 /// <reference types="npm:@types/frida-gum" />
 
-declare const Java: {
-  perform(fn: () => void): void;
-  use(className: string): any;
-  registerClass(spec: {
-    name: string;
-    implements: any[];
-    methods: Record<string, (...args: any[]) => any>;
-  }): any;
-};
+import type { HookRule } from "./types";
+import { getModule, listInterfaces } from "./router";
 
-const nopVerifyCallback = new NativeCallback(
-  (_ssl: NativePointer, _out_alert: NativePointer): number => 0,
-  "int",
-  ["pointer", "pointer"],
-);
+const appliedRules: HookRule[] = [];
 
-const nopCertVerifyCallback = new NativeCallback(
-  (_x509_ctx: NativePointer, _arg: NativePointer): number => 1,
-  "int",
-  ["pointer", "pointer"],
-);
-
-function hookNativeVerification(mod: Module): void {
-  const setVerify = mod.findExportByName("SSL_CTX_set_verify");
-  if (setVerify) {
-    Interceptor.attach(setVerify, {
-      onEnter(args) {
-        args[1] = ptr(0);
-        args[2] = ptr(0);
-      },
-    });
-  }
-
-  const setCustomVerify = mod.findExportByName("SSL_CTX_set_custom_verify");
-  if (setCustomVerify) {
-    Interceptor.attach(setCustomVerify, {
-      onEnter(args) {
-        args[1] = ptr(0);
-        args[2] = nopVerifyCallback;
-      },
-    });
-  }
-
-  const sslSetCustomVerify = mod.findExportByName("SSL_set_custom_verify");
-  if (sslSetCustomVerify) {
-    Interceptor.attach(sslSetCustomVerify, {
-      onEnter(args) {
-        args[1] = ptr(0);
-        args[2] = nopVerifyCallback;
-      },
-    });
-  }
-
-  const setCertVerifyCb = mod.findExportByName(
-    "SSL_CTX_set_cert_verify_callback",
+function rulesEqual(a: HookRule, b: HookRule): boolean {
+  return (
+    a.namespace === b.namespace &&
+    a.method === b.method &&
+    JSON.stringify(a.args) === JSON.stringify(b.args)
   );
-  if (setCertVerifyCb) {
-    Interceptor.attach(setCertVerifyCb, {
-      onEnter(args) {
-        args[1] = nopCertVerifyCallback;
-        args[2] = ptr(0);
-      },
-    });
+}
+
+function invoke(
+  namespace: string,
+  method: string,
+  args: unknown[],
+): unknown {
+  const mod = getModule(namespace);
+  if (!mod) throw new Error(`unknown namespace: ${namespace}`);
+
+  const fn = mod[method];
+  if (typeof fn !== "function")
+    throw new Error(`unknown method: ${namespace}.${method}`);
+
+  const result = fn(...args);
+
+  const rule: HookRule = { namespace, method, args, enabled: true };
+  if (!appliedRules.some((r) => rulesEqual(r, rule))) {
+    appliedRules.push(rule);
   }
 
-  const x509VerifyCert = mod.findExportByName("X509_verify_cert");
-  if (x509VerifyCert) {
-    Interceptor.replace(
-      x509VerifyCert,
-      new NativeCallback(
-        (_ctx: NativePointer): number => 1,
-        "int",
-        ["pointer"],
-      ),
-    );
+  return result;
+}
+
+function restore(rules: HookRule[]): void {
+  appliedRules.length = 0;
+  for (const rule of rules) {
+    if (!rule.enabled) continue;
+    try {
+      invoke(rule.namespace, rule.method, rule.args);
+    } catch (e) {
+      console.error(
+        `restore failed for ${rule.namespace}.${rule.method}:`,
+        e,
+      );
+    }
   }
 }
 
-const SSL_LIB_PATTERN = /ssl|crypto|boring|flutter|cronet|conscrypt|curl/i;
-const hookedModules = new Set<string>();
-
-for (const mod of Process.enumerateModules()) {
-  if (!SSL_LIB_PATTERN.test(mod.name)) continue;
-  if (hookedModules.has(mod.path)) continue;
-  hookedModules.add(mod.path);
-  try {
-    hookNativeVerification(mod);
-  } catch (_) {}
+function snapshot(): HookRule[] {
+  return JSON.parse(JSON.stringify(appliedRules));
 }
-
-Process.attachModuleObserver({
-  onAdded(mod) {
-    if (!SSL_LIB_PATTERN.test(mod.name)) return;
-    if (hookedModules.has(mod.path)) return;
-    hookedModules.add(mod.path);
-    try {
-      hookNativeVerification(mod);
-    } catch (_) {}
-  },
-});
-
-Java.perform(() => {
-  try {
-    const CertificatePinner = Java.use("okhttp3.CertificatePinner");
-    CertificatePinner.check.overload(
-      "java.lang.String",
-      "java.util.List",
-    ).implementation = function () {};
-
-    try {
-      CertificatePinner["check$okhttp"].overload(
-        "java.lang.String",
-        "java.util.List",
-      ).implementation = function () {};
-    } catch (_) {}
-  } catch (_) {}
-
-  try {
-    const OkHostnameVerifier = Java.use(
-      "okhttp3.internal.tls.OkHostnameVerifier",
-    );
-    OkHostnameVerifier.verify.overload(
-      "java.lang.String",
-      "javax.net.ssl.SSLSession",
-    ).implementation = function (): boolean {
-      return true;
-    };
-  } catch (_) {}
-
-  try {
-    const X509TrustManager = Java.use("javax.net.ssl.X509TrustManager");
-    const SSLContext = Java.use("javax.net.ssl.SSLContext");
-
-    const TrustAll = Java.registerClass({
-      name: "com.juicebox.TrustAll",
-      implements: [X509TrustManager],
-      methods: {
-        checkClientTrusted() {},
-        checkServerTrusted() {},
-        getAcceptedIssuers() {
-          return [];
-        },
-      },
-    });
-    const trustAll = TrustAll.$new();
-
-    SSLContext.init.implementation = function (
-      km: any,
-      _tm: any,
-      sr: any,
-    ) {
-      this.init(km, [trustAll], sr);
-    };
-  } catch (_) {}
-
-  try {
-    const TrustManagerImpl = Java.use(
-      "com.android.org.conscrypt.TrustManagerImpl",
-    );
-
-    TrustManagerImpl.verifyChain.overload(
-      "[Ljava.security.cert.X509Certificate;",
-      "[[B",
-      "[B",
-      "java.lang.String",
-      "java.lang.String",
-      "boolean",
-    ).implementation = function (
-      untrustedChain: any,
-      _ocspResponses: any,
-      _tlsSctData: any,
-      _authType: any,
-      _host: any,
-      _clientAuth: any,
-    ): any {
-      return Java.use("java.util.Arrays").asList(untrustedChain);
-    };
-  } catch (_) {}
-
-  try {
-    const TrustManagerImpl = Java.use(
-      "com.android.org.conscrypt.TrustManagerImpl",
-    );
-
-    TrustManagerImpl.checkServerTrusted.overload(
-      "[Ljava.security.cert.X509Certificate;",
-      "java.lang.String",
-    ).implementation = function () {};
-
-    try {
-      TrustManagerImpl.checkServerTrusted.overload(
-        "[Ljava.security.cert.X509Certificate;",
-        "java.lang.String",
-        "java.lang.String",
-      ).implementation = function () {
-        return Java.use("java.util.ArrayList").$new();
-      };
-    } catch (_) {}
-  } catch (_) {}
-
-  try {
-    const ClassLoader = Java.use("java.lang.ClassLoader");
-    ClassLoader.loadClass.overload("java.lang.String").implementation =
-      function (name: string): any {
-        const klass = this.loadClass(name);
-        if (name === "okhttp3.CertificatePinner") {
-          try {
-            const CP = Java.use("okhttp3.CertificatePinner");
-            CP.check.overload(
-              "java.lang.String",
-              "java.util.List",
-            ).implementation = function () {};
-          } catch (_) {}
-        }
-        return klass;
-      };
-  } catch (_) {}
-});
 
 rpc.exports = {
+  invoke(namespace: string, method: string, args: unknown[]): unknown {
+    return invoke(namespace, method, args);
+  },
+
+  interfaces(): Record<string, string[]> {
+    return listInterfaces();
+  },
+
+  restore(rules: HookRule[]): void {
+    restore(rules);
+  },
+
+  snapshot(): HookRule[] {
+    return snapshot();
+  },
+
   ping(): string {
     return "pong";
   },
