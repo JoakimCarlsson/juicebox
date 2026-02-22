@@ -52,6 +52,7 @@ export interface SessionSummary {
   deviceId: string
   bundleId: string
   pid: number
+  name: string
   startedAt: number
   endedAt: number | null
   httpCount: number

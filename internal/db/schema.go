@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     device_id  TEXT NOT NULL,
     bundle_id  TEXT NOT NULL,
     pid        INTEGER NOT NULL DEFAULT 0,
+    name       TEXT NOT NULL DEFAULT '',
     started_at INTEGER NOT NULL,
     ended_at   INTEGER
 );

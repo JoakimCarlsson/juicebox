@@ -14,13 +14,11 @@ const SessionMessageContext = createContext<SessionMessageContextValue | null>(
 
 interface SessionMessageProviderProps {
   sessionId: string
-  historicalSessionId?: string
   children: React.ReactNode
 }
 
 export function SessionMessageProvider({
   sessionId,
-  historicalSessionId,
   children,
 }: SessionMessageProviderProps) {
   const { subscribe, connected } = useDeviceSocket()
@@ -35,54 +33,65 @@ export function SessionMessageProvider({
     }
   }, [sessionId])
 
+  const prevSourceId = useRef("")
+
   useEffect(() => {
-    const sourceId = historicalSessionId || sessionId
-    if (connected && !prevConnected.current && sourceId) {
-      Promise.all([
-        fetchSessionMessages(sourceId).catch(() => null),
-        fetchSessionLogs(sourceId).catch(() => null),
-      ]).then(([msgResp, logResp]) => {
-        const historical: AgentMessage[] = []
-
-        if (msgResp?.messages) {
-          for (const m of msgResp.messages) {
-            if (!seenIds.current.has(m.id)) {
-              seenIds.current.add(m.id)
-              historical.push({ type: "http", payload: m })
-            }
-          }
-        }
-
-        if (logResp?.entries) {
-          for (const e of logResp.entries) {
-            if (!seenIds.current.has(e.id)) {
-              seenIds.current.add(e.id)
-              historical.push({ type: "logcat", payload: e })
-            }
-          }
-        }
-
-        if (historical.length > 0) {
-          setMessages((prev) => {
-            const existingIds = new Set(
-              prev
-                .map((m) => {
-                  const p = m.payload as { id?: string } | undefined
-                  return p?.id
-                })
-                .filter(Boolean),
-            )
-            const newMsgs = historical.filter((h) => {
-              const p = h.payload as { id?: string } | undefined
-              return p?.id && !existingIds.has(p.id)
-            })
-            return [...newMsgs, ...prev]
-          })
-        }
-      })
+    if (!connected || !sessionId) {
+      prevConnected.current = connected
+      return
     }
+
+    const isReconnect = connected && !prevConnected.current
+    const isNewSource = sessionId !== prevSourceId.current
+
     prevConnected.current = connected
-  }, [connected, sessionId, historicalSessionId])
+
+    if (!isReconnect && !isNewSource) return
+    prevSourceId.current = sessionId
+
+    Promise.all([
+      fetchSessionMessages(sessionId).catch(() => null),
+      fetchSessionLogs(sessionId).catch(() => null),
+    ]).then(([msgResp, logResp]) => {
+      const historical: AgentMessage[] = []
+
+      if (msgResp?.messages) {
+        for (const m of msgResp.messages) {
+          if (!seenIds.current.has(m.id)) {
+            seenIds.current.add(m.id)
+            historical.push({ type: "http", payload: m })
+          }
+        }
+      }
+
+      if (logResp?.entries) {
+        for (const e of logResp.entries) {
+          if (!seenIds.current.has(e.id)) {
+            seenIds.current.add(e.id)
+            historical.push({ type: "logcat", payload: e })
+          }
+        }
+      }
+
+      if (historical.length > 0) {
+        setMessages((prev) => {
+          const existingIds = new Set(
+            prev
+              .map((m) => {
+                const p = m.payload as { id?: string } | undefined
+                return p?.id
+              })
+              .filter(Boolean),
+          )
+          const newMsgs = historical.filter((h) => {
+            const p = h.payload as { id?: string } | undefined
+            return p?.id && !existingIds.has(p.id)
+          })
+          return [...newMsgs, ...prev]
+        })
+      }
+    })
+  }, [connected, sessionId])
 
   useEffect(() => {
     if (!sessionId) return

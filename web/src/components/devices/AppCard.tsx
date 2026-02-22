@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { useNavigate } from "@tanstack/react-router"
 import { Badge } from "@/components/ui/badge"
 import type { App } from "@/types/device"
 import { cn } from "@/lib/utils"
@@ -22,26 +21,18 @@ function hashColor(str: string): string {
 interface AppCardProps {
   app: App
   deviceId: string
+  onSelect: (app: App) => void
 }
 
-export function AppCard({ app, deviceId }: AppCardProps) {
+export function AppCard({ app, deviceId, onSelect }: AppCardProps) {
   const [imgError, setImgError] = useState(false)
-  const navigate = useNavigate()
   const initial = app.name.charAt(0).toUpperCase()
   const isRunning = app.pid > 0
   const iconUrl = `/api/v1/devices/${deviceId}/icon/${app.identifier}`
 
-  function handleClick() {
-    navigate({
-      to: "/devices/$deviceId/app/$bundleId",
-      params: { deviceId, bundleId: app.identifier },
-      search: { sessionId: "", historicalSessionId: "" },
-    })
-  }
-
   return (
     <div
-      onClick={handleClick}
+      onClick={() => onSelect(app)}
       className={cn(
         "group flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-border bg-card p-4",
         "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",

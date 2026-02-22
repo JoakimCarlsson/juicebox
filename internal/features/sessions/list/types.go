@@ -5,6 +5,7 @@ type SessionItem struct {
 	DeviceID    string `json:"deviceId"`
 	BundleID    string `json:"bundleId"`
 	PID         int    `json:"pid"`
+	Name        string `json:"name"`
 	StartedAt   int64  `json:"startedAt"`
 	EndedAt     *int64 `json:"endedAt"`
 	HttpCount   int    `json:"httpCount"`

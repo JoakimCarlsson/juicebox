@@ -5,7 +5,6 @@ export const Route = createFileRoute(
 )({
   validateSearch: (search: Record<string, unknown>) => ({
     sessionId: (search.sessionId as string) ?? "",
-    historicalSessionId: (search.historicalSessionId as string) ?? "",
   }),
   component: AppIndex,
 })
@@ -14,14 +13,14 @@ function AppIndex() {
   const { deviceId, bundleId } = useParams({
     from: "/devices/$deviceId/app/$bundleId/",
   })
-  const { sessionId, historicalSessionId } = useSearch({
+  const { sessionId } = useSearch({
     from: "/devices/$deviceId/app/$bundleId/",
   })
   return (
     <Navigate
       to="/devices/$deviceId/app/$bundleId/home"
       params={{ deviceId, bundleId }}
-      search={{ sessionId, historicalSessionId }}
+      search={{ sessionId }}
     />
   )
 }

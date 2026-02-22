@@ -20,7 +20,6 @@ export const Route = createFileRoute(
 )({
   validateSearch: (search: Record<string, unknown>) => ({
     sessionId: (search.sessionId as string) ?? "",
-    historicalSessionId: (search.historicalSessionId as string) ?? "",
   }),
   component: AppLayout,
 })
@@ -36,7 +35,7 @@ function AppLayout() {
   const { deviceId, bundleId } = useParams({
     from: "/devices/$deviceId/app/$bundleId",
   })
-  const { sessionId, historicalSessionId } = useSearch({
+  const { sessionId } = useSearch({
     from: "/devices/$deviceId/app/$bundleId",
   })
   const navigate = useNavigate()
@@ -52,14 +51,13 @@ function AppLayout() {
     } catch {}
     setDetaching(false)
     navigate({
-      to: "/devices/$deviceId/app/$bundleId/home",
-      params: { deviceId, bundleId },
-      search: { sessionId: "", historicalSessionId: "" },
+      to: "/devices/$deviceId/apps",
+      params: { deviceId },
     })
   }
 
   return (
-    <SessionMessageProvider sessionId={sessionId} historicalSessionId={historicalSessionId}>
+    <SessionMessageProvider sessionId={sessionId}>
     <div className="flex h-full flex-col">
       {sessionId && <SessionStatusReporter sessionId={sessionId} bundleId={bundleId} />}
 
@@ -106,7 +104,7 @@ function AppLayout() {
               key={tab.value}
               to={tab.enabled ? tab.to : undefined!}
               params={{ deviceId, bundleId }}
-              search={{ sessionId, historicalSessionId }}
+              search={{ sessionId }}
               className={cn(
                 "flex items-center h-9 px-3 text-xs transition-colors",
                 "border-b-2 border-transparent",

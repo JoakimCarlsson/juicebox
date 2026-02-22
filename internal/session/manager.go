@@ -59,8 +59,10 @@ type AttachResult struct {
 	PID       int    `json:"pid"`
 }
 
-func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
+func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachResult, error) {
 	logger := slog.With("device_id", deviceId, "source", "manager")
+
+	isRestore := existingSessionId != ""
 
 	sess := &Session{
 		DeviceID: deviceId,
@@ -124,19 +126,27 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 		return nil, fmt.Errorf("manager: bridge attach: %w", err)
 	}
 
-	sess.ID = bridgeResp.SessionID
 	sess.PID = bridgeResp.PID
 	sess.BridgeSession = bridgeResp.SessionID
 	sess.StartedAt = time.Now().UnixMilli()
 
-	if err := m.database.InsertSession(&db.SessionRow{
-		ID:        sess.ID,
-		DeviceID:  sess.DeviceID,
-		BundleID:  sess.BundleID,
-		PID:       sess.PID,
-		StartedAt: sess.StartedAt,
-	}); err != nil {
-		logger.Error("failed to persist session", "error", err)
+	if isRestore {
+		sess.ID = existingSessionId
+		if err := m.database.ReopenSession(existingSessionId, sess.PID); err != nil {
+			logger.Error("failed to reopen session", "error", err)
+		}
+		logger.Info("restored session", "session_id", existingSessionId)
+	} else {
+		sess.ID = bridgeResp.SessionID
+		if err := m.database.InsertSession(&db.SessionRow{
+			ID:        sess.ID,
+			DeviceID:  sess.DeviceID,
+			BundleID:  sess.BundleID,
+			PID:       sess.PID,
+			StartedAt: sess.StartedAt,
+		}); err != nil {
+			logger.Error("failed to persist session", "error", err)
+		}
 	}
 
 	m.mu.Lock()

@@ -19,7 +19,6 @@ export const Route = createFileRoute(
 )({
   validateSearch: (search: Record<string, unknown>) => ({
     sessionId: (search.sessionId as string) ?? "",
-    historicalSessionId: (search.historicalSessionId as string) ?? "",
   }),
   component: NetworkPage,
 })

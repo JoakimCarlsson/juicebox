@@ -10,6 +10,7 @@ type SessionRow struct {
 	DeviceID  string
 	BundleID  string
 	PID       int
+	Name      string
 	StartedAt int64
 	EndedAt   *int64
 }
@@ -45,8 +46,8 @@ type LogcatEntryRow struct {
 
 func (d *DB) InsertSession(s *SessionRow) error {
 	_, err := d.Conn.Exec(
-		`INSERT INTO sessions (id, device_id, bundle_id, pid, started_at) VALUES (?, ?, ?, ?, ?)`,
-		s.ID, s.DeviceID, s.BundleID, s.PID, s.StartedAt,
+		`INSERT INTO sessions (id, device_id, bundle_id, pid, name, started_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		s.ID, s.DeviceID, s.BundleID, s.PID, s.Name, s.StartedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("db.InsertSession: %w", err)
@@ -64,10 +65,10 @@ func (d *DB) EndSession(id string, endedAt int64) error {
 
 func (d *DB) GetSession(id string) (*SessionRow, error) {
 	row := d.Conn.QueryRow(
-		`SELECT id, device_id, bundle_id, pid, started_at, ended_at FROM sessions WHERE id = ?`, id,
+		`SELECT id, device_id, bundle_id, pid, name, started_at, ended_at FROM sessions WHERE id = ?`, id,
 	)
 	s := &SessionRow{}
-	if err := row.Scan(&s.ID, &s.DeviceID, &s.BundleID, &s.PID, &s.StartedAt, &s.EndedAt); err != nil {
+	if err := row.Scan(&s.ID, &s.DeviceID, &s.BundleID, &s.PID, &s.Name, &s.StartedAt, &s.EndedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -78,7 +79,7 @@ func (d *DB) GetSession(id string) (*SessionRow, error) {
 
 func (d *DB) ListSessions(deviceID string, limit, offset int) ([]SessionRow, error) {
 	rows, err := d.Conn.Query(
-		`SELECT id, device_id, bundle_id, pid, started_at, ended_at
+		`SELECT id, device_id, bundle_id, pid, name, started_at, ended_at
 		 FROM sessions WHERE device_id = ? ORDER BY started_at DESC LIMIT ? OFFSET ?`,
 		deviceID, limit, offset,
 	)
@@ -91,7 +92,7 @@ func (d *DB) ListSessions(deviceID string, limit, offset int) ([]SessionRow, err
 
 func (d *DB) ListAllSessions(limit, offset int) ([]SessionRow, error) {
 	rows, err := d.Conn.Query(
-		`SELECT id, device_id, bundle_id, pid, started_at, ended_at
+		`SELECT id, device_id, bundle_id, pid, name, started_at, ended_at
 		 FROM sessions ORDER BY started_at DESC LIMIT ? OFFSET ?`,
 		limit, offset,
 	)
@@ -115,7 +116,7 @@ func scanSessions(rows *sql.Rows) ([]SessionRow, error) {
 	var result []SessionRow
 	for rows.Next() {
 		var s SessionRow
-		if err := rows.Scan(&s.ID, &s.DeviceID, &s.BundleID, &s.PID, &s.StartedAt, &s.EndedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.DeviceID, &s.BundleID, &s.PID, &s.Name, &s.StartedAt, &s.EndedAt); err != nil {
 			return nil, err
 		}
 		result = append(result, s)
@@ -225,7 +226,7 @@ func (d *DB) CountLogcatEntries(sessionID string) (int, error) {
 
 func (d *DB) ListSessionsByBundle(deviceID, bundleID string, limit, offset int) ([]SessionRow, error) {
 	rows, err := d.Conn.Query(
-		`SELECT id, device_id, bundle_id, pid, started_at, ended_at
+		`SELECT id, device_id, bundle_id, pid, name, started_at, ended_at
 		 FROM sessions WHERE device_id = ? AND bundle_id = ?
 		 ORDER BY started_at DESC LIMIT ? OFFSET ?`,
 		deviceID, bundleID, limit, offset,
@@ -247,6 +248,22 @@ func (d *DB) CountSessionsByBundle(deviceID, bundleID string) (int, error) {
 		return 0, fmt.Errorf("db.CountSessionsByBundle: %w", err)
 	}
 	return count, nil
+}
+
+func (d *DB) ReopenSession(id string, pid int) error {
+	_, err := d.Conn.Exec(`UPDATE sessions SET ended_at = NULL, pid = ? WHERE id = ?`, pid, id)
+	if err != nil {
+		return fmt.Errorf("db.ReopenSession: %w", err)
+	}
+	return nil
+}
+
+func (d *DB) RenameSession(id, name string) error {
+	_, err := d.Conn.Exec(`UPDATE sessions SET name = ? WHERE id = ?`, name, id)
+	if err != nil {
+		return fmt.Errorf("db.RenameSession: %w", err)
+	}
+	return nil
 }
 
 func (d *DB) CloseOrphanedSessions(endedAt int64) (int64, error) {

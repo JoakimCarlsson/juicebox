@@ -3,11 +3,12 @@ import type { AttachResponse, SessionsResponse, MessagesResponse, LogsResponse }
 export async function attachApp(
   deviceId: string,
   bundleId: string,
+  sessionId?: string,
 ): Promise<AttachResponse> {
-  const res = await fetch(
-    `/api/v1/devices/${deviceId}/apps/${bundleId}/attach`,
-    { method: "POST" },
-  )
+  const url = sessionId
+    ? `/api/v1/devices/${deviceId}/apps/${bundleId}/attach?sessionId=${encodeURIComponent(sessionId)}`
+    : `/api/v1/devices/${deviceId}/apps/${bundleId}/attach`
+  const res = await fetch(url, { method: "POST" })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.error || "Failed to attach")
@@ -60,6 +61,21 @@ export async function fetchSessionMessages(
   )
   if (!res.ok) throw new Error("Failed to fetch messages")
   return res.json()
+}
+
+export async function renameSession(
+  sessionId: string,
+  name: string,
+): Promise<void> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || "Failed to rename session")
+  }
 }
 
 export async function fetchSessionLogs(
