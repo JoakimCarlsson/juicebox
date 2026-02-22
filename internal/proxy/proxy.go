@@ -3,6 +3,8 @@ package proxy
 import (
 	"bufio"
 	"bytes"
+	"compress/flate"
+	"compress/gzip"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -13,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/andybalholm/brotli"
 )
 
 const maxTotalBodyRead = 10 * 1024 * 1024 // 10MB
@@ -221,10 +225,11 @@ func (p *Proxy) emitMessage(req *http.Request, reqBody []byte, resp *http.Respon
 	}
 
 	reqCapture := reqBody
+	respCapture := decompressBody(respBody, resp.Header.Get("Content-Encoding"))
+
 	if len(reqCapture) > maxBodyBytes {
 		reqCapture = reqCapture[:maxBodyBytes]
 	}
-	respCapture := respBody
 	if len(respCapture) > maxBodyBytes {
 		respCapture = respCapture[:maxBodyBytes]
 	}
@@ -253,6 +258,51 @@ func (p *Proxy) emitMessage(req *http.Request, reqBody []byte, resp *http.Respon
 	}
 
 	p.sink(msg)
+}
+
+func decompressBody(data []byte, encoding string) []byte {
+	if len(data) == 0 {
+		return data
+	}
+
+	enc := strings.ToLower(strings.TrimSpace(encoding))
+	log.Printf("[proxy] decompressBody: encoding=%q len=%d", enc, len(data))
+
+	switch enc {
+	case "gzip":
+		r, err := gzip.NewReader(bytes.NewReader(data))
+		if err != nil {
+			log.Printf("[proxy] gzip.NewReader error: %v", err)
+			return data
+		}
+		defer r.Close()
+		out, err := io.ReadAll(io.LimitReader(r, maxTotalBodyRead))
+		if err != nil {
+			log.Printf("[proxy] gzip read error: %v", err)
+			return data
+		}
+		return out
+	case "deflate":
+		r := flate.NewReader(bytes.NewReader(data))
+		defer r.Close()
+		out, err := io.ReadAll(io.LimitReader(r, maxTotalBodyRead))
+		if err != nil {
+			log.Printf("[proxy] deflate read error: %v", err)
+			return data
+		}
+		return out
+	case "br":
+		r := brotli.NewReader(bytes.NewReader(data))
+		out, err := io.ReadAll(io.LimitReader(r, maxTotalBodyRead))
+		if err != nil {
+			log.Printf("[proxy] brotli read error: %v", err)
+			return data
+		}
+		return out
+	default:
+		log.Printf("[proxy] unknown/empty encoding, not decompressing")
+		return data
+	}
 }
 
 func MarshalMessage(msg AgentMessage) ([]byte, error) {

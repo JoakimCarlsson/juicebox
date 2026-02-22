@@ -212,6 +212,7 @@ async function decompressBytes(
 function useDecodedBody(
   body: string,
   headers: Record<string, string>,
+  bodyEncoding?: string,
 ): { decoded: string | null; isImage: boolean; imageDataUri: string | null; loading: boolean } {
   const contentType = headers["content-type"] ?? headers["Content-Type"] ?? ""
   const contentEncoding = (headers["content-encoding"] ?? headers["Content-Encoding"] ?? "").trim().toLowerCase()
@@ -227,6 +228,18 @@ function useDecodedBody(
     let cancelled = false
     ;(async () => {
       try {
+        if (bodyEncoding === "utf8") {
+          if (cancelled) return
+          if (isText || !contentType) {
+            setDecoded(body)
+            setImageDataUri(null)
+          } else {
+            setDecoded(null)
+            setImageDataUri(null)
+          }
+          return
+        }
+
         const raw = b64ToBytes(body)
         const bytes = await decompressBytes(raw, contentEncoding)
 
@@ -251,7 +264,7 @@ function useDecodedBody(
       }
     })()
     return () => { cancelled = true }
-  }, [body, contentEncoding, isImage, isText, mimeType, contentType])
+  }, [body, bodyEncoding, contentEncoding, isImage, isText, mimeType, contentType])
 
   return { decoded, isImage, imageDataUri, loading }
 }
@@ -260,14 +273,16 @@ function BodyViewer({
   body,
   headers,
   size,
+  bodyEncoding,
 }: {
   body: string
   headers: Record<string, string>
   size?: number
+  bodyEncoding?: string
 }) {
   const contentType = headers["content-type"] ?? headers["Content-Type"] ?? ""
   const mimeType = contentType.split(";")[0].trim() || "unknown"
-  const { decoded, isImage, imageDataUri, loading } = useDecodedBody(body, headers)
+  const { decoded, isImage, imageDataUri, loading } = useDecodedBody(body, headers, bodyEncoding)
 
   if (loading) {
     return (
@@ -430,6 +445,7 @@ function RequestDetail({ message }: { message: HttpMessage | null }) {
               body={message.requestBody}
               headers={message.requestHeaders}
               size={message.requestBodySize}
+              bodyEncoding={message.requestBodyEncoding}
             />
           </div>
         )}
@@ -479,6 +495,7 @@ function RequestDetail({ message }: { message: HttpMessage | null }) {
               body={message.responseBody}
               headers={message.responseHeaders}
               size={message.responseBodySize}
+              bodyEncoding={message.responseBodyEncoding}
             />
           </div>
         )}
