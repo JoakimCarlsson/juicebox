@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -26,16 +26,18 @@ type MessageSink func(AgentMessage)
 type Proxy struct {
 	certManager *CertManager
 	sink        MessageSink
+	logger      *slog.Logger
 	listener    net.Listener
 	transport   *http.Transport
 	done        chan struct{}
 	wg          sync.WaitGroup
 }
 
-func NewProxy(cm *CertManager, sink MessageSink) *Proxy {
+func NewProxy(cm *CertManager, sink MessageSink, logger *slog.Logger) *Proxy {
 	return &Proxy{
 		certManager: cm,
 		sink:        sink,
+		logger:      logger,
 		transport: &http.Transport{
 			TLSClientConfig: &tls.Config{},
 			MaxIdleConns:    100,
@@ -87,7 +89,6 @@ func (p *Proxy) serve() {
 			case <-p.done:
 				return
 			default:
-				log.Printf("[proxy] accept error: %v", err)
 				continue
 			}
 		}
@@ -106,11 +107,8 @@ func (p *Proxy) handleConn(conn net.Conn) {
 	br := bufio.NewReader(conn)
 	req, err := http.ReadRequest(br)
 	if err != nil {
-		log.Printf("[proxy] read request error: %v", err)
 		return
 	}
-
-	log.Printf("[proxy] %s %s", req.Method, req.Host)
 
 	if req.Method == http.MethodConnect {
 		p.handleConnect(conn, req)
@@ -130,7 +128,6 @@ func (p *Proxy) handleConnect(clientConn net.Conn, connectReq *http.Request) {
 
 	cert, err := p.certManager.GetCert(hostname)
 	if err != nil {
-		log.Printf("[proxy] cert error for %s: %v", hostname, err)
 		return
 	}
 
@@ -140,11 +137,8 @@ func (p *Proxy) handleConnect(clientConn net.Conn, connectReq *http.Request) {
 	defer tlsConn.Close()
 
 	if err := tlsConn.Handshake(); err != nil {
-		log.Printf("[proxy] TLS handshake FAILED for %s: %v", hostname, err)
 		return
 	}
-
-	log.Printf("[proxy] TLS handshake OK for %s", hostname)
 
 	br := bufio.NewReader(tlsConn)
 	for {
@@ -192,7 +186,6 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 
 	resp, err := p.transport.RoundTrip(req)
 	if err != nil {
-		log.Printf("[proxy] roundtrip error %s %s: %v", req.Method, req.URL, err)
 		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n"))
 		return
 	}
@@ -225,7 +218,7 @@ func (p *Proxy) emitMessage(req *http.Request, reqBody []byte, resp *http.Respon
 	}
 
 	reqCapture := reqBody
-	respCapture := decompressBody(respBody, resp.Header.Get("Content-Encoding"))
+	respCapture := p.decompressBody(respBody, resp.Header.Get("Content-Encoding"))
 
 	if len(reqCapture) > maxBodyBytes {
 		reqCapture = reqCapture[:maxBodyBytes]
@@ -260,25 +253,24 @@ func (p *Proxy) emitMessage(req *http.Request, reqBody []byte, resp *http.Respon
 	p.sink(msg)
 }
 
-func decompressBody(data []byte, encoding string) []byte {
+func (p *Proxy) decompressBody(data []byte, encoding string) []byte {
 	if len(data) == 0 {
 		return data
 	}
 
 	enc := strings.ToLower(strings.TrimSpace(encoding))
-	log.Printf("[proxy] decompressBody: encoding=%q len=%d", enc, len(data))
 
 	switch enc {
 	case "gzip":
 		r, err := gzip.NewReader(bytes.NewReader(data))
 		if err != nil {
-			log.Printf("[proxy] gzip.NewReader error: %v", err)
+			p.logger.Error("gzip reader error", "error", err)
 			return data
 		}
 		defer r.Close()
 		out, err := io.ReadAll(io.LimitReader(r, maxTotalBodyRead))
 		if err != nil {
-			log.Printf("[proxy] gzip read error: %v", err)
+			p.logger.Error("gzip read error", "error", err)
 			return data
 		}
 		return out
@@ -287,7 +279,7 @@ func decompressBody(data []byte, encoding string) []byte {
 		defer r.Close()
 		out, err := io.ReadAll(io.LimitReader(r, maxTotalBodyRead))
 		if err != nil {
-			log.Printf("[proxy] deflate read error: %v", err)
+			p.logger.Error("deflate read error", "error", err)
 			return data
 		}
 		return out
@@ -295,12 +287,11 @@ func decompressBody(data []byte, encoding string) []byte {
 		r := brotli.NewReader(bytes.NewReader(data))
 		out, err := io.ReadAll(io.LimitReader(r, maxTotalBodyRead))
 		if err != nil {
-			log.Printf("[proxy] brotli read error: %v", err)
+			p.logger.Error("brotli read error", "error", err)
 			return data
 		}
 		return out
 	default:
-		log.Printf("[proxy] unknown/empty encoding, not decompressing")
 		return data
 	}
 }

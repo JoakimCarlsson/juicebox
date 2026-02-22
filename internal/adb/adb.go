@@ -4,7 +4,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -131,7 +130,6 @@ echo 'System cert successfully injected'
 	cmd := exec.Command("adb", "-s", deviceId, "shell", "sh", scriptPath)
 	out, err := cmd.CombinedOutput()
 	output := string(out)
-	log.Printf("[adb] cert inject output:\n%s", output)
 
 	if err != nil {
 		return fmt.Errorf("cert injection script failed: %s: %w", output, err)
@@ -143,7 +141,6 @@ echo 'System cert successfully injected'
 
 	shell(deviceId, fmt.Sprintf("rm -f %s", scriptPath))
 
-	log.Printf("[adb] CA cert installed via tmpfs overlay")
 	return nil
 }
 

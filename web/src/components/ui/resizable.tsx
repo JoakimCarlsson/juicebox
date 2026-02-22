@@ -10,15 +10,9 @@ import {
 
 import { cn } from "@/lib/utils"
 
-function ResizablePanelGroup({
-  className,
-  ...props
-}: GroupProps) {
+function ResizablePanelGroup({ className, ...props }: GroupProps) {
   return (
-    <Group
-      className={cn("flex h-full w-full", className)}
-      {...props}
-    />
+    <Group className={cn("flex h-full w-full", className)} {...props} />
   )
 }
 

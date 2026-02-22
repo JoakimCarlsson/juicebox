@@ -3,12 +3,12 @@ package session
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 
-	"github.com/gorilla/websocket"
 	"github.com/joakimcarlsson/juicebox/internal/adb"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/proxy"
 )
 
@@ -22,55 +22,21 @@ type Session struct {
 	BridgeSession string
 	Proxy         *proxy.Proxy
 	ProxyPort     int
-
-	mu            sync.Mutex
-	subscribers   map[*websocket.Conn]struct{}
-	messageBuffer [][]byte
-}
-
-func (s *Session) addSubscriber(ws *websocket.Conn) [][]byte {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.subscribers[ws] = struct{}{}
-	buffered := s.messageBuffer
-	s.messageBuffer = nil
-	return buffered
-}
-
-func (s *Session) removeSubscriber(ws *websocket.Conn) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.subscribers, ws)
-}
-
-func (s *Session) broadcast(data []byte) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if len(s.subscribers) == 0 {
-		s.messageBuffer = append(s.messageBuffer, data)
-		return
-	}
-
-	for ws := range s.subscribers {
-		if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-			delete(s.subscribers, ws)
-			ws.Close()
-		}
-	}
 }
 
 type Manager struct {
 	certManager *proxy.CertManager
 	bridge      *bridge.Client
+	hubManager  *devicehub.Manager
 	mu          sync.RWMutex
 	sessions    map[string]*Session
 }
 
-func NewManager(cm *proxy.CertManager, bridgeClient *bridge.Client) *Manager {
+func NewManager(cm *proxy.CertManager, bridgeClient *bridge.Client, hubManager *devicehub.Manager) *Manager {
 	return &Manager{
 		certManager: cm,
 		bridge:      bridgeClient,
+		hubManager:  hubManager,
 		sessions:    make(map[string]*Session),
 	}
 }
@@ -85,20 +51,24 @@ type AttachResult struct {
 }
 
 func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
+	logger := slog.With("device_id", deviceId, "source", "manager")
+
 	sess := &Session{
-		DeviceID:    deviceId,
-		BundleID:    bundleId,
-		subscribers: make(map[*websocket.Conn]struct{}),
+		DeviceID: deviceId,
+		BundleID: bundleId,
 	}
 
+	hub := m.hubManager.GetOrCreate(deviceId)
+
+	proxyLogger := slog.With("device_id", deviceId, "source", "proxy")
 	p := proxy.NewProxy(m.certManager, func(msg proxy.AgentMessage) {
-		data, err := proxy.MarshalMessage(msg)
+		data, err := devicehub.Marshal(msg.Type, sess.ID, msg.Payload)
 		if err != nil {
-			log.Printf("[manager] marshal error: %v", err)
+			logger.Error("marshal error", "error", err)
 			return
 		}
-		sess.broadcast(data)
-	})
+		hub.Broadcast(data)
+	}, proxyLogger)
 
 	port, err := p.Start()
 	if err != nil {
@@ -107,22 +77,24 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 	sess.Proxy = p
 	sess.ProxyPort = port
 
-	log.Printf("[manager] proxy started on port %d for %s", port, bundleId)
+	logger.Info("proxy started", "port", port, "bundle", bundleId)
 
+	logger.Info("installing CA certificate")
 	if err := adb.InstallCACert(deviceId, m.certManager.CAPEMPath()); err != nil {
-		log.Printf("[manager] CA cert install failed: %v", err)
+		logger.Error("CA cert install failed", "error", err)
 		p.Stop()
 		return nil, fmt.Errorf("manager: install ca cert: %w", err)
 	}
+	logger.Info("CA cert installed via tmpfs overlay")
 
 	if err := adb.ReversePort(deviceId, deviceProxyPort, port); err != nil {
-		log.Printf("[manager] adb reverse failed: %v", err)
+		logger.Error("adb reverse failed", "error", err)
 		p.Stop()
 		return nil, fmt.Errorf("manager: adb reverse: %w", err)
 	}
 
 	if err := adb.SetProxy(deviceId, "127.0.0.1", deviceProxyPort); err != nil {
-		log.Printf("[manager] set proxy failed: %v", err)
+		logger.Error("set proxy failed", "error", err)
 		adb.RemoveReverse(deviceId, deviceProxyPort)
 		p.Stop()
 		return nil, fmt.Errorf("manager: set proxy: %w", err)
@@ -130,7 +102,7 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 
 	bridgeResp, err := m.bridge.Attach(deviceId, bundleId)
 	if err != nil {
-		log.Printf("[manager] bridge attach failed: %v", err)
+		logger.Error("bridge attach failed", "error", err)
 		adb.ClearProxy(deviceId)
 		adb.RemoveReverse(deviceId, deviceProxyPort)
 		p.Stop()
@@ -145,7 +117,10 @@ func (m *Manager) Attach(deviceId, bundleId string) (*AttachResult, error) {
 	m.sessions[sess.ID] = sess
 	m.mu.Unlock()
 
-	log.Printf("[manager] attached %s (pid %d), session %s", bundleId, sess.PID, sess.ID)
+	go m.bridgeSubscribeForward(sess)
+
+	logger = logger.With("session_id", sess.ID)
+	logger.Info("attached", "bundle", bundleId, "pid", sess.PID)
 
 	return &AttachResult{
 		SessionID: sess.ID,
@@ -165,8 +140,10 @@ func (m *Manager) Detach(sessionId string) error {
 		return m.bridge.Detach(sessionId)
 	}
 
+	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sessionId)
+
 	if err := m.bridge.Detach(sess.BridgeSession); err != nil {
-		log.Printf("[manager] bridge detach error: %v", err)
+		logger.Warn("bridge detach error", "error", err)
 	}
 
 	adb.ClearProxy(sess.DeviceID)
@@ -174,13 +151,7 @@ func (m *Manager) Detach(sessionId string) error {
 
 	sess.Proxy.Stop()
 
-	sess.mu.Lock()
-	for ws := range sess.subscribers {
-		ws.Close()
-	}
-	sess.mu.Unlock()
-
-	log.Printf("[manager] detached session %s", sessionId)
+	logger.Info("detached session")
 	return nil
 }
 
@@ -190,39 +161,17 @@ func (m *Manager) GetSession(sessionId string) *Session {
 	return m.sessions[sessionId]
 }
 
-func (m *Manager) Subscribe(sessionId string, ws *websocket.Conn) error {
-	sess := m.GetSession(sessionId)
-	if sess == nil {
-		return fmt.Errorf("session not found: %s", sessionId)
-	}
+func (m *Manager) bridgeSubscribeForward(sess *Session) {
+	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sess.ID)
 
-	buffered := sess.addSubscriber(ws)
-	for _, data := range buffered {
-		if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-			sess.removeSubscriber(ws)
-			return err
-		}
-	}
-
-	go m.bridgeSubscribeForward(sessionId, sess)
-
-	for {
-		if _, _, err := ws.ReadMessage(); err != nil {
-			break
-		}
-	}
-
-	sess.removeSubscriber(ws)
-	return nil
-}
-
-func (m *Manager) bridgeSubscribeForward(sessionId string, sess *Session) {
-	sub, err := m.bridge.Subscribe(sessionId)
+	sub, err := m.bridge.Subscribe(sess.ID)
 	if err != nil {
-		log.Printf("[manager] bridge subscribe error for %s: %v", sessionId, err)
+		logger.Error("bridge subscribe failed", "error", err)
 		return
 	}
 	defer sub.Close()
+
+	hub := m.hubManager.GetOrCreate(sess.DeviceID)
 
 	buf := make([]byte, 1024*1024)
 	for {
@@ -237,10 +186,17 @@ func (m *Manager) bridgeSubscribeForward(sessionId string, sess *Session) {
 		}
 
 		var msg struct {
-			Type string `json:"type"`
+			Type    string          `json:"type"`
+			Payload json.RawMessage `json:"payload"`
 		}
-		if json.Unmarshal(line, &msg) == nil && msg.Type == "http" {
-			sess.broadcast(append([]byte{}, line...))
+		if err := json.Unmarshal(line, &msg); err != nil || msg.Type == "" {
+			continue
 		}
+
+		data, err := devicehub.Marshal(msg.Type, sess.ID, msg.Payload)
+		if err != nil {
+			continue
+		}
+		hub.Broadcast(data)
 	}
 }
