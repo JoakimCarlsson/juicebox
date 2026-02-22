@@ -4,6 +4,9 @@ import { History } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { sessionsQueryOptions } from "@/features/sessions/queries"
+import { attachApp } from "@/features/sessions/api"
+import { useState } from "react"
+import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/devices/$deviceId/sessions")({
   component: SessionsPage,
@@ -25,8 +28,25 @@ function SessionsPage() {
   const { deviceId } = useParams({ from: "/devices/$deviceId/sessions" })
   const navigate = useNavigate()
   const { data, isLoading } = useQuery(sessionsQueryOptions(deviceId))
+  const [attachingId, setAttachingId] = useState<string | null>(null)
 
   const sessions = data?.sessions ?? []
+
+  async function handleClick(bundleId: string, id: string) {
+    if (attachingId) return
+    setAttachingId(id)
+    try {
+      const { sessionId } = await attachApp(deviceId, bundleId)
+      navigate({
+        to: "/devices/$deviceId/session/$bundleId",
+        params: { deviceId, bundleId },
+        search: { sessionId },
+      })
+    } catch (err) {
+      console.error("Failed to attach:", err)
+      setAttachingId(null)
+    }
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -70,14 +90,12 @@ function SessionsPage() {
             {sessions.map((session) => (
               <button
                 key={session.id}
-                onClick={() =>
-                  navigate({
-                    to: "/devices/$deviceId/session/$bundleId",
-                    params: { deviceId, bundleId: session.bundleId },
-                    search: { sessionId: session.id },
-                  })
-                }
-                className="flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+                onClick={() => handleClick(session.bundleId, session.id)}
+                disabled={attachingId !== null}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
+                  attachingId === session.id && "opacity-50",
+                )}
               >
                 <span className="text-sm font-mono text-foreground">
                   {session.bundleId}
