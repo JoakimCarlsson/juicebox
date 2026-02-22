@@ -238,7 +238,7 @@ func (m *Manager) GetSession(sessionId string) *Session {
 func (m *Manager) bridgeSubscribeForward(sess *Session) {
 	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sess.ID)
 
-	sub, err := m.bridge.Subscribe(sess.ID)
+	sub, err := m.bridge.Subscribe(sess.BridgeSession)
 	if err != nil {
 		logger.Error("bridge subscribe failed", "error", err)
 		return
