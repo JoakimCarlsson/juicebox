@@ -198,7 +198,19 @@ async function handleAttach(
         }
       }
     } else if (msg.type === "error") {
-      console.error(`[${sessionId}] agent error:`, (msg as any).description ?? msg);
+      const description = (msg as any).description ?? String(msg);
+      console.error(`[${sessionId}] agent error:`, description);
+      const errLine = JSON.stringify({ type: "agent-error", payload: { message: description } }) + "\n";
+      const errEncoded = new TextEncoder().encode(errLine);
+      if (state.subscribers.size === 0) {
+        state.messageBuffer.push(errLine);
+      } else {
+        for (const sub of state.subscribers) {
+          sub.write(errEncoded).catch(() => {
+            state.subscribers.delete(sub);
+          });
+        }
+      }
     }
   });
 
@@ -223,7 +235,19 @@ async function handleAttach(
   try {
     await script.exports.invoke("ssl", "bypass", []);
   } catch (err) {
+    const description = err instanceof Error ? err.message : String(err);
     console.error(`[${sessionId}] ssl bypass failed:`, err);
+    const errLine = JSON.stringify({ type: "agent-error", payload: { message: `ssl bypass failed: ${description}` } }) + "\n";
+    if (state.subscribers.size === 0) {
+      state.messageBuffer.push(errLine);
+    } else {
+      const errEncoded = new TextEncoder().encode(errLine);
+      for (const sub of state.subscribers) {
+        sub.write(errEncoded).catch(() => {
+          state.subscribers.delete(sub);
+        });
+      }
+    }
   }
 
   await device.resume(pid);
