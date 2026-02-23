@@ -22,7 +22,7 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable"
 import { useDefaultLayout } from "react-resizable-panels"
-import { ArrowLeft, Home, Globe, FileText, Code, Terminal, MessageSquare } from "lucide-react"
+import { ArrowLeft, Home, Globe, FileText, Code, Terminal, MessageSquare, FolderOpen } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { deviceInfoQueryOptions } from "@/features/devices/queries"
@@ -42,6 +42,7 @@ function getTabs(platform: string | undefined) {
     { value: "home", label: "Home", icon: Home, enabled: true, to: "/devices/$deviceId/app/$bundleId/home" as const },
     { value: "network", label: "Network", icon: Globe, enabled: true, to: "/devices/$deviceId/app/$bundleId/network" as const },
     { value: "logs", label: "Logs", icon: FileText, enabled: platform === "android" || platform === undefined, to: "/devices/$deviceId/app/$bundleId/logs" as const },
+    { value: "files", label: "Files", icon: FolderOpen, enabled: true, to: "/devices/$deviceId/app/$bundleId/files" as const },
     { value: "hooks", label: "Hooks", icon: Code, enabled: false, to: "/devices/$deviceId/app/$bundleId/network" as const },
   ]
 }

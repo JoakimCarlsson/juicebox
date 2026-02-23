@@ -8,6 +8,7 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/attach"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/chat"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/detach"
+	"github.com/joakimcarlsson/juicebox/internal/features/sessions/filesystem"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/intercept"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/list"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/logs"
@@ -25,6 +26,7 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	renameHandler := rename.NewHandler(database)
 	chatHandler := chat.NewHandler(database, bridgeClient, manager, &appConfig.LLM, chatStore)
 	interceptHandler := intercept.NewHandler(manager)
+	fsHandler := filesystem.NewHandler(bridgeClient, manager)
 
 	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
@@ -40,4 +42,8 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	r.GET("/sessions/{sessionId}/intercept/pending", interceptHandler.ListPending)
 	r.POST("/sessions/{sessionId}/intercept/resolve", interceptHandler.Resolve)
 	r.POST("/sessions/{sessionId}/intercept/resolve-all", interceptHandler.ResolveAll)
+
+	r.GET("/sessions/{sessionId}/fs/ls", fsHandler.List)
+	r.GET("/sessions/{sessionId}/fs/read", fsHandler.Read)
+	r.GET("/sessions/{sessionId}/fs/find", fsHandler.Find)
 }

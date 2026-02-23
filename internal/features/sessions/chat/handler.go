@@ -111,6 +111,11 @@ func (h *Handler) Handle(c *router.Context) {
 	if sess.Platform == "" || sess.Platform == "android" {
 		sessionTools = append(sessionTools, chattools.NewRunLogcatQuery(h.db, sessionID))
 	}
+	sessionTools = append(sessionTools,
+		chattools.NewLs(h.bridgeClient, sess.DeviceID, sess.BundleID),
+		chattools.NewReadFile(h.bridgeClient, sess.DeviceID, sess.BundleID),
+		chattools.NewFindFiles(h.bridgeClient, sess.DeviceID, sess.BundleID),
+	)
 
 	state := map[string]any{
 		"BundleID":  sess.BundleID,

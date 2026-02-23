@@ -179,6 +179,48 @@ func (c *Client) Detach(sessionId string) error {
 	return err
 }
 
+func (c *Client) ListFiles(deviceId, bundleId, path string) ([]FileEntry, error) {
+	raw, err := c.call("listFiles", map[string]string{"deviceId": deviceId, "bundleId": bundleId, "path": path})
+	if err != nil {
+		return nil, err
+	}
+
+	var entries []FileEntry
+	if err := json.Unmarshal(raw, &entries); err != nil {
+		return nil, fmt.Errorf("bridge.ListFiles: %w", err)
+	}
+
+	return entries, nil
+}
+
+func (c *Client) ReadFile(deviceId, bundleId, path string) (*FileContent, error) {
+	raw, err := c.call("readFile", map[string]string{"deviceId": deviceId, "bundleId": bundleId, "path": path})
+	if err != nil {
+		return nil, err
+	}
+
+	var content FileContent
+	if err := json.Unmarshal(raw, &content); err != nil {
+		return nil, fmt.Errorf("bridge.ReadFile: %w", err)
+	}
+
+	return &content, nil
+}
+
+func (c *Client) FindFiles(deviceId, bundleId, pattern, basePath string) ([]string, error) {
+	raw, err := c.call("findFiles", map[string]any{"deviceId": deviceId, "bundleId": bundleId, "pattern": pattern, "basePath": basePath})
+	if err != nil {
+		return nil, err
+	}
+
+	var paths []string
+	if err := json.Unmarshal(raw, &paths); err != nil {
+		return nil, fmt.Errorf("bridge.FindFiles: %w", err)
+	}
+
+	return paths, nil
+}
+
 func (c *Client) AgentInvoke(sessionId, namespace, method string, args []any) (json.RawMessage, error) {
 	return c.call("agentInvoke", map[string]any{
 		"sessionId": sessionId,
