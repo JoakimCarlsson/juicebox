@@ -14,24 +14,41 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	chattools "github.com/joakimcarlsson/juicebox/internal/features/sessions/chat/tools"
+	sqlitepkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type Handler struct {
-	db           *db.DB
-	bridgeClient *bridge.Client
-	manager      *session.Manager
-	llmConfig    *config.LLMConfig
-	chatStore    *ChatSessionStore
+	db            *db.DB
+	bridgeClient  *bridge.Client
+	manager       *session.Manager
+	llmConfig     *config.LLMConfig
+	chatStore     *ChatSessionStore
+	sqliteHandler *sqlitepkg.Handler
 }
 
-func NewHandler(database *db.DB, bridgeClient *bridge.Client, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore) *Handler {
+func NewHandler(database *db.DB, bridgeClient *bridge.Client, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteHandler *sqlitepkg.Handler) *Handler {
 	return &Handler{
-		db:           database,
-		bridgeClient: bridgeClient,
-		manager:      manager,
-		llmConfig:    llmConfig,
-		chatStore:    chatStore,
+		db:            database,
+		bridgeClient:  bridgeClient,
+		manager:       manager,
+		llmConfig:     llmConfig,
+		chatStore:     chatStore,
+		sqliteHandler: sqliteHandler,
+	}
+}
+
+func (h *Handler) sqliteQueryFn() func(sess *session.Session, sessionID, dbPath, sqlStr string) (*chattools.QueryResult, error) {
+	return func(sess *session.Session, sessionID, dbPath, sqlStr string) (*chattools.QueryResult, error) {
+		resp, err := h.sqliteHandler.ExecQuery(sess, sessionID, dbPath, sqlStr)
+		if err != nil {
+			return nil, err
+		}
+		return &chattools.QueryResult{
+			Columns:  resp.Columns,
+			Rows:     resp.Rows,
+			RowCount: resp.RowCount,
+		}, nil
 	}
 }
 
@@ -115,6 +132,9 @@ func (h *Handler) Handle(c *router.Context) {
 		chattools.NewLs(h.bridgeClient, sess.DeviceID, sess.BundleID),
 		chattools.NewReadFile(h.bridgeClient, sess.DeviceID, sess.BundleID),
 		chattools.NewFindFiles(h.bridgeClient, sess.DeviceID, sess.BundleID),
+		chattools.NewListDatabases(h.bridgeClient, sess.DeviceID, sess.BundleID),
+		chattools.NewGetSchema(h.sqliteHandler, h.manager, sessionID),
+		chattools.NewSqliteQuery(h.sqliteQueryFn(), h.manager, sessionID),
 	)
 
 	state := map[string]any{

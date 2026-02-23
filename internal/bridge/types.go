@@ -54,3 +54,19 @@ type FileContent struct {
 	MimeType string `json:"mimeType"`
 	Size     int64  `json:"size"`
 }
+
+type PullDatabaseResponse struct {
+	LocalPath string `json:"localPath"`
+}
+
+type DatabaseTable struct {
+	Name    string           `json:"name"`
+	Columns []DatabaseColumn `json:"columns"`
+}
+
+type DatabaseColumn struct {
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	NotNull bool   `json:"notNull"`
+	PK      bool   `json:"pk"`
+}

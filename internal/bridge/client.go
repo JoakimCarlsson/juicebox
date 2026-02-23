@@ -221,6 +221,20 @@ func (c *Client) FindFiles(deviceId, bundleId, pattern, basePath string) ([]stri
 	return paths, nil
 }
 
+func (c *Client) PullDatabase(deviceId, bundleId, dbPath string) (string, error) {
+	raw, err := c.call("pullDatabase", map[string]string{"deviceId": deviceId, "bundleId": bundleId, "dbPath": dbPath})
+	if err != nil {
+		return "", err
+	}
+
+	var resp PullDatabaseResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return "", fmt.Errorf("bridge.PullDatabase: %w", err)
+	}
+
+	return resp.LocalPath, nil
+}
+
 func (c *Client) AgentInvoke(sessionId, namespace, method string, args []any) (json.RawMessage, error) {
 	return c.call("agentInvoke", map[string]any{
 		"sessionId": sessionId,

@@ -611,6 +611,56 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
         return ok(req.id, paths);
       }
 
+      case "pullDatabase": {
+        const deviceId = req.params?.deviceId as string;
+        const bundleId = req.params?.bundleId as string;
+        const dbPath = req.params?.dbPath as string;
+        if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
+        if (!bundleId) return fail(req.id, -32602, "missing param: bundleId");
+        if (!dbPath) return fail(req.id, -32602, "missing param: dbPath");
+
+        const hash = Array.from(new TextEncoder().encode(dbPath))
+          .map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+        const remoteTmp = `/data/local/tmp/jb_${hash}.db`;
+        const localTmp = `${Deno.env.get("TMPDIR") ?? "/tmp"}/jb_${hash}_${Date.now()}.db`;
+
+        const cp = await exec([
+          "adb", "-s", deviceId, "shell",
+          `run-as ${bundleId} cat "${dbPath}" > "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}" || cat "${dbPath}" > "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}" || cp "${dbPath}" "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}"`,
+        ]);
+
+        const checkTmp = await exec(["adb", "-s", deviceId, "shell", `ls "${remoteTmp}" 2>/dev/null && echo EXISTS || echo MISSING`]);
+        if (!checkTmp.stdout.includes("EXISTS")) {
+          return fail(req.id, -32000, `copy failed: could not copy ${dbPath} to ${remoteTmp} (tried run-as and root)`);
+        }
+
+        const pull = await exec(["adb", "-s", deviceId, "pull", remoteTmp, localTmp]);
+        if (pull.code !== 0) {
+          return fail(req.id, -32000, `adb pull failed: ${pull.stderr}`);
+        }
+
+        await exec(["adb", "-s", deviceId, "shell", `rm -f "${remoteTmp}"`]);
+
+        const pullSidecar = async (suffix: string) => {
+          const srcPath = dbPath + suffix;
+          const rTmp = remoteTmp + suffix;
+          const lTmp = localTmp + suffix;
+          const scCp = await exec([
+            "adb", "-s", deviceId, "shell",
+            `run-as ${bundleId} cat "${srcPath}" > "${rTmp}" 2>/dev/null && chmod 644 "${rTmp}" && echo OK || cat "${srcPath}" > "${rTmp}" 2>/dev/null && chmod 644 "${rTmp}" && echo OK || echo SKIP`,
+          ]);
+          if (scCp.stdout.trim().includes("OK")) {
+            await exec(["adb", "-s", deviceId, "pull", rTmp, lTmp]);
+            await exec(["adb", "-s", deviceId, "shell", `rm -f "${rTmp}"`]);
+          }
+        };
+
+        await pullSidecar("-wal");
+        await pullSidecar("-shm");
+
+        return ok(req.id, { localPath: localTmp });
+      }
+
       default:
         return fail(req.id, -32601, `unknown method: ${req.method}`);
     }

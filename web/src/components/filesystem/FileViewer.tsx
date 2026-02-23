@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query"
 import { readFileQueryOptions } from "@/features/filesystem/queries"
 import { downloadFile } from "@/features/filesystem/api"
+import { DatabaseViewer } from "./DatabaseViewer"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Download, FileText, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+const DB_EXTENSIONS = new Set(["db", "sqlite", "sqlite3"])
 
 interface FileViewerProps {
   sessionId: string
@@ -29,6 +32,14 @@ function syntaxClass(mimeType: string, path: string): string {
 }
 
 export function FileViewer({ sessionId, path }: FileViewerProps) {
+  const ext = path.split(".").pop()?.toLowerCase() ?? ""
+  if (DB_EXTENSIONS.has(ext)) {
+    return <DatabaseViewer sessionId={sessionId} dbPath={path} />
+  }
+  return <TextFileViewer sessionId={sessionId} path={path} />
+}
+
+function TextFileViewer({ sessionId, path }: FileViewerProps) {
   const { data, isLoading, error } = useQuery(readFileQueryOptions(sessionId, path))
 
   if (isLoading) {
