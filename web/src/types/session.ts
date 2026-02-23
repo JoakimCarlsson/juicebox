@@ -86,12 +86,17 @@ export interface InterceptRule {
 
 export interface PendingRequest {
   id: string
+  phase: "request" | "response"
   method: string
   url: string
   headers: Record<string, string>
   body?: string | null
   bodyEncoding?: string
   timestamp: number
+  statusCode?: number
+  responseHeaders?: Record<string, string>
+  responseBody?: string | null
+  responseBodyEncoding?: string
 }
 
 export interface InterceptState {
@@ -107,4 +112,7 @@ export interface InterceptDecision {
   url?: string
   headers?: Record<string, string>
   body?: string
+  statusCode?: number
+  responseHeaders?: Record<string, string>
+  responseBody?: string
 }

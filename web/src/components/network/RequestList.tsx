@@ -83,9 +83,16 @@ export function RequestList({
                 </td>
                 <td className="px-2 py-1.5">
                   {isPending ? (
-                    <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] px-1.5 py-0">
-                      PAUSED
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] px-1.5 py-0">
+                        PAUSED
+                      </Badge>
+                      {msg.statusCode > 0 && (
+                        <span className={cn("text-[10px] font-mono", statusColor(msg.statusCode))}>
+                          {msg.statusCode}
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <span
                       className={cn(

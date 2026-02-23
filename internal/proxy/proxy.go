@@ -216,6 +216,15 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 
 	respFullBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxTotalBodyRead))
 
+	if p.intercept != nil && p.intercept.IsEnabled() {
+		var drop bool
+		respFullBody, resp.StatusCode, resp.Header, drop = p.intercept.MaybeInterceptResponse(req, resp, respFullBody)
+		if drop {
+			clientConn.Write([]byte("HTTP/1.1 502 Blocked\r\nContent-Length: 0\r\n\r\n"))
+			return
+		}
+	}
+
 	duration := time.Since(start).Milliseconds()
 
 	p.emitMessage(req, reqFullBody, resp, respFullBody, duration)

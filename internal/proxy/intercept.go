@@ -29,22 +29,30 @@ type InterceptRule struct {
 }
 
 type InterceptDecision struct {
-	RequestID string            `json:"requestId"`
-	Action    InterceptAction   `json:"action"`
-	Method    *string           `json:"method,omitempty"`
-	URL       *string           `json:"url,omitempty"`
-	Headers   map[string]string `json:"headers,omitempty"`
-	Body      *string           `json:"body,omitempty"`
+	RequestID       string            `json:"requestId"`
+	Action          InterceptAction   `json:"action"`
+	Method          *string           `json:"method,omitempty"`
+	URL             *string           `json:"url,omitempty"`
+	Headers         map[string]string `json:"headers,omitempty"`
+	Body            *string           `json:"body,omitempty"`
+	StatusCode      *int              `json:"statusCode,omitempty"`
+	ResponseHeaders map[string]string `json:"responseHeaders,omitempty"`
+	ResponseBody    *string           `json:"responseBody,omitempty"`
 }
 
 type PendingRequest struct {
-	ID           string            `json:"id"`
-	Method       string            `json:"method"`
-	URL          string            `json:"url"`
-	Headers      map[string]string `json:"headers"`
-	Body         *string           `json:"body,omitempty"`
-	BodyEncoding string            `json:"bodyEncoding,omitempty"`
-	Timestamp    int64             `json:"timestamp"`
+	ID                   string            `json:"id"`
+	Phase                string            `json:"phase"`
+	Method               string            `json:"method"`
+	URL                  string            `json:"url"`
+	Headers              map[string]string `json:"headers"`
+	Body                 *string           `json:"body,omitempty"`
+	BodyEncoding         string            `json:"bodyEncoding,omitempty"`
+	Timestamp            int64             `json:"timestamp"`
+	StatusCode           int               `json:"statusCode,omitempty"`
+	ResponseHeaders      map[string]string `json:"responseHeaders,omitempty"`
+	ResponseBody         *string           `json:"responseBody,omitempty"`
+	ResponseBodyEncoding string            `json:"responseBodyEncoding,omitempty"`
 }
 
 type interceptEntry struct {
@@ -138,6 +146,7 @@ func (ie *InterceptEngine) MaybeIntercept(req *http.Request, reqBody []byte) (*h
 	entry := &interceptEntry{
 		pending: PendingRequest{
 			ID:           id,
+			Phase:        "request",
 			Method:       req.Method,
 			URL:          req.URL.String(),
 			Headers:      reqHeaders,
@@ -256,6 +265,105 @@ func (ie *InterceptEngine) matches(req *http.Request) bool {
 		return true
 	}
 	return false
+}
+
+func (ie *InterceptEngine) MaybeInterceptResponse(req *http.Request, resp *http.Response, respBody []byte) ([]byte, int, http.Header, bool) {
+	ie.mu.RLock()
+	if !ie.enabled {
+		ie.mu.RUnlock()
+		return respBody, resp.StatusCode, resp.Header, false
+	}
+	ie.mu.RUnlock()
+
+	if !ie.matches(req) {
+		return respBody, resp.StatusCode, resp.Header, false
+	}
+
+	id := generateID()
+
+	reqHeaders := make(map[string]string)
+	for k, v := range req.Header {
+		reqHeaders[strings.ToLower(k)] = strings.Join(v, ", ")
+	}
+	if req.Host != "" {
+		reqHeaders["host"] = req.Host
+	}
+
+	respHeaders := make(map[string]string)
+	for k, v := range resp.Header {
+		respHeaders[strings.ToLower(k)] = strings.Join(v, ", ")
+	}
+
+	encBody, encoding := EncodeBody(respBody)
+
+	entry := &interceptEntry{
+		pending: PendingRequest{
+			ID:                   id,
+			Phase:                "response",
+			Method:               req.Method,
+			URL:                  req.URL.String(),
+			Headers:              reqHeaders,
+			Timestamp:            time.Now().UnixMilli(),
+			StatusCode:           resp.StatusCode,
+			ResponseHeaders:      respHeaders,
+			ResponseBody:         encBody,
+			ResponseBodyEncoding: encoding,
+		},
+		req:      req,
+		reqBody:  nil,
+		decision: make(chan InterceptDecision, 1),
+	}
+
+	ie.mu.Lock()
+	ie.pending[id] = entry
+	entry.timer = time.AfterFunc(ie.timeout, func() {
+		ie.mu.Lock()
+		if _, ok := ie.pending[id]; ok {
+			delete(ie.pending, id)
+			entry.decision <- InterceptDecision{
+				RequestID: id,
+				Action:    ActionForward,
+			}
+			ie.logger.Info("intercept timeout, auto-forwarding response", "request_id", id)
+		}
+		ie.mu.Unlock()
+		ie.notifier("intercept_resolved", map[string]any{"id": id, "action": "timeout"})
+	})
+	ie.mu.Unlock()
+
+	ie.notifier("intercept", entry.pending)
+
+	dec := <-entry.decision
+	entry.timer.Stop()
+
+	switch dec.Action {
+	case ActionDrop:
+		return nil, 0, nil, true
+	case ActionModify:
+		modBody, modStatus, modHeaders := applyResponseModifications(resp, respBody, dec)
+		return modBody, modStatus, modHeaders, false
+	default:
+		return respBody, resp.StatusCode, resp.Header, false
+	}
+}
+
+func applyResponseModifications(resp *http.Response, respBody []byte, dec InterceptDecision) ([]byte, int, http.Header) {
+	statusCode := resp.StatusCode
+	headers := resp.Header.Clone()
+
+	if dec.StatusCode != nil {
+		statusCode = *dec.StatusCode
+	}
+	if dec.ResponseHeaders != nil {
+		headers = make(http.Header)
+		for k, v := range dec.ResponseHeaders {
+			headers.Set(k, v)
+		}
+	}
+	if dec.ResponseBody != nil {
+		respBody = []byte(*dec.ResponseBody)
+	}
+	return respBody, statusCode, headers
 }
 
 func applyRequestModifications(req *http.Request, reqBody []byte, dec InterceptDecision) (*http.Request, []byte) {

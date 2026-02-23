@@ -1,5 +1,5 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Search, Trash2, Wifi, Pause, FastForward } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -75,8 +75,10 @@ function NetworkPage() {
       requestBody: p.body,
       requestBodyEncoding: p.bodyEncoding,
       requestBodySize: 0,
-      statusCode: 0,
-      responseHeaders: {},
+      statusCode: p.phase === "response" ? (p.statusCode ?? 0) : 0,
+      responseHeaders: p.phase === "response" ? (p.responseHeaders ?? {}) : {},
+      responseBody: p.phase === "response" ? p.responseBody : undefined,
+      responseBodyEncoding: p.phase === "response" ? p.responseBodyEncoding : undefined,
       timestamp: p.timestamp,
     }))
   }, [pendingRequests])
@@ -94,6 +96,17 @@ function NetworkPage() {
     if (!selectedId) return null
     return allMessages.find((m) => m.id === selectedId) ?? null
   }, [allMessages, selectedId])
+
+  const prevPendingIdsRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const prevIds = prevPendingIdsRef.current
+    const newArrivals = pendingRequests.filter((p) => !prevIds.has(p.id))
+    prevPendingIdsRef.current = pendingIds
+
+    if (newArrivals.length > 0 && (!selectedId || !pendingIds.has(selectedId))) {
+      setSelectedId(newArrivals[newArrivals.length - 1].id)
+    }
+  }, [pendingRequests, pendingIds, selectedId])
 
   const selectedPending = useMemo(() => {
     if (!selectedId || !pendingIds.has(selectedId)) return null
