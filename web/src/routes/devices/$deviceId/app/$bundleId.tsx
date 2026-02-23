@@ -8,11 +8,19 @@ import {
   useSearch,
 } from "@tanstack/react-router"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { SessionStatusReporter } from "@/components/layout/SessionStatusReporter"
 import { detachSession } from "@/features/sessions/api"
 import { SessionMessageProvider } from "@/contexts/SessionMessageContext"
-import { ArrowLeft, Unplug, Home, Globe, FileText, Code } from "lucide-react"
-import { useState } from "react"
+import { ChatPanelProvider, useChatPanel } from "@/contexts/ChatPanelContext"
+import { ChatPanel } from "@/components/chat/ChatPanel"
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable"
+import { ArrowLeft, Unplug, Home, Globe, FileText, Code, MessageSquare } from "lucide-react"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute(
@@ -38,10 +46,72 @@ function AppLayout() {
   const { sessionId } = useSearch({
     from: "/devices/$deviceId/app/$bundleId",
   })
+
+  return (
+    <SessionMessageProvider sessionId={sessionId}>
+      <ChatPanelProvider sessionId={sessionId}>
+        <AppLayoutWithChat
+          deviceId={deviceId}
+          bundleId={bundleId}
+          sessionId={sessionId}
+        />
+      </ChatPanelProvider>
+    </SessionMessageProvider>
+  )
+}
+
+function AppLayoutWithChat({
+  deviceId,
+  bundleId,
+  sessionId,
+}: {
+  deviceId: string
+  bundleId: string
+  sessionId: string
+}) {
+  const { panelRef } = useChatPanel()
+
+  useEffect(() => {
+    panelRef.current?.collapse()
+  }, [panelRef])
+
+  return (
+    <ResizablePanelGroup orientation="horizontal" className="h-full">
+      <ResizablePanel defaultSize={100} minSize={40}>
+        <AppLayoutInner
+          deviceId={deviceId}
+          bundleId={bundleId}
+          sessionId={sessionId}
+        />
+      </ResizablePanel>
+      <ResizableHandle className="h-full w-px after:inset-y-0 after:-left-1 after:-right-1 after:inset-x-auto" />
+      <ResizablePanel
+        panelRef={panelRef}
+        defaultSize={30}
+        minSize={20}
+        collapsible
+        collapsedSize={0}
+      >
+        <ChatPanel />
+      </ResizablePanel>
+    </ResizablePanelGroup>
+  )
+}
+
+function AppLayoutInner({
+  deviceId,
+  bundleId,
+  sessionId,
+}: {
+  deviceId: string
+  bundleId: string
+  sessionId: string
+}) {
   const navigate = useNavigate()
   const location = useLocation()
   const activeTab = location.pathname.split("/").pop() || "home"
   const [detaching, setDetaching] = useState(false)
+  const { toggle: toggleChat, isOpen: chatOpen } = useChatPanel()
 
   async function handleDetach() {
     if (!sessionId || detaching) return
@@ -57,7 +127,6 @@ function AppLayout() {
   }
 
   return (
-    <SessionMessageProvider sessionId={sessionId}>
     <div className="flex h-full flex-col">
       {sessionId && <SessionStatusReporter sessionId={sessionId} bundleId={bundleId} />}
 
@@ -81,17 +150,34 @@ function AppLayout() {
               {bundleId}
             </span>
           </div>
-          {sessionId && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDetach}
-              disabled={detaching}
-            >
-              <Unplug className="mr-1.5 h-3.5 w-3.5" />
-              Detach
-            </Button>
-          )}
+          <div className="flex items-center gap-1.5">
+            {sessionId && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={chatOpen ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={toggleChat}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">AI Assistant</TooltipContent>
+              </Tooltip>
+            )}
+            {sessionId && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDetach}
+                disabled={detaching}
+              >
+                <Unplug className="mr-1.5 h-3.5 w-3.5" />
+                Detach
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -128,6 +214,5 @@ function AppLayout() {
         <Outlet />
       </div>
     </div>
-    </SessionMessageProvider>
   )
 }
