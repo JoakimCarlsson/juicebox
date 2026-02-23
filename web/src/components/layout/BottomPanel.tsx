@@ -6,8 +6,6 @@ import { useEventLog, type EventLogEntry } from "@/contexts/EventLogContext"
 import type { LogEntry } from "@/types/session"
 import { Button } from "@/components/ui/button"
 import {
-  ChevronDown,
-  ChevronUp,
   Terminal,
   AlertTriangle,
   Trash2,
@@ -55,7 +53,7 @@ function formatTime(timestamp: number): string {
 }
 
 export function BottomPanel() {
-  const { isOpen, activeTab, setActiveTab, toggle } = useBottomPanel()
+  const { activeTab, setActiveTab } = useBottomPanel()
   const { entries, clear } = useEventLog()
   const problemsCount = getProblemsCount(entries)
 
@@ -85,29 +83,15 @@ export function BottomPanel() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={clear}
-            title="Clear"
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={toggle}
-          >
-            {isOpen ? (
-              <ChevronDown className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronUp className="h-3.5 w-3.5" />
-            )}
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={clear}
+          title="Clear"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
       </div>
 
       <div className="flex-1 overflow-auto">

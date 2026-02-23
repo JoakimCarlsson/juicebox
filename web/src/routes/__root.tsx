@@ -1,4 +1,4 @@
-import { createRootRouteWithContext, Outlet } from "@tanstack/react-router"
+import { createRootRouteWithContext, Outlet, useLocation } from "@tanstack/react-router"
 import type { QueryClient } from "@tanstack/react-query"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppStatusProvider } from "@/contexts/AppStatusContext"
@@ -14,12 +14,15 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootLayout() {
+  const location = useLocation()
+  const hideSidebar = location.pathname.includes("/app/")
+
   return (
     <AppStatusProvider>
       <TooltipProvider>
         <div className="flex h-screen flex-col bg-background font-sans antialiased">
           <div className="flex flex-1 min-h-0">
-            <Sidebar />
+            {!hideSidebar && <Sidebar />}
             <main className="flex-1 min-h-0 min-w-0">
               <Outlet />
             </main>
