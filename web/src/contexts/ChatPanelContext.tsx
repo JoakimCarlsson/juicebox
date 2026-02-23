@@ -34,7 +34,6 @@ interface ChatPanelContextValue {
   messages: ChatMessage[]
   isStreaming: boolean
   configured: boolean | null
-  provider: string
   panelRef: React.RefObject<PanelImperativeHandle | null>
   toggle: () => void
   sendMessage: (text: string) => void
@@ -59,7 +58,6 @@ export function ChatPanelProvider({
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [configured, setConfigured] = useState<boolean | null>(null)
-  const [provider, setProvider] = useState("")
   const panelRef = useRef<PanelImperativeHandle | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -68,7 +66,6 @@ export function ChatPanelProvider({
     fetchChatStatus(sessionId)
       .then((status) => {
         setConfigured(status.configured)
-        setProvider(status.provider)
       })
       .catch(() => setConfigured(false))
   }, [sessionId])
@@ -224,7 +221,6 @@ export function ChatPanelProvider({
         messages,
         isStreaming,
         configured,
-        provider,
         panelRef,
         toggle,
         sendMessage,

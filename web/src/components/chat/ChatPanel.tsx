@@ -3,7 +3,6 @@ import { useChatPanel } from "@/contexts/ChatPanelContext"
 import { ChatMessage } from "@/components/chat/ChatMessage"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { X, Send, Trash2, BotMessageSquare, Settings } from "lucide-react"
 
@@ -12,7 +11,6 @@ export function ChatPanel() {
     messages,
     isStreaming,
     configured,
-    provider,
     toggle,
     sendMessage,
     clearChat,
@@ -55,7 +53,7 @@ export function ChatPanel() {
   if (configured === false) {
     return (
       <div className="flex h-full flex-col bg-background border-l border-border">
-        <Header provider={provider} onClose={toggle} onClear={clearChat} />
+        <Header onClose={toggle} onClear={clearChat} />
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center space-y-3 max-w-[280px]">
             <Settings className="h-8 w-8 text-muted-foreground mx-auto" />
@@ -82,7 +80,7 @@ export function ChatPanel() {
 
   return (
     <div className="flex h-full flex-col bg-background border-l border-border">
-      <Header provider={provider} onClose={toggle} onClear={clearChat} />
+      <Header onClose={toggle} onClear={clearChat} />
       <Separator />
 
       <div ref={scrollRef} className="flex-1 overflow-auto">
@@ -119,7 +117,7 @@ export function ChatPanel() {
           />
           <Button
             size="icon"
-            className="h-7 w-7 shrink-0"
+            className="h-9 w-9 shrink-0"
             onClick={handleSend}
             disabled={!input.trim() || isStreaming || configured !== true}
           >
@@ -132,24 +130,15 @@ export function ChatPanel() {
 }
 
 function Header({
-  provider,
   onClose,
   onClear,
 }: {
-  provider: string
   onClose: () => void
   onClear: () => void
 }) {
   return (
     <div className="flex items-center justify-between px-3 h-9 shrink-0">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold">AI Assistant</span>
-        {provider && (
-          <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-            {provider}
-          </Badge>
-        )}
-      </div>
+      <span className="text-xs font-semibold">AI Assistant</span>
       <div className="flex items-center gap-0.5">
         <Button
           variant="ghost"

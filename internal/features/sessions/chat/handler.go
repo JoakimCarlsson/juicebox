@@ -170,13 +170,8 @@ func (h *Handler) Handle(c *router.Context) {
 }
 
 func (h *Handler) Status(c *router.Context) {
-	provider := ""
-	if h.llmConfig.Configured() {
-		provider = h.llmConfig.Provider
-	}
 	c.JSON(http.StatusOK, map[string]any{
 		"configured": h.llmConfig.Configured(),
-		"provider":   provider,
 	})
 }
 

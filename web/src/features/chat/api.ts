@@ -1,6 +1,5 @@
 export interface ChatStatusResponse {
   configured: boolean
-  provider: string
 }
 
 export interface ChatHistoryMessage {
