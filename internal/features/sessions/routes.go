@@ -8,7 +8,9 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/attach"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/chat"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/detach"
+	"github.com/joakimcarlsson/juicebox/internal/features/sessions/filesystem"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/intercept"
+	sqlitepkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/list"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/logs"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/messages"
@@ -23,8 +25,10 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	messagesHandler := messages.NewHandler(database)
 	logsHandler := logs.NewHandler(database)
 	renameHandler := rename.NewHandler(database)
-	chatHandler := chat.NewHandler(database, bridgeClient, manager, &appConfig.LLM, chatStore)
+	sqliteHandler := sqlitepkg.NewHandler(bridgeClient, manager)
+	chatHandler := chat.NewHandler(database, bridgeClient, manager, &appConfig.LLM, chatStore, sqliteHandler)
 	interceptHandler := intercept.NewHandler(manager)
+	fsHandler := filesystem.NewHandler(bridgeClient, manager)
 
 	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
@@ -40,4 +44,12 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	r.GET("/sessions/{sessionId}/intercept/pending", interceptHandler.ListPending)
 	r.POST("/sessions/{sessionId}/intercept/resolve", interceptHandler.Resolve)
 	r.POST("/sessions/{sessionId}/intercept/resolve-all", interceptHandler.ResolveAll)
+
+	r.GET("/sessions/{sessionId}/fs/ls", fsHandler.List)
+	r.GET("/sessions/{sessionId}/fs/read", fsHandler.Read)
+	r.GET("/sessions/{sessionId}/fs/find", fsHandler.Find)
+
+	r.GET("/sessions/{sessionId}/sqlite/tables", sqliteHandler.Tables)
+	r.POST("/sessions/{sessionId}/sqlite/query", sqliteHandler.Query)
+	r.GET("/sessions/{sessionId}/sqlite/export", sqliteHandler.Export)
 }
