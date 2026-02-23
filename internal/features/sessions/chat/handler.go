@@ -10,7 +10,6 @@ import (
 	"github.com/joakimcarlsson/ai/tool"
 	"github.com/joakimcarlsson/ai/types"
 	"github.com/joakimcarlsson/go-router/router"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	chattools "github.com/joakimcarlsson/juicebox/internal/features/sessions/chat/tools"
@@ -20,17 +19,15 @@ import (
 
 type Handler struct {
 	db            *db.DB
-	bridgeClient  *bridge.Client
 	manager       *session.Manager
 	llmConfig     *config.LLMConfig
 	chatStore     *ChatSessionStore
 	sqliteHandler *sqlitepkg.Handler
 }
 
-func NewHandler(database *db.DB, bridgeClient *bridge.Client, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteHandler *sqlitepkg.Handler) *Handler {
+func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteHandler *sqlitepkg.Handler) *Handler {
 	return &Handler{
 		db:            database,
-		bridgeClient:  bridgeClient,
 		manager:       manager,
 		llmConfig:     llmConfig,
 		chatStore:     chatStore,
@@ -104,9 +101,15 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
-	sess, err := h.db.GetSession(sessionID)
-	if err != nil || sess == nil {
+	dbSess, err := h.db.GetSession(sessionID)
+	if err != nil || dbSess == nil {
 		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		return
+	}
+
+	liveSess := h.manager.GetSession(sessionID)
+	if liveSess == nil {
+		c.JSON(http.StatusNotFound, map[string]string{"error": "active session not found"})
 		return
 	}
 
@@ -116,30 +119,34 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
+	setup := liveSess.Setup
 	sessionTools := []tool.BaseTool{
 		chattools.NewSearchTraffic(h.db, sessionID),
 		chattools.NewGetRequestDetail(h.db),
-		chattools.NewListProcesses(h.bridgeClient, sess.DeviceID),
+		chattools.NewListProcesses(setup, dbSess.DeviceID),
 		chattools.NewListPendingRequests(h.manager, sessionID),
 		chattools.NewModifyAndForward(h.manager, sessionID),
 		chattools.NewForwardRequest(h.manager, sessionID),
 		chattools.NewDropRequest(h.manager, sessionID),
 	}
-	if sess.Platform == "" || sess.Platform == "android" {
-		sessionTools = append(sessionTools, chattools.NewRunLogcatQuery(h.db, sessionID))
+	for _, cap := range setup.Capabilities() {
+		if cap == "logstream" {
+			sessionTools = append(sessionTools, chattools.NewRunLogcatQuery(h.db, sessionID))
+			break
+		}
 	}
 	sessionTools = append(sessionTools,
-		chattools.NewLs(h.bridgeClient, sess.DeviceID, sess.BundleID),
-		chattools.NewReadFile(h.bridgeClient, sess.DeviceID, sess.BundleID),
-		chattools.NewFindFiles(h.bridgeClient, sess.DeviceID, sess.BundleID),
-		chattools.NewListDatabases(h.bridgeClient, sess.DeviceID, sess.BundleID),
+		chattools.NewLs(setup, dbSess.DeviceID, dbSess.BundleID),
+		chattools.NewReadFile(setup, dbSess.DeviceID, dbSess.BundleID),
+		chattools.NewFindFiles(setup, dbSess.DeviceID, dbSess.BundleID),
+		chattools.NewListDatabases(setup, dbSess.DeviceID, dbSess.BundleID),
 		chattools.NewGetSchema(h.sqliteHandler, h.manager, sessionID),
 		chattools.NewSqliteQuery(h.sqliteQueryFn(), h.manager, sessionID),
 	)
 
 	state := map[string]any{
-		"BundleID":  sess.BundleID,
-		"DeviceID":  sess.DeviceID,
+		"BundleID":  dbSess.BundleID,
+		"DeviceID":  dbSess.DeviceID,
 		"SessionID": sessionID,
 	}
 

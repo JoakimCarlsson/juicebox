@@ -1,5 +1,8 @@
 import { createFileRoute, Link, useParams, useSearch } from "@tanstack/react-router"
+import { useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Globe, FileText, FolderOpen } from "lucide-react"
+import { appSessionsQueryOptions } from "@/features/sessions/queries"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute(
@@ -11,7 +14,7 @@ export const Route = createFileRoute(
   component: HomePage,
 })
 
-const MODULES = [
+const ALL_MODULES = [
   {
     value: "network",
     label: "Network",
@@ -22,9 +25,10 @@ const MODULES = [
   {
     value: "logs",
     label: "Logs",
-    description: "Stream and filter Logcat output from the app",
+    description: "Stream and filter log output from the app",
     icon: FileText,
     to: "/devices/$deviceId/app/$bundleId/logs" as const,
+    capability: "logstream",
   },
   {
     value: "files",
@@ -32,8 +36,15 @@ const MODULES = [
     description: "Browse, read, and search files in the app sandbox",
     icon: FolderOpen,
     to: "/devices/$deviceId/app/$bundleId/files" as const,
+    capability: "filesystem",
   },
 ]
+
+function getModules(capabilities: string[] | null) {
+  return ALL_MODULES.filter(
+    (m) => !m.capability || capabilities === null || capabilities.includes(m.capability),
+  )
+}
 
 function HomePage() {
   const { deviceId, bundleId } = useParams({
@@ -43,10 +54,17 @@ function HomePage() {
     from: "/devices/$deviceId/app/$bundleId/home",
   })
 
+  const { data: sessionsData } = useQuery(appSessionsQueryOptions(deviceId, bundleId))
+  const capabilities = useMemo(() => {
+    if (!sessionsData) return null
+    return sessionsData.sessions.find((s) => s.id === sessionId)?.capabilities ?? null
+  }, [sessionsData, sessionId])
+  const modules = getModules(capabilities)
+
   return (
     <div className="flex h-full flex-col items-center justify-center p-8">
       <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-        {MODULES.map((mod) => {
+        {modules.map((mod) => {
           const Icon = mod.icon
           return (
             <Link

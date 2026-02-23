@@ -23,9 +23,9 @@ import {
 } from "@/components/ui/resizable"
 import { useDefaultLayout } from "react-resizable-panels"
 import { ArrowLeft, Home, Globe, FileText, Code, Terminal, MessageSquare, FolderOpen } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { deviceInfoQueryOptions } from "@/features/devices/queries"
+import { appSessionsQueryOptions } from "@/features/sessions/queries"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute(
@@ -37,12 +37,13 @@ export const Route = createFileRoute(
   component: AppLayout,
 })
 
-function getTabs(platform: string | undefined) {
+function getTabs(capabilities: string[] | null) {
+  const has = (cap: string) => capabilities === null || capabilities.includes(cap)
   return [
     { value: "home", label: "Home", icon: Home, enabled: true, to: "/devices/$deviceId/app/$bundleId/home" as const },
     { value: "network", label: "Network", icon: Globe, enabled: true, to: "/devices/$deviceId/app/$bundleId/network" as const },
-    { value: "logs", label: "Logs", icon: FileText, enabled: platform === "android" || platform === undefined, to: "/devices/$deviceId/app/$bundleId/logs" as const },
-    { value: "files", label: "Files", icon: FolderOpen, enabled: true, to: "/devices/$deviceId/app/$bundleId/files" as const },
+    { value: "logs", label: "Logs", icon: FileText, enabled: has("logstream"), to: "/devices/$deviceId/app/$bundleId/logs" as const },
+    { value: "files", label: "Files", icon: FolderOpen, enabled: has("filesystem"), to: "/devices/$deviceId/app/$bundleId/files" as const },
     { value: "hooks", label: "Hooks", icon: Code, enabled: false, to: "/devices/$deviceId/app/$bundleId/network" as const },
   ]
 }
@@ -82,8 +83,12 @@ function AppLayoutWithChat({
   const navigate = useNavigate()
   const location = useLocation()
   const activeTab = location.pathname.split("/").pop() || "home"
-  const { data: deviceInfo } = useQuery(deviceInfoQueryOptions(deviceId))
-  const tabs = getTabs(deviceInfo?.platform)
+  const { data: sessionsData } = useQuery(appSessionsQueryOptions(deviceId, bundleId))
+  const capabilities = useMemo(() => {
+    if (!sessionsData) return null
+    return sessionsData.sessions.find((s) => s.id === sessionId)?.capabilities ?? null
+  }, [sessionsData, sessionId])
+  const tabs = getTabs(capabilities)
   const { panelRef, onPanelResize: onChatResize, toggle: toggleChat, isOpen: chatOpen } = useChatPanel()
   const { panelRef: bottomPanelRef, onPanelResize: onBottomResize, toggle: toggleBottomPanel, isOpen: bottomPanelOpen } = useBottomPanel()
   const sessionRef = useRef(sessionId)

@@ -1,6 +1,7 @@
 export interface AttachResponse {
   sessionId: string
   pid: number
+  capabilities: string[]
 }
 
 export interface HttpMessage {
@@ -58,6 +59,7 @@ export interface SessionSummary {
   endedAt: number | null
   httpCount: number
   logcatCount: number
+  capabilities: string[]
 }
 
 export interface SessionsResponse {

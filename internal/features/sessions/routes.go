@@ -2,7 +2,6 @@ package sessions
 
 import (
 	"github.com/joakimcarlsson/go-router/router"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/attach"
@@ -10,25 +9,25 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/detach"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/filesystem"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/intercept"
-	sqlitepkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/list"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/logs"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/messages"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/rename"
+	sqlitepkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
-func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB, bridgeClient *bridge.Client, appConfig *config.Config, chatStore *chat.ChatSessionStore) {
+func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB, appConfig *config.Config, chatStore *chat.ChatSessionStore) {
 	attachHandler := attach.NewHandler(manager)
 	detachHandler := detach.NewHandler(manager)
-	listHandler := list.NewHandler(database)
+	listHandler := list.NewHandler(database, manager)
 	messagesHandler := messages.NewHandler(database)
 	logsHandler := logs.NewHandler(database)
 	renameHandler := rename.NewHandler(database)
-	sqliteHandler := sqlitepkg.NewHandler(bridgeClient, manager)
-	chatHandler := chat.NewHandler(database, bridgeClient, manager, &appConfig.LLM, chatStore, sqliteHandler)
+	sqliteHandler := sqlitepkg.NewHandler(manager)
+	chatHandler := chat.NewHandler(database, manager, &appConfig.LLM, chatStore, sqliteHandler)
 	interceptHandler := intercept.NewHandler(manager)
-	fsHandler := filesystem.NewHandler(bridgeClient, manager)
+	fsHandler := filesystem.NewHandler(manager)
 
 	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)

@@ -6,7 +6,7 @@ import (
 
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/tool"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type ReadFileParams struct {
@@ -14,13 +14,13 @@ type ReadFileParams struct {
 }
 
 type ReadFileTool struct {
-	bridge   *bridge.Client
+	setup    session.DeviceSetup
 	deviceID string
 	bundleID string
 }
 
-func NewReadFile(bridgeClient *bridge.Client, deviceID, bundleID string) *ReadFileTool {
-	return &ReadFileTool{bridge: bridgeClient, deviceID: deviceID, bundleID: bundleID}
+func NewReadFile(setup session.DeviceSetup, deviceID, bundleID string) *ReadFileTool {
+	return &ReadFileTool{setup: setup, deviceID: deviceID, bundleID: bundleID}
 }
 
 func (t *ReadFileTool) Info() tool.ToolInfo {
@@ -41,7 +41,7 @@ func (t *ReadFileTool) Run(ctx context.Context, params tool.ToolCall) (tool.Tool
 		return tool.NewTextErrorResponse("path is required"), nil
 	}
 
-	content, err := t.bridge.ReadFile(t.deviceID, t.bundleID, input.Path)
+	content, err := t.setup.ReadFile(t.deviceID, t.bundleID, input.Path)
 	if err != nil {
 		return tool.NewTextErrorResponse(fmt.Sprintf("read_file failed: %v", err)), nil
 	}

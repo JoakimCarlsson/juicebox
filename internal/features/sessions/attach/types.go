@@ -6,6 +6,7 @@ type AttachRequest struct {
 }
 
 type AttachResponseBody struct {
-	SessionID string `json:"sessionId"`
-	PID       int    `json:"pid"`
+	SessionID    string   `json:"sessionId"`
+	PID          int      `json:"pid"`
+	Capabilities []string `json:"capabilities"`
 }

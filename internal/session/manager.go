@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"sync"
 	"time"
@@ -24,7 +25,8 @@ type Session struct {
 	Proxy         *proxy.Proxy
 	ProxyPort     int
 	Intercept     *proxy.InterceptEngine
-	Logcat        *logcat.Streamer
+	LogStream     io.Closer
+	Setup         DeviceSetup
 	StartedAt     int64
 }
 
@@ -51,13 +53,10 @@ func NewManager(cm *proxy.CertManager, bridgeClient *bridge.Client, hubManager *
 	}
 }
 
-func (m *Manager) BridgeClient() *bridge.Client {
-	return m.bridge
-}
-
 type AttachResult struct {
-	SessionID string `json:"sessionId"`
-	PID       int    `json:"pid"`
+	SessionID    string   `json:"sessionId"`
+	PID          int      `json:"pid"`
+	Capabilities []string `json:"capabilities"`
 }
 
 func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachResult, error) {
@@ -83,6 +82,7 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachR
 		DeviceID: deviceId,
 		BundleID: bundleId,
 		Platform: platform,
+		Setup:    setup,
 	}
 
 	hub := m.hubManager.GetOrCreate(deviceId)
@@ -168,41 +168,39 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachR
 
 	go m.bridgeSubscribeForward(sess)
 
-	if setup.SupportsLogcat() {
-		logcatLogger := slog.With("device_id", deviceId, "source", "logcat", "session_id", sess.ID)
-		lc := logcat.NewStreamer(deviceId, sess.PID, func(entry *logcat.Entry) {
-			data, err := devicehub.Marshal("logcat", sess.ID, entry)
-			if err != nil {
-				logcatLogger.Error("marshal logcat entry", "error", err)
-				return
-			}
-			hub.Broadcast(data)
-
-			m.writer.WriteLogcatEntry(&db.LogcatEntryRow{
-				ID:        entry.ID,
-				SessionID: sess.ID,
-				Timestamp: entry.Timestamp,
-				PID:       entry.PID,
-				TID:       entry.TID,
-				Level:     string(entry.Level),
-				Tag:       entry.Tag,
-				Message:   entry.Message,
-			})
-		}, logcatLogger)
-
-		if err := lc.Start(); err != nil {
-			logger.Warn("logcat start failed (non-fatal)", "error", err)
-		} else {
-			sess.Logcat = lc
+	logStreamLogger := slog.With("device_id", deviceId, "source", "logstream", "session_id", sess.ID)
+	closer, err := setup.StartLogStream(deviceId, sess.PID, func(entry *logcat.Entry) {
+		data, err := devicehub.Marshal("logcat", sess.ID, entry)
+		if err != nil {
+			logStreamLogger.Error("marshal log entry", "error", err)
+			return
 		}
+		hub.Broadcast(data)
+
+		m.writer.WriteLogcatEntry(&db.LogcatEntryRow{
+			ID:        entry.ID,
+			SessionID: sess.ID,
+			Timestamp: entry.Timestamp,
+			PID:       entry.PID,
+			TID:       entry.TID,
+			Level:     string(entry.Level),
+			Tag:       entry.Tag,
+			Message:   entry.Message,
+		})
+	}, logStreamLogger)
+	if err != nil {
+		logger.Warn("log stream start failed (non-fatal)", "error", err)
+	} else if closer != nil {
+		sess.LogStream = closer
 	}
 
 	logger = logger.With("session_id", sess.ID)
 	logger.Info("attached", "bundle", bundleId, "pid", sess.PID, "platform", platform)
 
 	return &AttachResult{
-		SessionID: sess.ID,
-		PID:       sess.PID,
+		SessionID:    sess.ID,
+		PID:          sess.PID,
+		Capabilities: setup.Capabilities(),
 	}, nil
 }
 
@@ -231,8 +229,8 @@ func (m *Manager) Detach(sessionId string) error {
 		logger.Warn("bridge detach error", "error", err)
 	}
 
-	if sess.Logcat != nil {
-		sess.Logcat.Stop()
+	if sess.LogStream != nil {
+		sess.LogStream.Close()
 	}
 
 	if sess.Intercept != nil {

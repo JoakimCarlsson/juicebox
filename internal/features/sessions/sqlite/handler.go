@@ -17,15 +17,13 @@ import (
 )
 
 type Handler struct {
-	bridge  *bridge.Client
 	manager *session.Manager
 	mu      sync.Mutex
 	pulled  map[string]string
 }
 
-func NewHandler(bridgeClient *bridge.Client, manager *session.Manager) *Handler {
+func NewHandler(manager *session.Manager) *Handler {
 	return &Handler{
-		bridge:  bridgeClient,
 		manager: manager,
 		pulled:  make(map[string]string),
 	}
@@ -47,7 +45,7 @@ func (h *Handler) ensurePulled(sess *session.Session, sessionID, dbPath string) 
 		delete(h.pulled, key)
 	}
 
-	localPath, err := h.bridge.PullDatabase(sess.DeviceID, sess.BundleID, dbPath)
+	localPath, err := sess.Setup.PullDatabase(sess.DeviceID, sess.BundleID, dbPath)
 	if err != nil {
 		return "", fmt.Errorf("pull database: %w", err)
 	}

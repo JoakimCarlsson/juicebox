@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Play } from "lucide-react"
 import {
   Dialog,
@@ -26,6 +26,7 @@ interface SessionPickerDialogProps {
 
 export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDialogProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [attaching, setAttaching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState("")
@@ -46,6 +47,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
       if (name.trim()) {
         await renameSession(resp.sessionId, name.trim())
       }
+      await queryClient.invalidateQueries({ queryKey: ["devices", deviceId, "sessions", app.identifier] })
       onClose()
       setName("")
       await navigate({
@@ -65,6 +67,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
     setError(null)
     try {
       const resp = await attachApp(deviceId, app.identifier, sessionId)
+      await queryClient.invalidateQueries({ queryKey: ["devices", deviceId, "sessions", app.identifier] })
       onClose()
       await navigate({
         to: "/devices/$deviceId/app/$bundleId/home",

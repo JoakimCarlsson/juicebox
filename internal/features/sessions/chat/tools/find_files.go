@@ -6,7 +6,7 @@ import (
 
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/tool"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type FindFilesParams struct {
@@ -15,13 +15,13 @@ type FindFilesParams struct {
 }
 
 type FindFilesTool struct {
-	bridge   *bridge.Client
+	setup    session.DeviceSetup
 	deviceID string
 	bundleID string
 }
 
-func NewFindFiles(bridgeClient *bridge.Client, deviceID, bundleID string) *FindFilesTool {
-	return &FindFilesTool{bridge: bridgeClient, deviceID: deviceID, bundleID: bundleID}
+func NewFindFiles(setup session.DeviceSetup, deviceID, bundleID string) *FindFilesTool {
+	return &FindFilesTool{setup: setup, deviceID: deviceID, bundleID: bundleID}
 }
 
 func (t *FindFilesTool) Info() tool.ToolInfo {
@@ -47,7 +47,7 @@ func (t *FindFilesTool) Run(ctx context.Context, params tool.ToolCall) (tool.Too
 		basePath = "/data/data/" + t.bundleID
 	}
 
-	paths, err := t.bridge.FindFiles(t.deviceID, t.bundleID, input.Pattern, basePath)
+	paths, err := t.setup.FindFiles(t.deviceID, t.bundleID, input.Pattern, basePath)
 	if err != nil {
 		return tool.NewTextErrorResponse(fmt.Sprintf("find_files failed: %v", err)), nil
 	}
