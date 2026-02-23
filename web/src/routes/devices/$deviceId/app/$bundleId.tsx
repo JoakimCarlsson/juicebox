@@ -23,6 +23,8 @@ import {
 import { useDefaultLayout } from "react-resizable-panels"
 import { ArrowLeft, Home, Globe, FileText, Code, Terminal, MessageSquare } from "lucide-react"
 import { useEffect, useRef } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { deviceInfoQueryOptions } from "@/features/devices/queries"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute(
@@ -34,12 +36,14 @@ export const Route = createFileRoute(
   component: AppLayout,
 })
 
-const tabs = [
-  { value: "home", label: "Home", icon: Home, enabled: true, to: "/devices/$deviceId/app/$bundleId/home" as const },
-  { value: "network", label: "Network", icon: Globe, enabled: true, to: "/devices/$deviceId/app/$bundleId/network" as const },
-  { value: "logs", label: "Logs", icon: FileText, enabled: true, to: "/devices/$deviceId/app/$bundleId/logs" as const },
-  { value: "hooks", label: "Hooks", icon: Code, enabled: false, to: "/devices/$deviceId/app/$bundleId/network" as const },
-]
+function getTabs(platform: string | undefined) {
+  return [
+    { value: "home", label: "Home", icon: Home, enabled: true, to: "/devices/$deviceId/app/$bundleId/home" as const },
+    { value: "network", label: "Network", icon: Globe, enabled: true, to: "/devices/$deviceId/app/$bundleId/network" as const },
+    { value: "logs", label: "Logs", icon: FileText, enabled: platform === "android" || platform === undefined, to: "/devices/$deviceId/app/$bundleId/logs" as const },
+    { value: "hooks", label: "Hooks", icon: Code, enabled: false, to: "/devices/$deviceId/app/$bundleId/network" as const },
+  ]
+}
 
 function AppLayout() {
   const { deviceId, bundleId } = useParams({
@@ -74,6 +78,8 @@ function AppLayoutWithChat({
   const navigate = useNavigate()
   const location = useLocation()
   const activeTab = location.pathname.split("/").pop() || "home"
+  const { data: deviceInfo } = useQuery(deviceInfoQueryOptions(deviceId))
+  const tabs = getTabs(deviceInfo?.platform)
   const { panelRef, onPanelResize: onChatResize, toggle: toggleChat, isOpen: chatOpen } = useChatPanel()
   const { panelRef: bottomPanelRef, onPanelResize: onBottomResize, toggle: toggleBottomPanel, isOpen: bottomPanelOpen } = useBottomPanel()
   const sessionRef = useRef(sessionId)

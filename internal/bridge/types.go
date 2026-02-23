@@ -1,9 +1,10 @@
 package bridge
 
 type Device struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Type string `json:"type"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Platform string `json:"platform"`
 }
 
 type App struct {

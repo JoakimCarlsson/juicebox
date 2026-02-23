@@ -16,16 +16,12 @@ function DeviceItem({ device, active }: { device: Device; active: boolean }) {
     enabled: active,
   })
 
+  const platformLabel = info?.platform === "ios" ? "iOS" : info?.platform === "android" ? "Android" : info?.platform
+  const osVersion = info?.os && typeof info.os === "object" && "version" in info.os
+    ? String(info.os.version)
+    : null
   const subtitle = info
-    ? [
-        info.platform,
-        info.arch,
-        info.os && typeof info.os === "object" && "version" in info.os
-          ? `Android ${info.os.version}`
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" \u00B7 ")
+    ? [platformLabel, info.arch, osVersion].filter(Boolean).join(" \u00B7 ")
     : null
 
   return (

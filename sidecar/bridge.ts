@@ -36,6 +36,12 @@ async function exec(cmd: string[]): Promise<{ code: number; stdout: string; stde
   };
 }
 
+function normalizePlatform(raw: string): string {
+  if (raw === "linux") return "android";
+  if (raw === "darwin") return "ios";
+  return raw;
+}
+
 async function isFridaServerRunning(deviceId: string): Promise<boolean> {
   const { stdout } = await exec(["adb", "-s", deviceId, "shell", "ps -A | grep frida-server"]);
   return stdout.includes("frida-server");
@@ -159,7 +165,11 @@ async function handleAttach(
   if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
   if (!identifier) return fail(req.id, -32602, "missing param: identifier");
 
-  await ensureFridaServer(deviceId);
+  const tempDevice = await frida.getDevice(deviceId);
+  const sysParams = await tempDevice.querySystemParameters();
+  if (normalizePlatform(sysParams.platform as string) === "android") {
+    await ensureFridaServer(deviceId);
+  }
 
   // re-acquire device handle after potential adb root
   const device = await frida.getDevice(deviceId);
@@ -291,12 +301,19 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
       case "listDevices": {
         const mgr = frida.getDeviceManager();
         const devices = await mgr.enumerateDevices();
-        return ok(
-          req.id,
-          devices
-            .filter((d) => d.type === "usb")
-            .map((d) => ({ id: d.id, name: d.name, type: d.type })),
+        const usb = devices.filter((d) => d.type === "usb");
+        const result = await Promise.all(
+          usb.map(async (d) => {
+            const params = await d.querySystemParameters();
+            return {
+              id: d.id,
+              name: d.name,
+              type: d.type,
+              platform: normalizePlatform(params.platform as string),
+            };
+          }),
         );
+        return ok(req.id, result);
       }
 
       case "listApps": {
@@ -341,7 +358,7 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
           id: device.id,
           type: device.type,
           os: params.os,
-          platform: params.platform,
+          platform: normalizePlatform(params.platform as string),
           arch: params.arch,
           access: params.access,
         });
