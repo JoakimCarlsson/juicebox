@@ -14,6 +14,7 @@ interface BottomPanelContextValue {
   activeTab: PanelTab
   panelRef: React.RefObject<PanelImperativeHandle | null>
   toggle: () => void
+  onPanelResize: (sizePercent: number) => void
   open: (tab?: PanelTab) => void
   close: () => void
   setActiveTab: (tab: PanelTab) => void
@@ -29,27 +30,37 @@ export function BottomPanelProvider({
   const [isOpen, setIsOpen] = useState(true)
   const [activeTab, setActiveTab] = useState<PanelTab>("console")
   const panelRef = useRef<PanelImperativeHandle | null>(null)
+  const lastExpandedSize = useRef(25)
 
   const open = useCallback((tab?: PanelTab) => {
     if (tab) setActiveTab(tab)
-    setIsOpen(true)
-    panelRef.current?.expand()
+    const panel = panelRef.current
+    if (panel?.isCollapsed()) {
+      panel.resize(lastExpandedSize.current)
+    }
   }, [])
 
   const close = useCallback(() => {
-    setIsOpen(false)
     panelRef.current?.collapse()
   }, [])
 
   const toggle = useCallback(() => {
-    setIsOpen((prev) => {
-      if (prev) {
-        panelRef.current?.collapse()
-      } else {
-        panelRef.current?.expand()
-      }
-      return !prev
-    })
+    const panel = panelRef.current
+    if (!panel) return
+    if (panel.isCollapsed()) {
+      panel.resize(lastExpandedSize.current)
+    } else {
+      panel.collapse()
+    }
+  }, [])
+
+  const onPanelResize = useCallback((sizePercent: number) => {
+    if (sizePercent === 0) {
+      setIsOpen(false)
+    } else {
+      setIsOpen(true)
+      lastExpandedSize.current = sizePercent
+    }
   }, [])
 
   return (
@@ -59,6 +70,7 @@ export function BottomPanelProvider({
         activeTab,
         panelRef,
         toggle,
+        onPanelResize,
         open,
         close,
         setActiveTab,

@@ -21,7 +21,8 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable"
-import { ArrowLeft, Home, Globe, FileText, Code, MessageSquare } from "lucide-react"
+import { useDefaultLayout } from "react-resizable-panels"
+import { ArrowLeft, Home, Globe, FileText, Code, Terminal, MessageSquare } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 
@@ -71,18 +72,34 @@ function AppLayoutWithChat({
   bundleId: string
   sessionId: string
 }) {
-  const { panelRef } = useChatPanel()
-  const { panelRef: bottomPanelRef } = useBottomPanel()
+  const { panelRef, onPanelResize: onChatResize } = useChatPanel()
+  const { panelRef: bottomPanelRef, onPanelResize: onBottomResize } = useBottomPanel()
 
-  useEffect(() => {
-    panelRef.current?.collapse()
-  }, [panelRef])
+  const {
+    defaultLayout: horizontalLayout,
+    onLayoutChanged: onHorizontalLayoutChanged,
+  } = useDefaultLayout({ id: "app-horizontal", storage: localStorage })
+
+  const {
+    defaultLayout: verticalLayout,
+    onLayoutChanged: onVerticalLayoutChanged,
+  } = useDefaultLayout({ id: "app-vertical", storage: localStorage })
 
   return (
-    <ResizablePanelGroup orientation="horizontal" className="h-full">
-      <ResizablePanel defaultSize={100} minSize={40}>
-        <ResizablePanelGroup orientation="vertical" className="h-full">
-          <ResizablePanel defaultSize={75} minSize={30}>
+    <ResizablePanelGroup
+      orientation="horizontal"
+      className="h-full"
+      defaultLayout={horizontalLayout}
+      onLayoutChanged={onHorizontalLayoutChanged}
+    >
+      <ResizablePanel id="main" defaultSize={70} minSize={40}>
+        <ResizablePanelGroup
+          orientation="vertical"
+          className="h-full"
+          defaultLayout={verticalLayout}
+          onLayoutChanged={onVerticalLayoutChanged}
+        >
+          <ResizablePanel id="content" defaultSize={75} minSize={30}>
             <AppLayoutInner
               deviceId={deviceId}
               bundleId={bundleId}
@@ -91,11 +108,13 @@ function AppLayoutWithChat({
           </ResizablePanel>
           <ResizableHandle className="w-full h-px after:inset-x-0 after:-top-1 after:-bottom-1 after:inset-y-auto" />
           <ResizablePanel
+            id="bottom"
             panelRef={bottomPanelRef}
-            defaultSize={25}
-            minSize={10}
+            defaultSize={30}
+            minSize={50}
             collapsible
             collapsedSize={0}
+            onResize={(size) => onBottomResize(size.asPercentage)}
           >
             <BottomPanel />
           </ResizablePanel>
@@ -103,11 +122,13 @@ function AppLayoutWithChat({
       </ResizablePanel>
       <ResizableHandle className="h-full w-px after:inset-y-0 after:-left-1 after:-right-1 after:inset-x-auto" />
       <ResizablePanel
+        id="chat"
         panelRef={panelRef}
         defaultSize={30}
-        minSize={20}
+        minSize={50}
         collapsible
         collapsedSize={0}
+        onResize={(size) => onChatResize(size.asPercentage)}
       >
         <ChatPanel />
       </ResizablePanel>
@@ -128,6 +149,7 @@ function AppLayoutInner({
   const location = useLocation()
   const activeTab = location.pathname.split("/").pop() || "home"
   const { toggle: toggleChat, isOpen: chatOpen } = useChatPanel()
+  const { toggle: toggleBottomPanel, isOpen: bottomPanelOpen } = useBottomPanel()
   const sessionRef = useRef(sessionId)
   sessionRef.current = sessionId
 
@@ -169,7 +191,20 @@ function AppLayoutInner({
               {bundleId}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={bottomPanelOpen ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={toggleBottomPanel}
+                >
+                  <Terminal className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Console</TooltipContent>
+            </Tooltip>
             {sessionId && (
               <Tooltip>
                 <TooltipTrigger asChild>

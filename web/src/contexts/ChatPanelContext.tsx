@@ -36,6 +36,7 @@ interface ChatPanelContextValue {
   configured: boolean | null
   panelRef: React.RefObject<PanelImperativeHandle | null>
   toggle: () => void
+  onPanelResize: (sizePercent: number) => void
   sendMessage: (text: string) => void
   clearChat: () => void
 }
@@ -54,12 +55,13 @@ export function ChatPanelProvider({
   sessionId: string
   children: React.ReactNode
 }) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(true)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [configured, setConfigured] = useState<boolean | null>(null)
   const panelRef = useRef<PanelImperativeHandle | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const lastExpandedSize = useRef(30)
 
   useEffect(() => {
     if (!sessionId) return
@@ -88,14 +90,22 @@ export function ChatPanelProvider({
   }, [sessionId, configured])
 
   const toggle = useCallback(() => {
-    setIsOpen((prev) => {
-      if (prev) {
-        panelRef.current?.collapse()
-      } else {
-        panelRef.current?.expand()
-      }
-      return !prev
-    })
+    const panel = panelRef.current
+    if (!panel) return
+    if (panel.isCollapsed()) {
+      panel.resize(lastExpandedSize.current)
+    } else {
+      panel.collapse()
+    }
+  }, [])
+
+  const onPanelResize = useCallback((sizePercent: number) => {
+    if (sizePercent === 0) {
+      setIsOpen(false)
+    } else {
+      setIsOpen(true)
+      lastExpandedSize.current = sizePercent
+    }
   }, [])
 
   const sendMessage = useCallback(
@@ -223,6 +233,7 @@ export function ChatPanelProvider({
         configured,
         panelRef,
         toggle,
+        onPanelResize,
         sendMessage,
         clearChat,
       }}

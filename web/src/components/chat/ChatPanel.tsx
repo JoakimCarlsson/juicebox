@@ -4,16 +4,14 @@ import { ChatMessage } from "@/components/chat/ChatMessage"
 
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { X, Send, Trash2, BotMessageSquare, Settings } from "lucide-react"
+import { Send, BotMessageSquare, Settings } from "lucide-react"
 
 export function ChatPanel() {
   const {
     messages,
     isStreaming,
     configured,
-    toggle,
     sendMessage,
-    clearChat,
   } = useChatPanel()
 
   const [input, setInput] = useState("")
@@ -53,7 +51,7 @@ export function ChatPanel() {
   if (configured === false) {
     return (
       <div className="flex h-full flex-col bg-background border-l border-border">
-        <Header onClose={toggle} onClear={clearChat} />
+        <Header />
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center space-y-3 max-w-[280px]">
             <Settings className="h-8 w-8 text-muted-foreground mx-auto" />
@@ -80,7 +78,7 @@ export function ChatPanel() {
 
   return (
     <div className="flex h-full flex-col bg-background border-l border-border">
-      <Header onClose={toggle} onClear={clearChat} />
+      <Header />
       <Separator />
 
       <div ref={scrollRef} className="flex-1 overflow-auto">
@@ -129,36 +127,10 @@ export function ChatPanel() {
   )
 }
 
-function Header({
-  onClose,
-  onClear,
-}: {
-  onClose: () => void
-  onClear: () => void
-}) {
+function Header() {
   return (
-    <div className="flex items-center justify-between px-3 h-9 shrink-0">
+    <div className="flex items-center px-3 h-9 shrink-0">
       <span className="text-xs font-semibold">AI Assistant</span>
-      <div className="flex items-center gap-0.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={onClear}
-          title="Clear chat"
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={onClose}
-          title="Close"
-        >
-          <X className="h-3 w-3" />
-        </Button>
-      </div>
     </div>
   )
 }
