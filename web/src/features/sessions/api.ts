@@ -1,4 +1,4 @@
-import type { AttachResponse, SessionsResponse, MessagesResponse, LogsResponse } from "@/types/session"
+import type { AttachResponse, SessionsResponse, MessagesResponse, LogsResponse, InterceptState, InterceptDecision, InterceptRule, PendingRequest } from "@/types/session"
 
 export async function attachApp(
   deviceId: string,
@@ -88,4 +88,60 @@ export async function fetchSessionLogs(
   )
   if (!res.ok) throw new Error("Failed to fetch logs")
   return res.json()
+}
+
+export async function fetchInterceptState(
+  sessionId: string,
+): Promise<InterceptState> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/intercept`)
+  if (!res.ok) throw new Error("Failed to fetch intercept state")
+  return res.json()
+}
+
+export async function updateInterceptState(
+  sessionId: string,
+  update: { enabled?: boolean; rules?: InterceptRule[] },
+): Promise<InterceptState> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/intercept`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(update),
+  })
+  if (!res.ok) throw new Error("Failed to update intercept state")
+  return res.json()
+}
+
+export async function fetchPendingRequests(
+  sessionId: string,
+): Promise<{ pending: PendingRequest[] }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/intercept/pending`)
+  if (!res.ok) throw new Error("Failed to fetch pending requests")
+  return res.json()
+}
+
+export async function resolveInterceptRequest(
+  sessionId: string,
+  decision: InterceptDecision,
+): Promise<void> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/intercept/resolve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(decision),
+  })
+  if (!res.ok) throw new Error("Failed to resolve intercept request")
+}
+
+export async function resolveAllInterceptRequests(
+  sessionId: string,
+  action: "forward" | "drop",
+): Promise<void> {
+  const res = await fetch(
+    `/api/v1/sessions/${sessionId}/intercept/resolve-all`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    },
+  )
+  if (!res.ok) throw new Error("Failed to resolve all intercept requests")
 }

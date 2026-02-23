@@ -14,19 +14,22 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	chattools "github.com/joakimcarlsson/juicebox/internal/features/sessions/chat/tools"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type Handler struct {
 	db           *db.DB
 	bridgeClient *bridge.Client
+	manager      *session.Manager
 	llmConfig    *config.LLMConfig
 	chatStore    *ChatSessionStore
 }
 
-func NewHandler(database *db.DB, bridgeClient *bridge.Client, llmConfig *config.LLMConfig, chatStore *ChatSessionStore) *Handler {
+func NewHandler(database *db.DB, bridgeClient *bridge.Client, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore) *Handler {
 	return &Handler{
 		db:           database,
 		bridgeClient: bridgeClient,
+		manager:      manager,
 		llmConfig:    llmConfig,
 		chatStore:    chatStore,
 	}
@@ -100,6 +103,10 @@ func (h *Handler) Handle(c *router.Context) {
 		chattools.NewSearchTraffic(h.db, sessionID),
 		chattools.NewGetRequestDetail(h.db),
 		chattools.NewListProcesses(h.bridgeClient, sess.DeviceID),
+		chattools.NewListPendingRequests(h.manager, sessionID),
+		chattools.NewModifyAndForward(h.manager, sessionID),
+		chattools.NewForwardRequest(h.manager, sessionID),
+		chattools.NewDropRequest(h.manager, sessionID),
 	}
 	if sess.Platform == "" || sess.Platform == "android" {
 		sessionTools = append(sessionTools, chattools.NewRunLogcatQuery(h.db, sessionID))

@@ -74,3 +74,37 @@ export interface LogsResponse {
   entries: LogcatEntry[]
   total: number
 }
+
+export interface InterceptRule {
+  id: string
+  enabled: boolean
+  host?: string
+  pathPattern?: string
+  method?: string
+  contentType?: string
+}
+
+export interface PendingRequest {
+  id: string
+  method: string
+  url: string
+  headers: Record<string, string>
+  body?: string | null
+  bodyEncoding?: string
+  timestamp: number
+}
+
+export interface InterceptState {
+  enabled: boolean
+  rules: InterceptRule[]
+  pendingCount: number
+}
+
+export interface InterceptDecision {
+  requestId: string
+  action: "forward" | "modify" | "drop"
+  method?: string
+  url?: string
+  headers?: Record<string, string>
+  body?: string
+}

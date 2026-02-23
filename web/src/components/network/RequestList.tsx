@@ -9,11 +9,13 @@ export function RequestList({
   selectedId,
   onSelect,
   autoScroll = true,
+  pendingIds,
 }: {
   messages: HttpMessage[]
   selectedId: string | null
   onSelect: (id: string) => void
   autoScroll?: boolean
+  pendingIds?: Set<string>
 }) {
   const listRef = useRef<HTMLDivElement>(null)
   const isAtBottom = useRef(true)
@@ -57,6 +59,7 @@ export function RequestList({
         <tbody>
           {messages.map((msg) => {
             const { host, path } = parseUrl(msg.url)
+            const isPending = pendingIds?.has(msg.id)
             return (
               <tr
                 key={msg.id}
@@ -64,6 +67,7 @@ export function RequestList({
                 className={cn(
                   "cursor-pointer border-b border-border transition-colors hover:bg-muted/50",
                   selectedId === msg.id && "bg-accent",
+                  isPending && "bg-amber-500/5",
                 )}
               >
                 <td className="px-3 py-1.5">
@@ -78,14 +82,20 @@ export function RequestList({
                   </Badge>
                 </td>
                 <td className="px-2 py-1.5">
-                  <span
-                    className={cn(
-                      "text-xs font-mono font-medium",
-                      statusColor(msg.statusCode),
-                    )}
-                  >
-                    {msg.statusCode || "\u2014"}
-                  </span>
+                  {isPending ? (
+                    <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] px-1.5 py-0">
+                      PAUSED
+                    </Badge>
+                  ) : (
+                    <span
+                      className={cn(
+                        "text-xs font-mono font-medium",
+                        statusColor(msg.statusCode),
+                      )}
+                    >
+                      {msg.statusCode || "\u2014"}
+                    </span>
+                  )}
                 </td>
                 <td className="px-2 py-1.5 max-w-0">
                   <span className="block truncate text-xs font-mono text-foreground">

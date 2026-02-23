@@ -1,12 +1,15 @@
 package stream
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
+	"github.com/joakimcarlsson/juicebox/internal/proxy"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 var upgrader = websocket.Upgrader{
@@ -14,11 +17,12 @@ var upgrader = websocket.Upgrader{
 }
 
 type Handler struct {
-	hubManager *devicehub.Manager
+	hubManager     *devicehub.Manager
+	sessionManager *session.Manager
 }
 
-func NewHandler(hubManager *devicehub.Manager) *Handler {
-	return &Handler{hubManager: hubManager}
+func NewHandler(hubManager *devicehub.Manager, sessionManager *session.Manager) *Handler {
+	return &Handler{hubManager: hubManager, sessionManager: sessionManager}
 }
 
 func (h *Handler) Handle(c *router.Context) {
@@ -46,10 +50,38 @@ func (h *Handler) Handle(c *router.Context) {
 	}
 
 	for {
-		if _, _, err := ws.ReadMessage(); err != nil {
+		_, msg, err := ws.ReadMessage()
+		if err != nil {
 			break
 		}
+		h.handleIncoming(msg)
 	}
 
 	hub.RemoveSubscriber(ws)
+}
+
+type incomingEnvelope struct {
+	Type      string          `json:"type"`
+	SessionID string          `json:"sessionId"`
+	Payload   json.RawMessage `json:"payload"`
+}
+
+func (h *Handler) handleIncoming(msg []byte) {
+	var envelope incomingEnvelope
+	if err := json.Unmarshal(msg, &envelope); err != nil {
+		return
+	}
+
+	switch envelope.Type {
+	case "intercept_decision":
+		var decision proxy.InterceptDecision
+		if err := json.Unmarshal(envelope.Payload, &decision); err != nil {
+			return
+		}
+		sess := h.sessionManager.GetSession(envelope.SessionID)
+		if sess == nil || sess.Intercept == nil {
+			return
+		}
+		sess.Intercept.Resolve(decision)
+	}
 }

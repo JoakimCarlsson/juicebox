@@ -10,15 +10,16 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/list"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/processes"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/stream"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
-func RegisterRoutes(r *router.Router, client *bridge.Client, hubManager *devicehub.Manager) {
+func RegisterRoutes(r *router.Router, client *bridge.Client, hubManager *devicehub.Manager, sessionManager *session.Manager) {
 	listHandler := list.NewHandler(client)
 	appsHandler := apps.NewHandler(client)
 	infoHandler := info.NewHandler(client)
 	iconHandler := icon.NewHandler(client)
 	processesHandler := processes.NewHandler(client)
-	streamHandler := stream.NewHandler(hubManager)
+	streamHandler := stream.NewHandler(hubManager, sessionManager)
 
 	r.Group("/devices", func(d *router.Router) {
 		d.GET("", listHandler.Handle)
