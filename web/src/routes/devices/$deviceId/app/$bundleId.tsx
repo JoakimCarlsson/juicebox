@@ -72,86 +72,23 @@ function AppLayoutWithChat({
   bundleId: string
   sessionId: string
 }) {
-  const { panelRef, onPanelResize: onChatResize } = useChatPanel()
-  const { panelRef: bottomPanelRef, onPanelResize: onBottomResize } = useBottomPanel()
-
-  const {
-    defaultLayout: horizontalLayout,
-    onLayoutChanged: onHorizontalLayoutChanged,
-  } = useDefaultLayout({ id: "app-horizontal", storage: localStorage })
-
-  const {
-    defaultLayout: verticalLayout,
-    onLayoutChanged: onVerticalLayoutChanged,
-  } = useDefaultLayout({ id: "app-vertical", storage: localStorage })
-
-  return (
-    <ResizablePanelGroup
-      orientation="horizontal"
-      className="h-full"
-      defaultLayout={horizontalLayout}
-      onLayoutChanged={onHorizontalLayoutChanged}
-    >
-      <ResizablePanel id="main" defaultSize={70} minSize={40}>
-        <ResizablePanelGroup
-          orientation="vertical"
-          className="h-full"
-          defaultLayout={verticalLayout}
-          onLayoutChanged={onVerticalLayoutChanged}
-        >
-          <ResizablePanel id="content" defaultSize={75} minSize={30}>
-            <AppLayoutInner
-              deviceId={deviceId}
-              bundleId={bundleId}
-              sessionId={sessionId}
-            />
-          </ResizablePanel>
-          <ResizableHandle className="w-full h-px after:inset-x-0 after:-top-1 after:-bottom-1 after:inset-y-auto" />
-          <ResizablePanel
-            id="bottom"
-            panelRef={bottomPanelRef}
-            defaultSize={30}
-            minSize={50}
-            collapsible
-            collapsedSize={0}
-            onResize={(size) => onBottomResize(size.asPercentage)}
-          >
-            <BottomPanel />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </ResizablePanel>
-      <ResizableHandle className="h-full w-px after:inset-y-0 after:-left-1 after:-right-1 after:inset-x-auto" />
-      <ResizablePanel
-        id="chat"
-        panelRef={panelRef}
-        defaultSize={30}
-        minSize={50}
-        collapsible
-        collapsedSize={0}
-        onResize={(size) => onChatResize(size.asPercentage)}
-      >
-        <ChatPanel />
-      </ResizablePanel>
-    </ResizablePanelGroup>
-  )
-}
-
-function AppLayoutInner({
-  deviceId,
-  bundleId,
-  sessionId,
-}: {
-  deviceId: string
-  bundleId: string
-  sessionId: string
-}) {
   const navigate = useNavigate()
   const location = useLocation()
   const activeTab = location.pathname.split("/").pop() || "home"
-  const { toggle: toggleChat, isOpen: chatOpen } = useChatPanel()
-  const { toggle: toggleBottomPanel, isOpen: bottomPanelOpen } = useBottomPanel()
+  const { panelRef, onPanelResize: onChatResize, toggle: toggleChat, isOpen: chatOpen } = useChatPanel()
+  const { panelRef: bottomPanelRef, onPanelResize: onBottomResize, toggle: toggleBottomPanel, isOpen: bottomPanelOpen } = useBottomPanel()
   const sessionRef = useRef(sessionId)
   sessionRef.current = sessionId
+
+  const {
+    defaultLayout: outerLayout,
+    onLayoutChanged: onOuterLayoutChanged,
+  } = useDefaultLayout({ id: "app-main", storage: localStorage })
+
+  const {
+    defaultLayout: innerLayout,
+    onLayoutChanged: onInnerLayoutChanged,
+  } = useDefaultLayout({ id: "app-top", storage: localStorage })
 
   useEffect(() => {
     if (!sessionId) return
@@ -224,37 +161,82 @@ function AppLayoutInner({
         </div>
       </div>
 
-      <div className="flex items-center border-b border-border px-2 h-9">
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          const isActive = tab.value === activeTab
-          return (
-            <Link
-              key={tab.value}
-              to={tab.enabled ? tab.to : undefined!}
-              params={{ deviceId, bundleId }}
-              search={{ sessionId }}
-              className={cn(
-                "flex items-center h-9 px-3 text-xs transition-colors",
-                "border-b-2 border-transparent",
-                tab.enabled
-                  ? "text-muted-foreground hover:text-foreground"
-                  : "text-muted-foreground/50 cursor-default",
-                isActive && "border-foreground text-foreground",
-              )}
-              onClick={(e) => {
-                if (!tab.enabled) e.preventDefault()
-              }}
-            >
-              <Icon className="mr-1.5 h-3 w-3" />
-              {tab.label}
-            </Link>
-          )
-        })}
-      </div>
-
       <div className="flex-1 overflow-hidden">
-        <Outlet />
+        <ResizablePanelGroup
+          orientation="vertical"
+          className="h-full"
+          defaultLayout={outerLayout}
+          onLayoutChanged={onOuterLayoutChanged}
+        >
+          <ResizablePanel id="top" defaultSize={75} minSize={30}>
+            <ResizablePanelGroup
+              orientation="horizontal"
+              className="h-full"
+              defaultLayout={innerLayout}
+              onLayoutChanged={onInnerLayoutChanged}
+            >
+              <ResizablePanel id="content" defaultSize={70} minSize={40}>
+                <div className="flex h-full flex-col">
+                  <div className="flex items-center border-b border-border px-2 h-9">
+                    {tabs.map((tab) => {
+                      const Icon = tab.icon
+                      const isActive = tab.value === activeTab
+                      return (
+                        <Link
+                          key={tab.value}
+                          to={tab.enabled ? tab.to : undefined!}
+                          params={{ deviceId, bundleId }}
+                          search={{ sessionId }}
+                          className={cn(
+                            "flex items-center h-9 px-3 text-xs transition-colors",
+                            "border-b-2 border-transparent",
+                            tab.enabled
+                              ? "text-muted-foreground hover:text-foreground"
+                              : "text-muted-foreground/50 cursor-default",
+                            isActive && "border-foreground text-foreground",
+                          )}
+                          onClick={(e) => {
+                            if (!tab.enabled) e.preventDefault()
+                          }}
+                        >
+                          <Icon className="mr-1.5 h-3 w-3" />
+                          {tab.label}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <Outlet />
+                  </div>
+                </div>
+              </ResizablePanel>
+              <ResizableHandle className="h-full w-px after:inset-y-0 after:-left-1 after:-right-1 after:inset-x-auto" />
+              <ResizablePanel
+                id="chat"
+                panelRef={panelRef}
+                defaultSize={30}
+                minSize={20}
+                collapsible
+                collapsedSize={0}
+                onResize={(size) => onChatResize(size.asPercentage)}
+              >
+                <ChatPanel />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </ResizablePanel>
+          <ResizableHandle className="w-full h-px after:inset-x-0 after:-top-1 after:-bottom-1 after:inset-y-auto" />
+          <ResizablePanel
+            id="bottom"
+            panelRef={bottomPanelRef}
+            defaultSize={25}
+            minSize={10}
+            collapsible
+            collapsedSize={0}
+            onResize={(size) => onBottomResize(size.asPercentage)}
+          >
+            <BottomPanel />
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   )

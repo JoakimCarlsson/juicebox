@@ -3,7 +3,6 @@ import { useChatPanel } from "@/contexts/ChatPanelContext"
 import { ChatMessage } from "@/components/chat/ChatMessage"
 
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { Send, BotMessageSquare, Settings } from "lucide-react"
 
 export function ChatPanel() {
@@ -51,7 +50,6 @@ export function ChatPanel() {
   if (configured === false) {
     return (
       <div className="flex h-full flex-col bg-background border-l border-border">
-        <Header />
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center space-y-3 max-w-[280px]">
             <Settings className="h-8 w-8 text-muted-foreground mx-auto" />
@@ -78,9 +76,6 @@ export function ChatPanel() {
 
   return (
     <div className="flex h-full flex-col bg-background border-l border-border">
-      <Header />
-      <Separator />
-
       <div ref={scrollRef} className="flex-1 overflow-auto">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center p-6">
@@ -100,8 +95,7 @@ export function ChatPanel() {
         )}
       </div>
 
-      <Separator />
-      <div className="p-2 shrink-0">
+      <div className="p-2 shrink-0 border-t border-border">
         <div className="flex items-end gap-1.5">
           <textarea
             ref={textareaRef}
@@ -123,14 +117,6 @@ export function ChatPanel() {
           </Button>
         </div>
       </div>
-    </div>
-  )
-}
-
-function Header() {
-  return (
-    <div className="flex items-center px-3 h-9 shrink-0">
-      <span className="text-xs font-semibold">AI Assistant</span>
     </div>
   )
 }
