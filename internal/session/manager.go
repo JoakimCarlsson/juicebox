@@ -23,6 +23,7 @@ type Session struct {
 	BridgeSession string
 	Proxy         *proxy.Proxy
 	ProxyPort     int
+	Intercept     *proxy.InterceptEngine
 	Logcat        *logcat.Streamer
 	StartedAt     int64
 }
@@ -102,12 +103,23 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachR
 		}
 	}, proxyLogger)
 
+	interceptEngine := proxy.NewInterceptEngine(func(msgType string, payload any) {
+		data, err := devicehub.Marshal(msgType, sess.ID, payload)
+		if err != nil {
+			logger.Error("marshal intercept", "error", err)
+			return
+		}
+		hub.Broadcast(data)
+	}, proxyLogger)
+	p.SetInterceptEngine(interceptEngine)
+
 	port, err := p.Start()
 	if err != nil {
 		return nil, fmt.Errorf("manager: start proxy: %w", err)
 	}
 	sess.Proxy = p
 	sess.ProxyPort = port
+	sess.Intercept = interceptEngine
 
 	logger.Info("proxy started", "port", port, "bundle", bundleId)
 
@@ -221,6 +233,10 @@ func (m *Manager) Detach(sessionId string) error {
 
 	if sess.Logcat != nil {
 		sess.Logcat.Stop()
+	}
+
+	if sess.Intercept != nil {
+		sess.Intercept.ResolveAll(proxy.ActionForward)
 	}
 
 	if setup, ok := m.deviceSetups[sess.Platform]; ok {

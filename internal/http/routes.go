@@ -16,7 +16,7 @@ import (
 func RegisterRoutes(r *router.Router, db *db.DB, bridgeClient *bridge.Client, manager *session.Manager, hubManager *devicehub.Manager, appConfig *config.Config, chatStore *chat.ChatSessionStore) {
 	r.Group("/api/v1", func(api *router.Router) {
 		system.RegisterRoutes(api, db)
-		devices.RegisterRoutes(api, bridgeClient, hubManager)
+		devices.RegisterRoutes(api, bridgeClient, hubManager, manager)
 		sessions.RegisterRoutes(api, manager, db, bridgeClient, appConfig, chatStore)
 	})
 }

@@ -26,6 +26,7 @@ type MessageSink func(AgentMessage)
 type Proxy struct {
 	certManager *CertManager
 	sink        MessageSink
+	intercept   *InterceptEngine
 	logger      *slog.Logger
 	listener    net.Listener
 	transport   *http.Transport
@@ -72,8 +73,19 @@ func (p *Proxy) Port() int {
 	return p.listener.Addr().(*net.TCPAddr).Port
 }
 
+func (p *Proxy) SetInterceptEngine(ie *InterceptEngine) {
+	p.intercept = ie
+}
+
+func (p *Proxy) InterceptEngine() *InterceptEngine {
+	return p.intercept
+}
+
 func (p *Proxy) Stop() {
 	close(p.done)
+	if p.intercept != nil {
+		p.intercept.ResolveAll(ActionForward)
+	}
 	if p.listener != nil {
 		p.listener.Close()
 	}
@@ -184,6 +196,17 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 		req.ContentLength = int64(len(reqFullBody))
 	}
 
+	if p.intercept != nil && p.intercept.IsEnabled() {
+		var drop bool
+		req, reqFullBody, drop = p.intercept.MaybeIntercept(req, reqFullBody)
+		if drop {
+			clientConn.Write([]byte("HTTP/1.1 502 Blocked\r\nContent-Length: 0\r\n\r\n"))
+			return
+		}
+		req.Body = io.NopCloser(bytes.NewReader(reqFullBody))
+		req.ContentLength = int64(len(reqFullBody))
+	}
+
 	resp, err := p.transport.RoundTrip(req)
 	if err != nil {
 		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n"))
@@ -192,6 +215,15 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 	defer resp.Body.Close()
 
 	respFullBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxTotalBodyRead))
+
+	if p.intercept != nil && p.intercept.IsEnabled() {
+		var drop bool
+		respFullBody, resp.StatusCode, resp.Header, drop = p.intercept.MaybeInterceptResponse(req, resp, respFullBody)
+		if drop {
+			clientConn.Write([]byte("HTTP/1.1 502 Blocked\r\nContent-Length: 0\r\n\r\n"))
+			return
+		}
+	}
 
 	duration := time.Since(start).Milliseconds()
 

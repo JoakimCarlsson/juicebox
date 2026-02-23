@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { SessionStatusReporter } from "@/components/layout/SessionStatusReporter"
 import { SessionMessageProvider } from "@/contexts/SessionMessageContext"
+import { InterceptProvider } from "@/contexts/InterceptContext"
 import { ChatPanelProvider, useChatPanel } from "@/contexts/ChatPanelContext"
 import { useBottomPanel } from "@/contexts/BottomPanelContext"
 import { ChatPanel } from "@/components/chat/ChatPanel"
@@ -55,13 +56,15 @@ function AppLayout() {
 
   return (
     <SessionMessageProvider sessionId={sessionId}>
-      <ChatPanelProvider sessionId={sessionId}>
-        <AppLayoutWithChat
-          deviceId={deviceId}
-          bundleId={bundleId}
-          sessionId={sessionId}
-        />
-      </ChatPanelProvider>
+      <InterceptProvider sessionId={sessionId}>
+        <ChatPanelProvider sessionId={sessionId}>
+          <AppLayoutWithChat
+            deviceId={deviceId}
+            bundleId={bundleId}
+            sessionId={sessionId}
+          />
+        </ChatPanelProvider>
+      </InterceptProvider>
     </SessionMessageProvider>
   )
 }

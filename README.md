@@ -7,11 +7,12 @@ Runtime mobile application instrumentation toolkit powered by [Frida](https://fr
 ## Features
 
 - **Traffic interception** — MITM proxy with automatic CA cert install and device proxy config via ADB. Captures full request/response data, stored in SQLite
+- **Intercept mode** — Pause in-flight HTTP requests, edit method/URL/headers/body in the UI, then forward modified, forward original, or drop. Supports glob-based match rules (host, path, method, content type). Paused requests auto-forward after 60s to prevent app hangs
 - **SSL unpinning** — Hooks native SSL libraries (BoringSSL, Flutter, Cronet, Conscrypt, libcurl) and Java TrustManager to bypass certificate pinning
 - **Sessions** — Attach to any app by bundle ID, resume past sessions, view history. Cleans up device state on detach
 - **Logcat** — Streams and stores device logs per session
-- **AI analyst** — Embedded LLM chat with tool access to captured traffic and logs. Flags security issues automatically
-- **Web UI** — Embedded React SPA with network inspector, logcat viewer, process list, and AI chat
+- **AI analyst** — Embedded LLM chat with tool access to captured traffic, logs, and intercepted requests. Can autonomously modify and forward paused requests to test authorization bypasses
+- **Web UI** — Embedded React SPA with network inspector, request editor, logcat viewer, process list, and AI chat
 
 ## Architecture
 
