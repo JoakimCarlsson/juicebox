@@ -163,19 +163,19 @@ function AppLayoutWithChat({
 
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup
-          orientation="vertical"
+          orientation="horizontal"
           className="h-full"
-          defaultLayout={outerLayout}
-          onLayoutChanged={onOuterLayoutChanged}
+          defaultLayout={innerLayout}
+          onLayoutChanged={onInnerLayoutChanged}
         >
-          <ResizablePanel id="top" defaultSize={75} minSize={30}>
+          <ResizablePanel id="content" defaultSize={70} minSize={40}>
             <ResizablePanelGroup
-              orientation="horizontal"
+              orientation="vertical"
               className="h-full"
-              defaultLayout={innerLayout}
-              onLayoutChanged={onInnerLayoutChanged}
+              defaultLayout={outerLayout}
+              onLayoutChanged={onOuterLayoutChanged}
             >
-              <ResizablePanel id="content" defaultSize={70} minSize={40}>
+              <ResizablePanel id="top" defaultSize={75} minSize={30}>
                 <div className="flex h-full flex-col">
                   <div className="flex items-center border-b border-border px-2 h-9">
                     {tabs.map((tab) => {
@@ -210,31 +210,31 @@ function AppLayoutWithChat({
                   </div>
                 </div>
               </ResizablePanel>
-              <ResizableHandle className="h-full w-px after:inset-y-0 after:-left-1 after:-right-1 after:inset-x-auto" />
+              <ResizableHandle className="w-full h-px after:inset-x-0 after:-top-1 after:-bottom-1 after:inset-y-auto" />
               <ResizablePanel
-                id="chat"
-                panelRef={panelRef}
-                defaultSize={30}
-                minSize={20}
+                id="bottom"
+                panelRef={bottomPanelRef}
+                defaultSize={25}
+                minSize={10}
                 collapsible
                 collapsedSize={0}
-                onResize={(size) => onChatResize(size.asPercentage)}
+                onResize={(size) => onBottomResize(size.asPercentage)}
               >
-                <ChatPanel />
+                <BottomPanel />
               </ResizablePanel>
             </ResizablePanelGroup>
           </ResizablePanel>
-          <ResizableHandle className="w-full h-px after:inset-x-0 after:-top-1 after:-bottom-1 after:inset-y-auto" />
+          <ResizableHandle className="h-full w-px after:inset-y-0 after:-left-1 after:-right-1 after:inset-x-auto" />
           <ResizablePanel
-            id="bottom"
-            panelRef={bottomPanelRef}
-            defaultSize={25}
-            minSize={10}
+            id="chat"
+            panelRef={panelRef}
+            defaultSize={30}
+            minSize={20}
             collapsible
             collapsedSize={0}
-            onResize={(size) => onBottomResize(size.asPercentage)}
+            onResize={(size) => onChatResize(size.asPercentage)}
           >
-            <BottomPanel />
+            <ChatPanel />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
