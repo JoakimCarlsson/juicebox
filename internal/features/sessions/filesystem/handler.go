@@ -6,17 +6,15 @@ import (
 	"path/filepath"
 
 	"github.com/joakimcarlsson/go-router/router"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type Handler struct {
-	bridge  *bridge.Client
 	manager *session.Manager
 }
 
-func NewHandler(bridgeClient *bridge.Client, manager *session.Manager) *Handler {
-	return &Handler{bridge: bridgeClient, manager: manager}
+func NewHandler(manager *session.Manager) *Handler {
+	return &Handler{manager: manager}
 }
 
 func (h *Handler) List(c *router.Context) {
@@ -33,7 +31,7 @@ func (h *Handler) List(c *router.Context) {
 		path = "/data/data/" + sess.BundleID
 	}
 
-	entries, err := h.bridge.ListFiles(sess.DeviceID, sess.BundleID, path)
+	entries, err := sess.Setup.ListFiles(sess.DeviceID, sess.BundleID, path)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -57,7 +55,7 @@ func (h *Handler) Read(c *router.Context) {
 		return
 	}
 
-	content, err := h.bridge.ReadFile(sess.DeviceID, sess.BundleID, path)
+	content, err := sess.Setup.ReadFile(sess.DeviceID, sess.BundleID, path)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -100,7 +98,7 @@ func (h *Handler) Find(c *router.Context) {
 		basePath = "/data/data/" + sess.BundleID
 	}
 
-	paths, err := h.bridge.FindFiles(sess.DeviceID, sess.BundleID, pattern, basePath)
+	paths, err := sess.Setup.FindFiles(sess.DeviceID, sess.BundleID, pattern, basePath)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

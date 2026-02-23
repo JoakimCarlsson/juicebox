@@ -32,7 +32,8 @@ func (h *Handler) Handle(c *router.Context) {
 	}
 
 	c.JSON(http.StatusOK, AttachResponseBody{
-		SessionID: resp.SessionID,
-		PID:       resp.PID,
+		SessionID:    resp.SessionID,
+		PID:          resp.PID,
+		Capabilities: resp.Capabilities,
 	})
 }

@@ -90,6 +90,11 @@ func (s *Streamer) Stop() {
 	s.wg.Wait()
 }
 
+func (s *Streamer) Close() error {
+	s.Stop()
+	return nil
+}
+
 func (s *Streamer) Done() <-chan struct{} {
 	return s.done
 }

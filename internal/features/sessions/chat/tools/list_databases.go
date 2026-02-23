@@ -5,19 +5,19 @@ import (
 	"fmt"
 
 	"github.com/joakimcarlsson/ai/tool"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type ListDatabasesParams struct{}
 
 type ListDatabasesTool struct {
-	bridge   *bridge.Client
+	setup    session.DeviceSetup
 	deviceID string
 	bundleID string
 }
 
-func NewListDatabases(bridgeClient *bridge.Client, deviceID, bundleID string) *ListDatabasesTool {
-	return &ListDatabasesTool{bridge: bridgeClient, deviceID: deviceID, bundleID: bundleID}
+func NewListDatabases(setup session.DeviceSetup, deviceID, bundleID string) *ListDatabasesTool {
+	return &ListDatabasesTool{setup: setup, deviceID: deviceID, bundleID: bundleID}
 }
 
 func (t *ListDatabasesTool) Info() tool.ToolInfo {
@@ -31,7 +31,7 @@ func (t *ListDatabasesTool) Info() tool.ToolInfo {
 func (t *ListDatabasesTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
 	basePath := "/data/data/" + t.bundleID
 
-	paths, err := t.bridge.FindFiles(t.deviceID, t.bundleID, "*.db", basePath)
+	paths, err := t.setup.FindFiles(t.deviceID, t.bundleID, "*.db", basePath)
 	if err != nil {
 		return tool.NewTextErrorResponse(fmt.Sprintf("list_databases failed: %v", err)), nil
 	}

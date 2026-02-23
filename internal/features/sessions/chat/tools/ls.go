@@ -6,7 +6,7 @@ import (
 
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/tool"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type LsParams struct {
@@ -14,13 +14,13 @@ type LsParams struct {
 }
 
 type LsTool struct {
-	bridge   *bridge.Client
+	setup    session.DeviceSetup
 	deviceID string
 	bundleID string
 }
 
-func NewLs(bridgeClient *bridge.Client, deviceID, bundleID string) *LsTool {
-	return &LsTool{bridge: bridgeClient, deviceID: deviceID, bundleID: bundleID}
+func NewLs(setup session.DeviceSetup, deviceID, bundleID string) *LsTool {
+	return &LsTool{setup: setup, deviceID: deviceID, bundleID: bundleID}
 }
 
 func (t *LsTool) Info() tool.ToolInfo {
@@ -42,7 +42,7 @@ func (t *LsTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolRespon
 		path = "/data/data/" + t.bundleID
 	}
 
-	entries, err := t.bridge.ListFiles(t.deviceID, t.bundleID, path)
+	entries, err := t.setup.ListFiles(t.deviceID, t.bundleID, path)
 	if err != nil {
 		return tool.NewTextErrorResponse(fmt.Sprintf("ls failed: %v", err)), nil
 	}

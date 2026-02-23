@@ -5,14 +5,21 @@ import (
 
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
-type Handler struct {
-	db *db.DB
+var platformCapabilities = map[string][]string{
+	"android": {"filesystem", "database", "logstream"},
+	"ios":     {},
 }
 
-func NewHandler(database *db.DB) *Handler {
-	return &Handler{db: database}
+type Handler struct {
+	db      *db.DB
+	manager *session.Manager
+}
+
+func NewHandler(database *db.DB, manager *session.Manager) *Handler {
+	return &Handler{db: database, manager: manager}
 }
 
 func (h *Handler) Handle(c *router.Context) {
@@ -55,17 +62,20 @@ func (h *Handler) Handle(c *router.Context) {
 		httpCount, _ := h.db.CountHttpMessages(s.ID)
 		logcatCount, _ := h.db.CountLogcatEntries(s.ID)
 
+		caps := capabilitiesFor(h.manager, s.ID, s.Platform)
+
 		items = append(items, SessionItem{
-			ID:          s.ID,
-			DeviceID:    s.DeviceID,
-			BundleID:    s.BundleID,
-			PID:         s.PID,
-			Name:        s.Name,
-			Platform:    s.Platform,
-			StartedAt:   s.StartedAt,
-			EndedAt:     s.EndedAt,
-			HttpCount:   httpCount,
-			LogcatCount: logcatCount,
+			ID:           s.ID,
+			DeviceID:     s.DeviceID,
+			BundleID:     s.BundleID,
+			PID:          s.PID,
+			Name:         s.Name,
+			Platform:     s.Platform,
+			StartedAt:    s.StartedAt,
+			EndedAt:      s.EndedAt,
+			HttpCount:    httpCount,
+			LogcatCount:  logcatCount,
+			Capabilities: caps,
 		})
 	}
 
@@ -73,4 +83,14 @@ func (h *Handler) Handle(c *router.Context) {
 		Sessions: items,
 		Total:    total,
 	})
+}
+
+func capabilitiesFor(mgr *session.Manager, sessionID, platform string) []string {
+	if sess := mgr.GetSession(sessionID); sess != nil && sess.Setup != nil {
+		return sess.Setup.Capabilities()
+	}
+	if caps, ok := platformCapabilities[platform]; ok {
+		return caps
+	}
+	return []string{}
 }

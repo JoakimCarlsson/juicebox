@@ -5,30 +5,30 @@ import (
 	"fmt"
 
 	"github.com/joakimcarlsson/ai/tool"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type ListProcessesParams struct{}
 
 type ListProcessesTool struct {
-	bridge   *bridge.Client
+	setup    session.DeviceSetup
 	deviceID string
 }
 
-func NewListProcesses(bridgeClient *bridge.Client, deviceID string) *ListProcessesTool {
-	return &ListProcessesTool{bridge: bridgeClient, deviceID: deviceID}
+func NewListProcesses(setup session.DeviceSetup, deviceID string) *ListProcessesTool {
+	return &ListProcessesTool{setup: setup, deviceID: deviceID}
 }
 
 func (t *ListProcessesTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"list_processes",
-		"List all running processes on the connected Android device. Returns process ID and name for each process.",
+		"List all running processes on the connected device. Returns process ID and name for each process.",
 		ListProcessesParams{},
 	)
 }
 
 func (t *ListProcessesTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
-	processes, err := t.bridge.ListProcesses(t.deviceID)
+	processes, err := t.setup.ListProcesses(t.deviceID)
 	if err != nil {
 		return tool.NewTextErrorResponse(fmt.Sprintf("failed to list processes: %v", err)), nil
 	}

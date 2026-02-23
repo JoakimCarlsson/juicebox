@@ -65,7 +65,8 @@ func main() {
 	}
 
 	deviceSetups := map[string]session.DeviceSetup{
-		"android": &session.AndroidSetup{},
+		"android": session.NewAndroidSetup(bridgeClient),
+		"ios":     &session.IOSSetup{},
 	}
 	manager := session.NewManager(certManager, bridgeClient, hubManager, database, writer, deviceSetups)
 
