@@ -6,6 +6,7 @@ type SessionItem struct {
 	BundleID    string `json:"bundleId"`
 	PID         int    `json:"pid"`
 	Name        string `json:"name"`
+	Platform    string `json:"platform"`
 	StartedAt   int64  `json:"startedAt"`
 	EndedAt     *int64 `json:"endedAt"`
 	HttpCount   int    `json:"httpCount"`

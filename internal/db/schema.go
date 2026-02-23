@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     bundle_id  TEXT NOT NULL,
     pid        INTEGER NOT NULL DEFAULT 0,
     name       TEXT NOT NULL DEFAULT '',
+    platform   TEXT NOT NULL DEFAULT 'android',
     started_at INTEGER NOT NULL,
     ended_at   INTEGER
 );
@@ -60,5 +61,6 @@ func (d *DB) Migrate() error {
 	if _, err := d.Conn.Exec(schema); err != nil {
 		return fmt.Errorf("db.Migrate: %w", err)
 	}
+	_, _ = d.Conn.Exec(`ALTER TABLE sessions ADD COLUMN platform TEXT NOT NULL DEFAULT 'android'`)
 	return nil
 }

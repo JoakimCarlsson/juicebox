@@ -100,7 +100,9 @@ func (h *Handler) Handle(c *router.Context) {
 		chattools.NewSearchTraffic(h.db, sessionID),
 		chattools.NewGetRequestDetail(h.db),
 		chattools.NewListProcesses(h.bridgeClient, sess.DeviceID),
-		chattools.NewRunLogcatQuery(h.db, sessionID),
+	}
+	if sess.Platform == "" || sess.Platform == "android" {
+		sessionTools = append(sessionTools, chattools.NewRunLogcatQuery(h.db, sessionID))
 	}
 
 	state := map[string]any{

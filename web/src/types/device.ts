@@ -2,6 +2,7 @@ export interface Device {
   id: string
   name: string
   type: string
+  platform: string
 }
 
 export interface App {

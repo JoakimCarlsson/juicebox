@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joakimcarlsson/juicebox/internal/adb"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
@@ -15,12 +14,11 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/proxy"
 )
 
-const deviceProxyPort = 8082
-
 type Session struct {
 	ID            string
 	DeviceID      string
 	BundleID      string
+	Platform      string
 	PID           int
 	BridgeSession string
 	Proxy         *proxy.Proxy
@@ -30,23 +28,25 @@ type Session struct {
 }
 
 type Manager struct {
-	certManager *proxy.CertManager
-	bridge      *bridge.Client
-	hubManager  *devicehub.Manager
-	database    *db.DB
-	writer      *db.AsyncWriter
-	mu          sync.RWMutex
-	sessions    map[string]*Session
+	certManager  *proxy.CertManager
+	bridge       *bridge.Client
+	hubManager   *devicehub.Manager
+	database     *db.DB
+	writer       *db.AsyncWriter
+	deviceSetups map[string]DeviceSetup
+	mu           sync.RWMutex
+	sessions     map[string]*Session
 }
 
-func NewManager(cm *proxy.CertManager, bridgeClient *bridge.Client, hubManager *devicehub.Manager, database *db.DB, writer *db.AsyncWriter) *Manager {
+func NewManager(cm *proxy.CertManager, bridgeClient *bridge.Client, hubManager *devicehub.Manager, database *db.DB, writer *db.AsyncWriter, deviceSetups map[string]DeviceSetup) *Manager {
 	return &Manager{
-		certManager: cm,
-		bridge:      bridgeClient,
-		hubManager:  hubManager,
-		database:    database,
-		writer:      writer,
-		sessions:    make(map[string]*Session),
+		certManager:  cm,
+		bridge:       bridgeClient,
+		hubManager:   hubManager,
+		database:     database,
+		writer:       writer,
+		deviceSetups: deviceSetups,
+		sessions:     make(map[string]*Session),
 	}
 }
 
@@ -64,9 +64,24 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachR
 
 	isRestore := existingSessionId != ""
 
+	deviceInfo, err := m.bridge.GetDeviceInfo(deviceId)
+	if err != nil {
+		return nil, fmt.Errorf("manager: get device info: %w", err)
+	}
+	platform := deviceInfo.Platform
+	if platform == "" {
+		platform = "android"
+	}
+
+	setup, ok := m.deviceSetups[platform]
+	if !ok {
+		setup = m.deviceSetups["android"]
+	}
+
 	sess := &Session{
 		DeviceID: deviceId,
 		BundleID: bundleId,
+		Platform: platform,
 	}
 
 	hub := m.hubManager.GetOrCreate(deviceId)
@@ -96,32 +111,17 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachR
 
 	logger.Info("proxy started", "port", port, "bundle", bundleId)
 
-	logger.Info("installing CA certificate")
-	if err := adb.InstallCACert(deviceId, m.certManager.CAPEMPath()); err != nil {
-		logger.Error("CA cert install failed", "error", err)
+	logger.Info("preparing device interception", "platform", platform)
+	if err := setup.PrepareInterception(deviceId, m.certManager.CAPEMPath(), port); err != nil {
+		logger.Error("device interception setup failed", "error", err)
 		p.Stop()
-		return nil, fmt.Errorf("manager: install ca cert: %w", err)
-	}
-	logger.Info("CA cert installed via tmpfs overlay")
-
-	if err := adb.ReversePort(deviceId, deviceProxyPort, port); err != nil {
-		logger.Error("adb reverse failed", "error", err)
-		p.Stop()
-		return nil, fmt.Errorf("manager: adb reverse: %w", err)
-	}
-
-	if err := adb.SetProxy(deviceId, "127.0.0.1", deviceProxyPort); err != nil {
-		logger.Error("set proxy failed", "error", err)
-		adb.RemoveReverse(deviceId, deviceProxyPort)
-		p.Stop()
-		return nil, fmt.Errorf("manager: set proxy: %w", err)
+		return nil, fmt.Errorf("manager: prepare interception: %w", err)
 	}
 
 	bridgeResp, err := m.bridge.Attach(deviceId, bundleId)
 	if err != nil {
 		logger.Error("bridge attach failed", "error", err)
-		adb.ClearProxy(deviceId)
-		adb.RemoveReverse(deviceId, deviceProxyPort)
+		setup.CleanupInterception(deviceId)
 		p.Stop()
 		return nil, fmt.Errorf("manager: bridge attach: %w", err)
 	}
@@ -143,6 +143,7 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachR
 			DeviceID:  sess.DeviceID,
 			BundleID:  sess.BundleID,
 			PID:       sess.PID,
+			Platform:  platform,
 			StartedAt: sess.StartedAt,
 		}); err != nil {
 			logger.Error("failed to persist session", "error", err)
@@ -155,35 +156,37 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachR
 
 	go m.bridgeSubscribeForward(sess)
 
-	logcatLogger := slog.With("device_id", deviceId, "source", "logcat", "session_id", sess.ID)
-	lc := logcat.NewStreamer(deviceId, sess.PID, func(entry *logcat.Entry) {
-		data, err := devicehub.Marshal("logcat", sess.ID, entry)
-		if err != nil {
-			logcatLogger.Error("marshal logcat entry", "error", err)
-			return
+	if setup.SupportsLogcat() {
+		logcatLogger := slog.With("device_id", deviceId, "source", "logcat", "session_id", sess.ID)
+		lc := logcat.NewStreamer(deviceId, sess.PID, func(entry *logcat.Entry) {
+			data, err := devicehub.Marshal("logcat", sess.ID, entry)
+			if err != nil {
+				logcatLogger.Error("marshal logcat entry", "error", err)
+				return
+			}
+			hub.Broadcast(data)
+
+			m.writer.WriteLogcatEntry(&db.LogcatEntryRow{
+				ID:        entry.ID,
+				SessionID: sess.ID,
+				Timestamp: entry.Timestamp,
+				PID:       entry.PID,
+				TID:       entry.TID,
+				Level:     string(entry.Level),
+				Tag:       entry.Tag,
+				Message:   entry.Message,
+			})
+		}, logcatLogger)
+
+		if err := lc.Start(); err != nil {
+			logger.Warn("logcat start failed (non-fatal)", "error", err)
+		} else {
+			sess.Logcat = lc
 		}
-		hub.Broadcast(data)
-
-		m.writer.WriteLogcatEntry(&db.LogcatEntryRow{
-			ID:        entry.ID,
-			SessionID: sess.ID,
-			Timestamp: entry.Timestamp,
-			PID:       entry.PID,
-			TID:       entry.TID,
-			Level:     string(entry.Level),
-			Tag:       entry.Tag,
-			Message:   entry.Message,
-		})
-	}, logcatLogger)
-
-	if err := lc.Start(); err != nil {
-		logger.Warn("logcat start failed (non-fatal)", "error", err)
-	} else {
-		sess.Logcat = lc
 	}
 
 	logger = logger.With("session_id", sess.ID)
-	logger.Info("attached", "bundle", bundleId, "pid", sess.PID)
+	logger.Info("attached", "bundle", bundleId, "pid", sess.PID, "platform", platform)
 
 	return &AttachResult{
 		SessionID: sess.ID,
@@ -220,8 +223,11 @@ func (m *Manager) Detach(sessionId string) error {
 		sess.Logcat.Stop()
 	}
 
-	adb.ClearProxy(sess.DeviceID)
-	adb.RemoveReverse(sess.DeviceID, deviceProxyPort)
+	if setup, ok := m.deviceSetups[sess.Platform]; ok {
+		setup.CleanupInterception(sess.DeviceID)
+	} else if fallback, ok := m.deviceSetups["android"]; ok {
+		fallback.CleanupInterception(sess.DeviceID)
+	}
 
 	sess.Proxy.Stop()
 

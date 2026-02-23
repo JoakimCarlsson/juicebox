@@ -53,6 +53,7 @@ export interface SessionSummary {
   bundleId: string
   pid: number
   name: string
+  platform: string
   startedAt: number
   endedAt: number | null
   httpCount: number

@@ -64,7 +64,10 @@ func main() {
 		slog.Info("LLM provider not configured, AI chat disabled")
 	}
 
-	manager := session.NewManager(certManager, bridgeClient, hubManager, database, writer)
+	deviceSetups := map[string]session.DeviceSetup{
+		"android": &session.AndroidSetup{},
+	}
+	manager := session.NewManager(certManager, bridgeClient, hubManager, database, writer, deviceSetups)
 
 	chatSessionStore, err := sqlitestore.SessionStore(context.Background(), database.Conn,
 		sqlitestore.WithTablePrefix("chat_"),

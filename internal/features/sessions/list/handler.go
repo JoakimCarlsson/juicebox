@@ -61,6 +61,7 @@ func (h *Handler) Handle(c *router.Context) {
 			BundleID:    s.BundleID,
 			PID:         s.PID,
 			Name:        s.Name,
+			Platform:    s.Platform,
 			StartedAt:   s.StartedAt,
 			EndedAt:     s.EndedAt,
 			HttpCount:   httpCount,

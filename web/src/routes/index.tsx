@@ -27,7 +27,7 @@ function IndexPage() {
       <Smartphone className="h-12 w-12 text-muted-foreground/50" />
       <h2 className="text-xl font-semibold text-foreground">No devices connected</h2>
       <p className="max-w-sm text-center text-sm text-muted-foreground">
-        Connect an Android device or start an emulator to get started.
+        Connect a device or start an emulator to get started.
       </p>
     </div>
   )
