@@ -21,8 +21,8 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable"
-import { ArrowLeft, Unplug, Home, Globe, FileText, Code, MessageSquare } from "lucide-react"
-import { useEffect, useState } from "react"
+import { ArrowLeft, Home, Globe, FileText, Code, MessageSquare } from "lucide-react"
+import { useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute(
@@ -127,21 +127,23 @@ function AppLayoutInner({
   const navigate = useNavigate()
   const location = useLocation()
   const activeTab = location.pathname.split("/").pop() || "home"
-  const [detaching, setDetaching] = useState(false)
   const { toggle: toggleChat, isOpen: chatOpen } = useChatPanel()
+  const sessionRef = useRef(sessionId)
+  sessionRef.current = sessionId
 
-  async function handleDetach() {
-    if (!sessionId || detaching) return
-    setDetaching(true)
-    try {
-      await detachSession(sessionId)
-    } catch {}
-    setDetaching(false)
-    navigate({
-      to: "/devices/$deviceId/apps",
-      params: { deviceId },
-    })
-  }
+  useEffect(() => {
+    if (!sessionId) return
+
+    function handleBeforeUnload() {
+      fetch(`/api/v1/sessions/${sessionRef.current}`, { method: "DELETE", keepalive: true })
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload)
+      detachSession(sessionRef.current).catch(() => {})
+    }
+  }, [sessionId])
 
   return (
     <div className="flex h-full flex-col">
@@ -182,17 +184,6 @@ function AppLayoutInner({
                 </TooltipTrigger>
                 <TooltipContent side="bottom">AI Assistant</TooltipContent>
               </Tooltip>
-            )}
-            {sessionId && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDetach}
-                disabled={detaching}
-              >
-                <Unplug className="mr-1.5 h-3.5 w-3.5" />
-                Detach
-              </Button>
             )}
           </div>
         </div>
