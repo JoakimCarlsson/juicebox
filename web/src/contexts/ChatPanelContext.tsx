@@ -14,18 +14,15 @@ import {
   type SSEEvent,
 } from "@/features/chat/api"
 
-export interface ToolCallInfo {
-  name: string
-  id: string
-  status: "running" | "done"
-  result?: string
-}
+export type MessagePart =
+  | { type: "text"; content: string }
+  | { type: "tool_call"; id: string; name: string; status: "running" | "done"; result?: string }
 
 export interface ChatMessage {
   id: string
   role: "user" | "assistant"
   content: string
-  toolCalls?: ToolCallInfo[]
+  parts?: MessagePart[]
   isStreaming?: boolean
 }
 
@@ -78,11 +75,32 @@ export function ChatPanelProvider({
       .then((history) => {
         if (history.messages.length > 0) {
           setMessages(
-            history.messages.map((m) => ({
-              id: nextId(),
-              role: m.role as "user" | "assistant",
-              content: m.content,
-            })),
+            history.messages.map((m) => {
+              const msg: ChatMessage = {
+                id: nextId(),
+                role: m.role as "user" | "assistant",
+                content: m.content,
+              }
+              if (m.role === "assistant") {
+                if (m.parts && m.parts.length > 0) {
+                  msg.parts = m.parts.map((p): MessagePart => {
+                    if (p.type === "tool_call") {
+                      return {
+                        type: "tool_call",
+                        id: p.id || "",
+                        name: p.name || "",
+                        status: "done",
+                        result: p.result,
+                      }
+                    }
+                    return { type: "text", content: p.content || "" }
+                  })
+                } else {
+                  msg.parts = [{ type: "text", content: m.content }]
+                }
+              }
+              return msg
+            }),
           )
         }
       })
@@ -122,7 +140,7 @@ export function ChatPanelProvider({
         id: assistantId,
         role: "assistant",
         content: "",
-        toolCalls: [],
+        parts: [],
         isStreaming: true,
       }
 
@@ -131,56 +149,51 @@ export function ChatPanelProvider({
 
       const controller = streamChat(sessionId, text.trim(), (event: SSEEvent) => {
         switch (event.type) {
-          case "content":
+          case "content": {
             setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId
-                  ? { ...m, content: m.content + event.data.delta }
-                  : m,
-              ),
+              prev.map((m) => {
+                if (m.id !== assistantId) return m
+                const parts = [...(m.parts || [])]
+                const last = parts[parts.length - 1]
+                if (last && last.type === "text") {
+                  parts[parts.length - 1] = { ...last, content: last.content + event.data.delta }
+                } else {
+                  parts.push({ type: "text", content: event.data.delta })
+                }
+                return { ...m, content: m.content + event.data.delta, parts }
+              }),
             )
             break
+          }
 
-          case "tool_start":
+          case "tool_start": {
             setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId
-                  ? {
-                      ...m,
-                      toolCalls: [
-                        ...(m.toolCalls || []),
-                        {
-                          name: event.data.name,
-                          id: event.data.id,
-                          status: "running" as const,
-                        },
-                      ],
-                    }
-                  : m,
-              ),
+              prev.map((m) => {
+                if (m.id !== assistantId) return m
+                const parts: MessagePart[] = [
+                  ...(m.parts || []),
+                  { type: "tool_call", id: event.data.id, name: event.data.name, status: "running" },
+                ]
+                return { ...m, parts }
+              }),
             )
             break
+          }
 
-          case "tool_end":
+          case "tool_end": {
             setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId
-                  ? {
-                      ...m,
-                      toolCalls: (m.toolCalls || []).map((tc) =>
-                        tc.id === event.data.id
-                          ? {
-                              ...tc,
-                              status: "done" as const,
-                              result: event.data.result,
-                            }
-                          : tc,
-                      ),
-                    }
-                  : m,
-              ),
+              prev.map((m) => {
+                if (m.id !== assistantId) return m
+                const parts = (m.parts || []).map((p) =>
+                  p.type === "tool_call" && p.id === event.data.id
+                    ? { ...p, status: "done" as const, result: event.data.result }
+                    : p,
+                )
+                return { ...m, parts }
+              }),
             )
             break
+          }
 
           case "done":
             setMessages((prev) =>

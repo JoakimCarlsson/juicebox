@@ -2,9 +2,19 @@ export interface ChatStatusResponse {
   configured: boolean
 }
 
+export interface ChatHistoryPart {
+  type: "text" | "tool_call"
+  content?: string
+  id?: string
+  name?: string
+  status?: string
+  result?: string
+}
+
 export interface ChatHistoryMessage {
   role: "user" | "assistant"
   content: string
+  parts?: ChatHistoryPart[]
 }
 
 export interface ChatHistoryResponse {

@@ -1,9 +1,53 @@
 import { useRef, useEffect, useState, type KeyboardEvent } from "react"
 import { useChatPanel } from "@/contexts/ChatPanelContext"
-import { ChatMessage } from "@/components/chat/ChatMessage"
+import type { ChatMessage as ChatMessageType, MessagePart } from "@/contexts/ChatPanelContext"
+import { UserMessage, TextBlock, ToolCallBlock, StreamingCursor } from "@/components/chat/ChatMessage"
 
 import { Button } from "@/components/ui/button"
 import { Send, BotMessageSquare, Settings } from "lucide-react"
+
+type RenderItem =
+  | { kind: "user"; key: string; content: string }
+  | { kind: "text"; key: string; content: string; isStreaming: boolean; isLast: boolean }
+  | { kind: "tool_call"; key: string; part: Extract<MessagePart, { type: "tool_call" }> }
+  | { kind: "cursor"; key: string }
+
+function flattenMessages(messages: ChatMessageType[]): RenderItem[] {
+  const items: RenderItem[] = []
+  for (const msg of messages) {
+    if (msg.role === "user") {
+      items.push({ kind: "user", key: msg.id, content: msg.content })
+      continue
+    }
+    const parts = msg.parts
+    if (!parts || parts.length === 0) {
+      if (msg.content) {
+        items.push({ kind: "text", key: msg.id, content: msg.content, isStreaming: false, isLast: false })
+      }
+      continue
+    }
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]
+      const isLast = i === parts.length - 1
+      if (part.type === "text") {
+        if (!part.content) continue
+        items.push({
+          kind: "text",
+          key: `${msg.id}-${i}`,
+          content: part.content,
+          isStreaming: !!msg.isStreaming && isLast,
+          isLast,
+        })
+      } else {
+        items.push({ kind: "tool_call", key: `${msg.id}-${part.id}`, part })
+      }
+    }
+    if (msg.isStreaming && parts[parts.length - 1]?.type !== "text") {
+      items.push({ kind: "cursor", key: `${msg.id}-cursor` })
+    }
+  }
+  return items
+}
 
 export function ChatPanel() {
   const {
@@ -88,9 +132,18 @@ export function ChatPanel() {
           </div>
         ) : (
           <div className="flex flex-col gap-4 p-4">
-            {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
-            ))}
+            {flattenMessages(messages).map((item) => {
+              switch (item.kind) {
+                case "user":
+                  return <UserMessage key={item.key} content={item.content} />
+                case "text":
+                  return <TextBlock key={item.key} content={item.content} isStreaming={item.isStreaming} />
+                case "tool_call":
+                  return <ToolCallBlock key={item.key} part={item.part} />
+                case "cursor":
+                  return <StreamingCursor key={item.key} />
+              }
+            })}
           </div>
         )}
       </div>

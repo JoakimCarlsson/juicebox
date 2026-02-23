@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { SessionStatusReporter } from "@/components/layout/SessionStatusReporter"
-import { detachSession } from "@/features/sessions/api"
 import { SessionMessageProvider } from "@/contexts/SessionMessageContext"
 import { ChatPanelProvider, useChatPanel } from "@/contexts/ChatPanelContext"
 import { useBottomPanel } from "@/contexts/BottomPanelContext"
@@ -100,7 +99,6 @@ function AppLayoutWithChat({
     window.addEventListener("beforeunload", handleBeforeUnload)
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload)
-      detachSession(sessionRef.current).catch(() => {})
     }
   }, [sessionId])
 

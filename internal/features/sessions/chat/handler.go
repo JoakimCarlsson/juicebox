@@ -203,9 +203,28 @@ func (h *Handler) History(c *router.Context) {
 		return
 	}
 
+	toolResults := make(map[string]message.ToolResult)
+	for _, m := range msgs {
+		if m.Role == message.Tool {
+			for _, tr := range m.ToolResults() {
+				toolResults[tr.ToolCallID] = tr
+			}
+		}
+	}
+
+	type historyPart struct {
+		Type    string `json:"type"`
+		Content string `json:"content,omitempty"`
+		ID      string `json:"id,omitempty"`
+		Name    string `json:"name,omitempty"`
+		Status  string `json:"status,omitempty"`
+		Result  string `json:"result,omitempty"`
+	}
+
 	type historyMsg struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
+		Role    string        `json:"role"`
+		Content string        `json:"content"`
+		Parts   []historyPart `json:"parts,omitempty"`
 	}
 
 	result := make([]historyMsg, 0)
@@ -213,19 +232,47 @@ func (h *Handler) History(c *router.Context) {
 		if m.Role == message.System || m.Role == message.Tool {
 			continue
 		}
-		content := ""
+
+		text := ""
 		for _, p := range m.Parts {
 			if tp, ok := p.(message.TextContent); ok {
-				content += tp.Text
+				text += tp.Text
 			}
 		}
-		if content == "" {
+
+		if m.Role == message.User {
+			if text == "" {
+				continue
+			}
+			result = append(result, historyMsg{Role: "user", Content: text})
 			continue
 		}
-		result = append(result, historyMsg{
-			Role:    string(m.Role),
-			Content: content,
-		})
+
+		var parts []historyPart
+		for _, p := range m.Parts {
+			switch v := p.(type) {
+			case message.TextContent:
+				if v.Text != "" {
+					parts = append(parts, historyPart{Type: "text", Content: v.Text})
+				}
+			case message.ToolCall:
+				hp := historyPart{
+					Type:   "tool_call",
+					ID:     v.ID,
+					Name:   v.Name,
+					Status: "done",
+				}
+				if tr, ok := toolResults[v.ID]; ok {
+					hp.Result = tr.Content
+				}
+				parts = append(parts, hp)
+			}
+		}
+
+		if text == "" && len(parts) == 0 {
+			continue
+		}
+		result = append(result, historyMsg{Role: "assistant", Content: text, Parts: parts})
 	}
 
 	c.JSON(http.StatusOK, map[string]any{"messages": result})
