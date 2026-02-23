@@ -11,7 +11,7 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-lg bg-primary px-3 py-2 text-primary-foreground text-sm">
+        <div className="max-w-[85%] rounded-lg bg-primary px-2.5 py-1.5 text-primary-foreground text-xs">
           {message.content}
         </div>
       </div>
@@ -41,10 +41,13 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
       {message.content && (
         <div
           className={cn(
-            "max-w-[95%] text-sm prose prose-sm dark:prose-invert",
-            "prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-md",
+            "min-w-0 max-w-full !text-xs prose prose-sm dark:prose-invert",
+            "prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-md prose-pre:overflow-x-auto",
             "prose-code:text-xs prose-code:before:content-none prose-code:after:content-none",
-            "prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1",
+            "prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5",
+            "prose-table:my-2 prose-table:text-xs",
+            "[&_table]:block [&_table]:overflow-x-auto [&_table]:max-w-full",
+            "prose-hr:my-3",
           )}
         >
           <ReactMarkdown

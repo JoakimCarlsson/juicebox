@@ -13,7 +13,9 @@ import { SessionStatusReporter } from "@/components/layout/SessionStatusReporter
 import { detachSession } from "@/features/sessions/api"
 import { SessionMessageProvider } from "@/contexts/SessionMessageContext"
 import { ChatPanelProvider, useChatPanel } from "@/contexts/ChatPanelContext"
+import { useBottomPanel } from "@/contexts/BottomPanelContext"
 import { ChatPanel } from "@/components/chat/ChatPanel"
+import { BottomPanel } from "@/components/layout/BottomPanel"
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -70,6 +72,7 @@ function AppLayoutWithChat({
   sessionId: string
 }) {
   const { panelRef } = useChatPanel()
+  const { panelRef: bottomPanelRef } = useBottomPanel()
 
   useEffect(() => {
     panelRef.current?.collapse()
@@ -78,11 +81,25 @@ function AppLayoutWithChat({
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full">
       <ResizablePanel defaultSize={100} minSize={40}>
-        <AppLayoutInner
-          deviceId={deviceId}
-          bundleId={bundleId}
-          sessionId={sessionId}
-        />
+        <ResizablePanelGroup orientation="vertical" className="h-full">
+          <ResizablePanel defaultSize={75} minSize={30}>
+            <AppLayoutInner
+              deviceId={deviceId}
+              bundleId={bundleId}
+              sessionId={sessionId}
+            />
+          </ResizablePanel>
+          <ResizableHandle className="w-full h-px after:inset-x-0 after:-top-1 after:-bottom-1 after:inset-y-auto" />
+          <ResizablePanel
+            panelRef={bottomPanelRef}
+            defaultSize={25}
+            minSize={10}
+            collapsible
+            collapsedSize={0}
+          >
+            <BottomPanel />
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </ResizablePanel>
       <ResizableHandle className="h-full w-px after:inset-y-0 after:-left-1 after:-right-1 after:inset-x-auto" />
       <ResizablePanel

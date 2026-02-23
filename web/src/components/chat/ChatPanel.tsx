@@ -96,7 +96,7 @@ export function ChatPanel() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-3 p-3">
+          <div className="flex flex-col gap-2 p-2">
             {messages.map((msg) => (
               <ChatMessage key={msg.id} message={msg} />
             ))}
@@ -115,15 +115,15 @@ export function ChatPanel() {
             placeholder="Ask about this session..."
             disabled={isStreaming || configured !== true}
             rows={1}
-            className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+            className="flex-1 resize-none rounded-md border border-input bg-background px-2.5 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
           />
           <Button
             size="icon"
-            className="h-9 w-9 shrink-0"
+            className="h-7 w-7 shrink-0"
             onClick={handleSend}
             disabled={!input.trim() || isStreaming || configured !== true}
           >
-            <Send className="h-3.5 w-3.5" />
+            <Send className="h-3 w-3" />
           </Button>
         </div>
       </div>
