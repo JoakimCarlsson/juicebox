@@ -404,9 +404,35 @@ function KeystorePanel({
   )
 }
 
+function BadgeList({ label, items }: { label: string; items: string[] }) {
+  if (items.length === 0) return null
+  return (
+    <div>
+      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-1 mt-1">
+        {items.map((item) => (
+          <Badge key={item} variant="outline" className="text-[10px] px-1.5 py-0">
+            {item}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function KeystoreDetail({ entry }: { entry: KeystoreEntry }) {
   return (
     <div className="px-4 pb-3 pl-9 space-y-2">
+      {entry.error && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-2.5 py-1.5">
+          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-mono break-all">
+            {entry.error}
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
         <DetailField label="Key Type" value={entry.keyType} />
         <DetailField label="Key Size" value={entry.keySize > 0 ? `${entry.keySize} bits` : "unknown"} />
@@ -420,20 +446,11 @@ function KeystoreDetail({ entry }: { entry: KeystoreEntry }) {
         )}
       </div>
 
-      {entry.purposes.length > 0 && (
-        <div>
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Purposes
-          </span>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {entry.purposes.map((p) => (
-              <Badge key={p} variant="outline" className="text-[10px] px-1.5 py-0">
-                {p}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
+      <BadgeList label="Purposes" items={entry.purposes} />
+      <BadgeList label="Block Modes" items={entry.blockModes} />
+      <BadgeList label="Encryption Paddings" items={entry.encryptionPaddings} />
+      <BadgeList label="Signature Paddings" items={entry.signaturePaddings} />
+      <BadgeList label="Digests" items={entry.digests} />
     </div>
   )
 }

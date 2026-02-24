@@ -123,9 +123,14 @@ export interface KeystoreEntry {
   keySize: number
   creationDate: string | null
   purposes: string[]
+  blockModes: string[]
+  encryptionPaddings: string[]
+  signaturePaddings: string[]
+  digests: string[]
   authRequired: boolean
   authValiditySeconds: number
   hardwareBacked: boolean
+  error: string | null
 }
 
 export interface InterceptRule {
