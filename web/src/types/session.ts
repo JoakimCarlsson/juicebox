@@ -117,10 +117,24 @@ export interface CryptoEventsResponse {
   total: number
 }
 
+export interface CertInfo {
+  subject: string
+  issuer: string
+  serial: string
+  notBefore: string
+  notAfter: string
+  sigAlgorithm: string
+}
+
 export interface KeystoreEntry {
   alias: string
+  entryClass: string
   keyType: string
   keySize: number
+  keyFormat: string | null
+  encodedKey: string | null
+  publicKey: string | null
+  certificate: CertInfo | null
   creationDate: string | null
   purposes: string[]
   blockModes: string[]

@@ -5,8 +5,13 @@ import Java from "frida-java-bridge";
 
 interface KeystoreEntry {
   alias: string;
+  entryClass: string;
   keyType: string;
   keySize: number;
+  keyFormat: string | null;
+  encodedKey: string | null;
+  publicKey: string | null;
+  certificate: CertInfo | null;
   creationDate: string | null;
   purposes: string[];
   blockModes: string[];
@@ -19,6 +24,15 @@ interface KeystoreEntry {
   error: string | null;
 }
 
+interface CertInfo {
+  subject: string;
+  issuer: string;
+  serial: string;
+  notBefore: string;
+  notAfter: string;
+  sigAlgorithm: string;
+}
+
 function purposeFlags(purposes: number): string[] {
   const result: string[] = [];
   if (purposes & 1) result.push("encrypt");
@@ -28,6 +42,35 @@ function purposeFlags(purposes: number): string[] {
   if (purposes & 32) result.push("agree_key");
   if (purposes & 64) result.push("attest_key");
   return result;
+}
+
+function byteArrayToHex(arr: any): string | null {
+  if (arr === null || arr === undefined) return null;
+  const len = arr.length;
+  if (len === 0) return null;
+  const bytes: string[] = [];
+  for (let i = 0; i < len; i++) {
+    bytes.push((arr[i] & 0xff).toString(16).padStart(2, "0"));
+  }
+  return bytes.join("");
+}
+
+function extractCertInfo(cert: any): CertInfo | null {
+  try {
+    const X509 = Java.use("java.security.cert.X509Certificate");
+    if (!X509.class.isInstance(cert)) return null;
+    const x509 = Java.cast(cert, X509);
+    return {
+      subject: x509.getSubjectDN().toString(),
+      issuer: x509.getIssuerDN().toString(),
+      serial: x509.getSerialNumber().toString(),
+      notBefore: x509.getNotBefore().toString(),
+      notAfter: x509.getNotAfter().toString(),
+      sigAlgorithm: x509.getSigAlgName(),
+    };
+  } catch (_) {
+    return null;
+  }
 }
 
 function javaStringArray(arr: any): string[] {
@@ -57,8 +100,13 @@ function extractKeyInfo(info: any): Partial<KeystoreEntry> {
 function defaults(): KeystoreEntry {
   return {
     alias: "",
+    entryClass: "unknown",
     keyType: "unknown",
     keySize: 0,
+    keyFormat: null,
+    encodedKey: null,
+    publicKey: null,
+    certificate: null,
     creationDate: null,
     purposes: [],
     blockModes: [],
@@ -70,6 +118,28 @@ function defaults(): KeystoreEntry {
     hardwareBacked: false,
     error: null,
   };
+}
+
+function extractPublicKeyInfo(pubKey: any, result: Partial<KeystoreEntry>): void {
+  try {
+    result.publicKey = byteArrayToHex(pubKey.getEncoded());
+  } catch (_) {}
+
+  try {
+    const RSAPublicKey = Java.use("java.security.interfaces.RSAPublicKey");
+    if (RSAPublicKey.class.isInstance(pubKey)) {
+      result.keySize = Java.cast(pubKey, RSAPublicKey).getModulus().bitLength();
+      return;
+    }
+  } catch (_) {}
+
+  try {
+    const ECPublicKey = Java.use("java.security.interfaces.ECPublicKey");
+    if (ECPublicKey.class.isInstance(pubKey)) {
+      result.keySize = Java.cast(pubKey, ECPublicKey).getParams().getOrder().bitLength();
+      return;
+    }
+  } catch (_) {}
 }
 
 function getKeyInfo(alias: string, ks: any): Partial<KeystoreEntry> {
@@ -90,7 +160,21 @@ function getKeyInfo(alias: string, ks: any): Partial<KeystoreEntry> {
   if (key !== null) {
     result.keyType = key.getAlgorithm();
 
+    try {
+      const fmt = key.getFormat();
+      if (fmt !== null) result.keyFormat = fmt.toString();
+    } catch (_) {}
+
+    try {
+      const encoded = key.getEncoded();
+      if (encoded !== null) {
+        result.encodedKey = byteArrayToHex(encoded);
+        if (!result.keySize) result.keySize = encoded.length * 8;
+      }
+    } catch (_) {}
+
     if (SecretKeyClass.isInstance(key)) {
+      result.entryClass = "SecretKey";
       try {
         const skf = Java.use("javax.crypto.SecretKeyFactory").getInstance(
           key.getAlgorithm(),
@@ -101,14 +185,9 @@ function getKeyInfo(alias: string, ks: any): Partial<KeystoreEntry> {
         Object.assign(result, extractKeyInfo(info));
       } catch (e) {
         errors.push(`SecretKeyFactory: ${e}`);
-        try {
-          const encoded = key.getEncoded();
-          if (encoded !== null) {
-            result.keySize = encoded.length * 8;
-          }
-        } catch (_) {}
       }
     } else if (PrivateKeyClass.isInstance(key)) {
+      result.entryClass = "PrivateKey";
       try {
         const kf = Java.use("java.security.KeyFactory").getInstance(
           key.getAlgorithm(),
@@ -120,9 +199,17 @@ function getKeyInfo(alias: string, ks: any): Partial<KeystoreEntry> {
       } catch (e) {
         errors.push(`KeyFactory: ${e}`);
       }
+
+      try {
+        const cert = ks.getCertificate(alias);
+        if (cert !== null) {
+          result.certificate = extractCertInfo(cert);
+          extractPublicKeyInfo(cert.getPublicKey(), result);
+        }
+      } catch (_) {}
     } else {
-      const className = key.getClass().getName();
-      errors.push(`unrecognized key class: ${className}`);
+      result.entryClass = key.getClass().getName();
+      errors.push(`unrecognized key class: ${result.entryClass}`);
     }
   }
 
@@ -130,26 +217,11 @@ function getKeyInfo(alias: string, ks: any): Partial<KeystoreEntry> {
     try {
       const cert = ks.getCertificate(alias);
       if (cert !== null) {
+        result.entryClass = "Certificate";
+        result.certificate = extractCertInfo(cert);
         const pubKey = cert.getPublicKey();
         result.keyType = pubKey.getAlgorithm();
-        try {
-          const RSAPublicKey = Java.use("java.security.interfaces.RSAPublicKey");
-          if (RSAPublicKey.class.isInstance(pubKey)) {
-            result.keySize = Java.cast(pubKey, RSAPublicKey).getModulus().bitLength();
-          }
-        } catch (_) {}
-        try {
-          const ECPublicKey = Java.use("java.security.interfaces.ECPublicKey");
-          if (ECPublicKey.class.isInstance(pubKey)) {
-            result.keySize = Java.cast(pubKey, ECPublicKey).getParams().getOrder().bitLength();
-          }
-        } catch (_) {}
-        if (!result.keySize) {
-          try {
-            const encoded = pubKey.getEncoded();
-            if (encoded !== null) result.keySize = encoded.length * 8;
-          } catch (_) {}
-        }
+        extractPublicKeyInfo(pubKey, result);
       } else {
         errors.push("no key or certificate found");
       }
@@ -191,8 +263,13 @@ function enumerate(): KeystoreEntry[] | Promise<KeystoreEntry[]> {
           } catch (_) {}
 
           const info = getKeyInfo(alias, ks);
+          entry.entryClass = info.entryClass ?? entry.entryClass;
           entry.keyType = info.keyType ?? entry.keyType;
           entry.keySize = info.keySize ?? entry.keySize;
+          entry.keyFormat = info.keyFormat ?? entry.keyFormat;
+          entry.encodedKey = info.encodedKey ?? entry.encodedKey;
+          entry.publicKey = info.publicKey ?? entry.publicKey;
+          entry.certificate = info.certificate ?? entry.certificate;
           entry.purposes = info.purposes ?? entry.purposes;
           entry.blockModes = info.blockModes ?? entry.blockModes;
           entry.encryptionPaddings = info.encryptionPaddings ?? entry.encryptionPaddings;

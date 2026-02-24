@@ -1,6 +1,6 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Search, Trash2, Lock, Shield, ShieldAlert, ShieldCheck, Key, RefreshCw, ChevronDown, ChevronRight } from "lucide-react"
+import { Search, Trash2, Lock, Shield, ShieldAlert, ShieldCheck, ShieldX, Key, RefreshCw, ChevronDown, ChevronRight, FileKey, Copy, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -372,7 +372,9 @@ function KeystorePanel({
                         <span className="text-xs font-mono truncate text-foreground">
                           {entry.alias}
                         </span>
-                        {entry.hardwareBacked ? (
+                        {entry.encodedKey ? (
+                          <ShieldX className="h-3 w-3 text-red-500 shrink-0" />
+                        ) : entry.hardwareBacked ? (
                           <ShieldCheck className="h-3 w-3 text-green-500 shrink-0" />
                         ) : (
                           <ShieldAlert className="h-3 w-3 text-amber-500 shrink-0" />
@@ -387,6 +389,9 @@ function KeystorePanel({
                             {entry.keySize}b
                           </Badge>
                         )}
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                          {entry.entryClass}
+                        </Badge>
                       </div>
                     </div>
                   </button>
@@ -422,6 +427,54 @@ function BadgeList({ label, items }: { label: string; items: string[] }) {
   )
 }
 
+function HexBlock({ label, hex }: { label: string; hex: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(hex)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }, [hex])
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          {label}
+        </span>
+        <button onClick={handleCopy} className="p-0.5 hover:bg-muted rounded">
+          {copied ? <Check className="h-2.5 w-2.5 text-green-500" /> : <Copy className="h-2.5 w-2.5 text-muted-foreground" />}
+        </button>
+      </div>
+      <div className="mt-1 rounded border border-border bg-muted/30 px-2 py-1.5 max-h-24 overflow-auto">
+        <p className="text-[10px] font-mono break-all text-foreground/80 select-all">
+          {hex}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function CertificateBlock({ cert }: { cert: NonNullable<KeystoreEntry["certificate"]> }) {
+  return (
+    <div>
+      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        Certificate
+      </span>
+      <div className="mt-1 rounded border border-border bg-muted/30 px-2.5 py-2 space-y-1">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          <DetailField label="Subject" value={cert.subject} />
+          <DetailField label="Issuer" value={cert.issuer} />
+          <DetailField label="Serial" value={cert.serial} />
+          <DetailField label="Sig Algorithm" value={cert.sigAlgorithm} />
+          <DetailField label="Not Before" value={cert.notBefore} />
+          <DetailField label="Not After" value={cert.notAfter} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function KeystoreDetail({ entry }: { entry: KeystoreEntry }) {
   return (
     <div className="px-4 pb-3 pl-9 space-y-2">
@@ -433,9 +486,20 @@ function KeystoreDetail({ entry }: { entry: KeystoreEntry }) {
         </div>
       )}
 
+      {entry.encodedKey && (
+        <div className="rounded-md border border-red-500/30 bg-red-500/5 px-2.5 py-1.5 flex items-start gap-1.5">
+          <ShieldX className="h-3 w-3 text-red-500 mt-0.5 shrink-0" />
+          <p className="text-[10px] text-red-600 dark:text-red-400">
+            Key material is extractable — raw bytes available below
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+        <DetailField label="Entry Class" value={entry.entryClass} />
         <DetailField label="Key Type" value={entry.keyType} />
         <DetailField label="Key Size" value={entry.keySize > 0 ? `${entry.keySize} bits` : "unknown"} />
+        {entry.keyFormat && <DetailField label="Key Format" value={entry.keyFormat} />}
         <DetailField label="Hardware Backed" value={entry.hardwareBacked ? "Yes (TEE/StrongBox)" : "No (software)"} warn={!entry.hardwareBacked} />
         <DetailField label="Auth Required" value={entry.authRequired ? "Yes" : "No"} warn={!entry.authRequired} />
         {entry.authRequired && entry.authValiditySeconds > 0 && (
@@ -445,6 +509,10 @@ function KeystoreDetail({ entry }: { entry: KeystoreEntry }) {
           <DetailField label="Created" value={entry.creationDate} />
         )}
       </div>
+
+      {entry.encodedKey && <HexBlock label="Raw Key (hex)" hex={entry.encodedKey} />}
+      {entry.publicKey && <HexBlock label="Public Key (hex)" hex={entry.publicKey} />}
+      {entry.certificate && <CertificateBlock cert={entry.certificate} />}
 
       <BadgeList label="Purposes" items={entry.purposes} />
       <BadgeList label="Block Modes" items={entry.blockModes} />
