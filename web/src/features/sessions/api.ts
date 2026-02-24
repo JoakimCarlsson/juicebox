@@ -199,32 +199,75 @@ export async function resolveAllInterceptRequests(
   if (!res.ok) throw new Error("Failed to resolve all intercept requests")
 }
 
-export interface ScriptResult {
+export interface ScriptFile {
   id: string
-  sessionId: string
-  code: string
+  name: string
+  content: string
+  createdAt: number
+  updatedAt: number
+}
+
+export interface ScriptRunResult {
+  id: string
+  fileId: string
+  fileName: string
   output: unknown[]
   status: string
   timestamp: number
   error?: string
 }
 
-export interface ScriptHistoryItem {
+export interface ScriptRunItem {
   id: string
-  code: string
+  scriptFileId: string
   output: unknown[]
   status: string
   timestamp: number
 }
 
-export async function runScript(
+export async function upsertScriptFile(
   sessionId: string,
-  code: string,
-): Promise<ScriptResult> {
+  name: string,
+  content: string,
+): Promise<ScriptFile> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/scripts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, content }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || "Failed to save script")
+  }
+  return res.json()
+}
+
+export async function fetchScriptFiles(
+  sessionId: string,
+): Promise<{ files: ScriptFile[] }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/scripts`)
+  if (!res.ok) throw new Error("Failed to fetch scripts")
+  return res.json()
+}
+
+export async function deleteScriptFile(
+  sessionId: string,
+  scriptId: string,
+): Promise<void> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/scripts/${scriptId}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) throw new Error("Failed to delete script")
+}
+
+export async function runScriptByName(
+  sessionId: string,
+  name: string,
+): Promise<ScriptRunResult> {
   const res = await fetch(`/api/v1/sessions/${sessionId}/scripts/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ name }),
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
@@ -233,10 +276,10 @@ export async function runScript(
   return res.json()
 }
 
-export async function fetchScriptHistory(
+export async function fetchScriptRuns(
   sessionId: string,
-): Promise<{ scripts: ScriptHistoryItem[] }> {
-  const res = await fetch(`/api/v1/sessions/${sessionId}/scripts`)
-  if (!res.ok) throw new Error("Failed to fetch script history")
+): Promise<{ runs: ScriptRunItem[] }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/scripts/runs`)
+  if (!res.ok) throw new Error("Failed to fetch script runs")
   return res.json()
 }

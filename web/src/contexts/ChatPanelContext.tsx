@@ -13,6 +13,7 @@ import {
   streamChat,
   type SSEEvent,
 } from "@/features/chat/api"
+import { useScriptEditor } from "@/contexts/ScriptEditorContext"
 
 export type MessagePart =
   | { type: "text"; content: string }
@@ -126,6 +127,8 @@ export function ChatPanelProvider({
     }
   }, [])
 
+  const scriptEditor = useScriptEditor()
+
   const sendMessage = useCallback(
     (text: string) => {
       if (!sessionId || isStreaming || !text.trim()) return
@@ -147,9 +150,44 @@ export function ChatPanelProvider({
       setMessages((prev) => [...prev, userMsg, assistantMsg])
       setIsStreaming(true)
 
+      let accumulated = ""
+      let insideFileWrite: string | null = null
+      let insideFileEdit: string | null = null
+
       const controller = streamChat(sessionId, text.trim(), (event: SSEEvent) => {
         switch (event.type) {
           case "content": {
+            accumulated += event.data.delta
+
+            if (!insideFileWrite && !insideFileEdit) {
+              const writeMatch = accumulated.match(/<file-write\s+src="([^"]+)">\n?/)
+              if (writeMatch && accumulated.indexOf(writeMatch[0]) + writeMatch[0].length <= accumulated.length) {
+                insideFileWrite = writeMatch[1]
+                scriptEditor.emit({ type: "file_write_start", name: writeMatch[1] })
+                const afterTag = accumulated.slice(accumulated.indexOf(writeMatch[0]) + writeMatch[0].length)
+                if (afterTag) {
+                  scriptEditor.emit({ type: "file_write_delta", name: writeMatch[1], delta: afterTag })
+                }
+              }
+              const editMatch = accumulated.match(/<file-edit\s+src="([^"]+)">\n?/)
+              if (editMatch && accumulated.indexOf(editMatch[0]) + editMatch[0].length <= accumulated.length) {
+                insideFileEdit = editMatch[1]
+                scriptEditor.emit({ type: "file_edit_start", name: editMatch[1] })
+              }
+            } else if (insideFileWrite) {
+              if (accumulated.includes("</file-write>")) {
+                scriptEditor.emit({ type: "file_write_end", name: insideFileWrite })
+                insideFileWrite = null
+              } else {
+                scriptEditor.emit({ type: "file_write_delta", name: insideFileWrite, delta: event.data.delta })
+              }
+            } else if (insideFileEdit) {
+              if (accumulated.includes("</file-edit>")) {
+                scriptEditor.emit({ type: "file_edit_end", name: insideFileEdit })
+                insideFileEdit = null
+              }
+            }
+
             setMessages((prev) =>
               prev.map((m) => {
                 if (m.id !== assistantId) return m

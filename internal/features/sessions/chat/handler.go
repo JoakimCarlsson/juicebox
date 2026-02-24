@@ -3,7 +3,11 @@ package chat
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/message"
@@ -144,7 +148,9 @@ func (h *Handler) Handle(c *router.Context) {
 				chattools.NewGetCryptoEvents(h.db, sessionID),
 				chattools.NewListKeystoreEntries(h.manager, sessionID),
 				chattools.NewListSharedPreferences(h.manager, sessionID),
-				chattools.NewRunFridaScript(h.manager, h.db, sessionID, h.hubManager),
+				chattools.NewRunFridaScript(h.manager, h.db, sessionID),
+				chattools.NewListScriptFiles(h.db, sessionID),
+				chattools.NewReadScriptFile(h.db, sessionID),
 			)
 		}
 	}
@@ -171,17 +177,27 @@ func (h *Handler) Handle(c *router.Context) {
 		agent.WithMaxIterations(5),
 	)
 
+	hub := h.hubManager.GetOrCreate(dbSess.DeviceID)
+
 	c.SSEHandler(router.DefaultSSEConfig(), func(ctx context.Context, send router.SSESendFunc) error {
 		eventCh := a.ChatStream(ctx, req.Message)
+
+		var fullContent string
+		var fileBlocksSaved bool
 
 		for event := range eventCh {
 			switch event.Type {
 			case types.EventContentDelta:
+				fullContent += event.Content
 				if err := send("content", sseContentEvent{Delta: event.Content}); err != nil {
 					return err
 				}
 
 			case types.EventToolUseStart:
+				if !fileBlocksSaved {
+					processFileBlocks(fullContent, sessionID, h.db, hub)
+					fileBlocksSaved = true
+				}
 				if event.ToolCall != nil {
 					if err := send("tool_start", sseToolStartEvent{
 						Name: event.ToolCall.Name,
@@ -203,6 +219,12 @@ func (h *Handler) Handle(c *router.Context) {
 				}
 
 			case types.EventComplete:
+				if !fileBlocksSaved {
+					processFileBlocks(fullContent, sessionID, h.db, hub)
+				}
+				fullContent = ""
+				fileBlocksSaved = false
+
 				evt := sseDoneEvent{}
 				if event.Response != nil {
 					evt.InputTokens = event.Response.Usage.InputTokens
@@ -221,6 +243,63 @@ func (h *Handler) Handle(c *router.Context) {
 
 		return nil
 	})
+}
+
+var (
+	fileWriteRe     = regexp.MustCompile(`(?s)<file-write\s+src="([^"]+)">\n?(.*?)</file-write>`)
+	fileEditRe      = regexp.MustCompile(`(?s)<file-edit\s+src="([^"]+)">\n?(.*?)</file-edit>`)
+	searchReplaceRe = regexp.MustCompile(`(?s)<<<<<<< SEARCH\n(.*?)\n=======\n(.*?)\n>>>>>>> REPLACE`)
+)
+
+func processFileBlocks(content, sessionID string, store *db.DB, hub *devicehub.Hub) {
+	now := time.Now().UnixMilli()
+
+	for _, match := range fileWriteRe.FindAllStringSubmatch(content, -1) {
+		name, code := match[1], match[2]
+		fileID := fmt.Sprintf("sf_%d", time.Now().UnixNano())
+		_ = store.UpsertScriptFile(db.ScriptFileRow{
+			ID:        fileID,
+			SessionID: sessionID,
+			Name:      name,
+			Content:   code,
+			CreatedAt: now,
+			UpdatedAt: now,
+		})
+		payload, _ := json.Marshal(map[string]string{"name": name})
+		if data, err := devicehub.Marshal("file_write", sessionID, json.RawMessage(payload)); err == nil {
+			hub.Broadcast(data)
+		}
+	}
+
+	for _, match := range fileEditRe.FindAllStringSubmatch(content, -1) {
+		name, body := match[1], match[2]
+		file, err := store.GetScriptFile(sessionID, name)
+		if err != nil || file == nil {
+			continue
+		}
+
+		updated := file.Content
+		for _, sr := range searchReplaceRe.FindAllStringSubmatch(body, -1) {
+			search, replace := sr[1], sr[2]
+			if !strings.Contains(updated, search) {
+				continue
+			}
+			updated = strings.Replace(updated, search, replace, 1)
+		}
+
+		_ = store.UpsertScriptFile(db.ScriptFileRow{
+			ID:        file.ID,
+			SessionID: sessionID,
+			Name:      name,
+			Content:   updated,
+			CreatedAt: file.CreatedAt,
+			UpdatedAt: now,
+		})
+		payload, _ := json.Marshal(map[string]string{"name": name})
+		if data, err := devicehub.Marshal("file_write", sessionID, json.RawMessage(payload)); err == nil {
+			hub.Broadcast(data)
+		}
+	}
 }
 
 func (h *Handler) Status(c *router.Context) {

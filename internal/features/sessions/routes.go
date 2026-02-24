@@ -72,6 +72,9 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	r.POST("/sessions/{sessionId}/classes/invoke", classesHandler.Invoke)
 	r.POST("/sessions/{sessionId}/classes/read-field", classesHandler.ReadField)
 
-	r.POST("/sessions/{sessionId}/scripts/run", scriptsHandler.Run)
+	r.POST("/sessions/{sessionId}/scripts", scriptsHandler.Upsert)
 	r.GET("/sessions/{sessionId}/scripts", scriptsHandler.List)
+	r.DELETE("/sessions/{sessionId}/scripts/{scriptId}", scriptsHandler.Delete)
+	r.POST("/sessions/{sessionId}/scripts/run", scriptsHandler.Run)
+	r.GET("/sessions/{sessionId}/scripts/runs", scriptsHandler.ListRuns)
 }

@@ -14,6 +14,7 @@ import { CrashAlertDialog } from "@/components/sessions/CrashAlertDialog"
 import { SessionMessageProvider } from "@/contexts/SessionMessageContext"
 import { InterceptProvider } from "@/contexts/InterceptContext"
 import { ChatPanelProvider, useChatPanel } from "@/contexts/ChatPanelContext"
+import { ScriptEditorProvider } from "@/contexts/ScriptEditorContext"
 import { useBottomPanel } from "@/contexts/BottomPanelContext"
 import { ChatPanel } from "@/components/chat/ChatPanel"
 import { BottomPanel } from "@/components/layout/BottomPanel"
@@ -63,13 +64,15 @@ function AppLayout() {
   return (
     <SessionMessageProvider sessionId={sessionId}>
       <InterceptProvider sessionId={sessionId}>
-        <ChatPanelProvider sessionId={sessionId}>
-          <AppLayoutWithChat
-            deviceId={deviceId}
-            bundleId={bundleId}
-            sessionId={sessionId}
-          />
-        </ChatPanelProvider>
+        <ScriptEditorProvider>
+          <ChatPanelProvider sessionId={sessionId}>
+            <AppLayoutWithChat
+              deviceId={deviceId}
+              bundleId={bundleId}
+              sessionId={sessionId}
+            />
+          </ChatPanelProvider>
+        </ScriptEditorProvider>
       </InterceptProvider>
     </SessionMessageProvider>
   )

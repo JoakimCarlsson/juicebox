@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { DeviceSocketProvider } from "@/contexts/DeviceSocketContext"
 import { EventLogProvider } from "@/contexts/EventLogContext"
 import { BottomPanelProvider } from "@/contexts/BottomPanelContext"
+import { ScriptOutputProvider } from "@/contexts/ScriptOutputContext"
 import { StatusReporter } from "@/components/layout/StatusReporter"
 import { deviceInfoQueryOptions } from "@/features/devices/queries"
 
@@ -19,9 +20,11 @@ function DeviceLayout() {
     <DeviceSocketProvider deviceId={deviceId}>
       <StatusReporter deviceId={deviceId} deviceName={deviceName} />
       <EventLogProvider>
-        <BottomPanelProvider>
-          <Outlet />
-        </BottomPanelProvider>
+        <ScriptOutputProvider>
+          <BottomPanelProvider>
+            <Outlet />
+          </BottomPanelProvider>
+        </ScriptOutputProvider>
       </EventLogProvider>
     </DeviceSocketProvider>
   )

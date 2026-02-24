@@ -9,29 +9,27 @@ import (
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/tool"
 	"github.com/joakimcarlsson/juicebox/internal/db"
-	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type RunFridaScriptParams struct {
-	Code string `json:"code" description:"Frida TypeScript code to compile and inject into the live app process. Use send() to return data."`
+	Name string `json:"name" description:"Name of the script file to compile and run (e.g. hook_crypto.ts)"`
 }
 
 type RunFridaScriptTool struct {
-	manager    *session.Manager
-	db         *db.DB
-	sessionID  string
-	hubManager *devicehub.Manager
+	manager   *session.Manager
+	db        *db.DB
+	sessionID string
 }
 
-func NewRunFridaScript(manager *session.Manager, database *db.DB, sessionID string, hubManager *devicehub.Manager) *RunFridaScriptTool {
-	return &RunFridaScriptTool{manager: manager, db: database, sessionID: sessionID, hubManager: hubManager}
+func NewRunFridaScript(manager *session.Manager, database *db.DB, sessionID string) *RunFridaScriptTool {
+	return &RunFridaScriptTool{manager: manager, db: database, sessionID: sessionID}
 }
 
 func (t *RunFridaScriptTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"run_frida_script",
-		"Write and execute arbitrary Frida TypeScript against the live app process. The code is compiled and injected via session.createScript(). Use send() to return data back. The script runs for up to 30 seconds collecting all send() payloads. Returns the collected output as a JSON array.",
+		"Compile and execute a saved Frida script by filename. The script must have been written first using <file-write> tags. Returns all send() payloads as a JSON array.",
 		RunFridaScriptParams{},
 	)
 }
@@ -42,8 +40,13 @@ func (t *RunFridaScriptTool) Run(ctx context.Context, params tool.ToolCall) (too
 		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
 	}
 
-	if input.Code == "" {
-		return tool.NewTextErrorResponse("code is required"), nil
+	if input.Name == "" {
+		return tool.NewTextErrorResponse("name is required"), nil
+	}
+
+	file, err := t.db.GetScriptFile(t.sessionID, input.Name)
+	if err != nil || file == nil {
+		return tool.NewTextErrorResponse(fmt.Sprintf("script file %q not found", input.Name)), nil
 	}
 
 	liveSess := t.manager.GetSession(t.sessionID)
@@ -51,35 +54,25 @@ func (t *RunFridaScriptTool) Run(ctx context.Context, params tool.ToolCall) (too
 		return tool.NewTextErrorResponse("active session not found"), nil
 	}
 
-	scriptID := fmt.Sprintf("scr_%d", time.Now().UnixNano())
+	runID := fmt.Sprintf("sr_%d", time.Now().UnixNano())
 	now := time.Now().UnixMilli()
 
-	_ = t.db.InsertScript(db.ScriptRow{
-		ID:        scriptID,
-		SessionID: t.sessionID,
-		Code:      input.Code,
-		Status:    "running",
-		Timestamp: now,
+	_ = t.db.InsertScriptRun(db.ScriptRunRow{
+		ID:           runID,
+		SessionID:    t.sessionID,
+		ScriptFileID: file.ID,
+		Status:       "running",
+		Timestamp:    now,
 	})
 
-	hub := t.hubManager.GetOrCreate(liveSess.DeviceID)
-	scriptRunPayload, _ := json.Marshal(map[string]any{
-		"scriptId": scriptID,
-		"code":     input.Code,
-		"source":   "ai",
-	})
-	if data, err := devicehub.Marshal("script_run", t.sessionID, json.RawMessage(scriptRunPayload)); err == nil {
-		hub.Broadcast(data)
-	}
-
-	resp, err := t.manager.RunScript(t.sessionID, input.Code, 30)
+	resp, err := t.manager.RunScript(t.sessionID, file.Content, 30)
 	if err != nil {
-		_ = t.db.UpdateScriptOutput(scriptID, "", "error")
+		_ = t.db.UpdateScriptRun(runID, "", "error")
 		return tool.NewTextErrorResponse(fmt.Sprintf("script execution failed: %v", err)), nil
 	}
 
 	outputJSON, _ := json.Marshal(resp.Messages)
-	_ = t.db.UpdateScriptOutput(scriptID, string(outputJSON), "done")
+	_ = t.db.UpdateScriptRun(runID, string(outputJSON), "done")
 
 	if len(resp.Messages) == 0 {
 		return tool.NewTextResponse("Script executed successfully but produced no send() output."), nil
