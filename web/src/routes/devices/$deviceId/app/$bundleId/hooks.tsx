@@ -139,9 +139,12 @@ function InlineInput({
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    el.focus()
-    const dot = defaultValue.lastIndexOf(".")
-    if (dot > 0) el.setSelectionRange(0, dot)
+    requestAnimationFrame(() => {
+      el.focus()
+      const dot = defaultValue.lastIndexOf(".")
+      if (dot > 0) el.setSelectionRange(0, dot)
+      else el.select()
+    })
   }, [defaultValue])
 
   return (
