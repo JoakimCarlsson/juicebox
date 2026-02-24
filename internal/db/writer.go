@@ -3,9 +3,10 @@ package db
 import "log/slog"
 
 type writeOp struct {
-	httpMessage *HttpMessageRow
-	logcatEntry *LogcatEntryRow
-	crashRow    *CrashRow
+	httpMessage  *HttpMessageRow
+	logcatEntry  *LogcatEntryRow
+	crashRow     *CrashRow
+	cryptoEvent  *CryptoEventRow
 }
 
 type AsyncWriter struct {
@@ -48,6 +49,14 @@ func (w *AsyncWriter) WriteCrash(c *CrashRow) {
 	}
 }
 
+func (w *AsyncWriter) WriteCryptoEvent(c *CryptoEventRow) {
+	select {
+	case w.ch <- writeOp{cryptoEvent: c}:
+	default:
+		slog.Warn("db write buffer full, dropping crypto event", "id", c.ID)
+	}
+}
+
 func (w *AsyncWriter) loop() {
 	defer close(w.done)
 	for op := range w.ch {
@@ -64,6 +73,11 @@ func (w *AsyncWriter) loop() {
 		if op.crashRow != nil {
 			if err := w.db.InsertCrash(op.crashRow); err != nil {
 				slog.Error("async write crash", "error", err)
+			}
+		}
+		if op.cryptoEvent != nil {
+			if err := w.db.InsertCryptoEvent(op.cryptoEvent); err != nil {
+				slog.Error("async write crypto event", "error", err)
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-import type { AttachResponse, EvasionConfig, SessionsResponse, MessagesResponse, LogsResponse, CrashesResponse, InterceptState, InterceptDecision, InterceptRule, PendingRequest } from "@/types/session"
+import type { AttachResponse, EvasionConfig, SessionsResponse, MessagesResponse, LogsResponse, CrashesResponse, CryptoEventsResponse, KeystoreEntry, SharedPrefsResponse, InterceptState, InterceptDecision, InterceptRule, PendingRequest } from "@/types/session"
 
 export async function attachApp(
   deviceId: string,
@@ -104,6 +104,42 @@ export async function fetchSessionCrashes(
     `/api/v1/sessions/${sessionId}/crashes?limit=${limit}&offset=${offset}`,
   )
   if (!res.ok) throw new Error("Failed to fetch crashes")
+  return res.json()
+}
+
+export async function fetchSessionCrypto(
+  sessionId: string,
+  limit = 500,
+  offset = 0,
+): Promise<CryptoEventsResponse> {
+  const res = await fetch(
+    `/api/v1/sessions/${sessionId}/crypto?limit=${limit}&offset=${offset}`,
+  )
+  if (!res.ok) throw new Error("Failed to fetch crypto events")
+  return res.json()
+}
+
+export async function enableCryptoHooks(sessionId: string): Promise<{ enabled: boolean }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/crypto/enable`, {
+    method: "POST",
+  })
+  if (!res.ok) throw new Error("Failed to enable crypto hooks")
+  return res.json()
+}
+
+export async function fetchKeystoreEntries(
+  sessionId: string,
+): Promise<{ entries: KeystoreEntry[]; total: number }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/crypto/keystore`)
+  if (!res.ok) throw new Error("Failed to fetch keystore entries")
+  return res.json()
+}
+
+export async function fetchSharedPreferences(
+  sessionId: string,
+): Promise<SharedPrefsResponse> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/crypto/sharedprefs`)
+  if (!res.ok) throw new Error("Failed to fetch shared preferences")
   return res.json()
 }
 

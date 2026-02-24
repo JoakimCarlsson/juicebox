@@ -101,6 +101,70 @@ export interface CrashesResponse {
   total: number
 }
 
+export interface CryptoEvent {
+  id: string
+  operation: string
+  algorithm: string
+  input: string | null
+  output: string | null
+  key: string | null
+  iv: string | null
+  timestamp: number
+}
+
+export interface CryptoEventsResponse {
+  events: CryptoEvent[]
+  total: number
+}
+
+export interface CertInfo {
+  subject: string
+  issuer: string
+  serial: string
+  notBefore: string
+  notAfter: string
+  sigAlgorithm: string
+}
+
+export interface KeystoreEntry {
+  alias: string
+  entryClass: string
+  keyType: string
+  keySize: number
+  keyFormat: string | null
+  encodedKey: string | null
+  publicKey: string | null
+  certificate: CertInfo | null
+  creationDate: string | null
+  purposes: string[]
+  blockModes: string[]
+  encryptionPaddings: string[]
+  signaturePaddings: string[]
+  digests: string[]
+  authRequired: boolean
+  authValiditySeconds: number
+  hardwareBacked: boolean
+  error: string | null
+}
+
+export interface SharedPrefEntry {
+  key: string
+  value: string
+  type: string
+}
+
+export interface SharedPrefsFile {
+  name: string
+  path: string
+  encrypted: boolean
+  entries: SharedPrefEntry[]
+}
+
+export interface SharedPrefsResponse {
+  files: SharedPrefsFile[]
+  total: number
+}
+
 export interface InterceptRule {
   id: string
   enabled: boolean

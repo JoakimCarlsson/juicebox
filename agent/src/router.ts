@@ -3,8 +3,11 @@ import evasion from "./modules/evasion";
 import ssl from "./modules/ssl";
 import classes from "./modules/classes";
 import crash from "./modules/crash";
+import crypto from "./modules/crypto";
+import keystore from "./modules/keystore";
+import sharedprefs from "./modules/sharedprefs";
 
-const registry: Record<string, AgentModule> = { evasion, ssl, classes, crash };
+const registry: Record<string, AgentModule> = { evasion, ssl, classes, crash, crypto, keystore, sharedprefs };
 
 export function getModule(namespace: string): AgentModule | undefined {
   return registry[namespace];

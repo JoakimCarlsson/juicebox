@@ -303,6 +303,35 @@ func (m *Manager) bridgeSubscribeForward(sess *Session) {
 		}
 		hub.Broadcast(data)
 
+		if msg.Type == "crypto" {
+			var cryptoEvt struct {
+				ID        string  `json:"id"`
+				Operation string  `json:"operation"`
+				Algorithm string  `json:"algorithm"`
+				Input     *string `json:"input"`
+				Output    *string `json:"output"`
+				Key       *string `json:"key"`
+				IV        *string `json:"iv"`
+				Timestamp int64   `json:"timestamp"`
+			}
+			if err := json.Unmarshal(msg.Payload, &cryptoEvt); err == nil && cryptoEvt.ID != "" {
+				if cryptoEvt.Timestamp == 0 {
+					cryptoEvt.Timestamp = time.Now().UnixMilli()
+				}
+				m.writer.WriteCryptoEvent(&db.CryptoEventRow{
+					ID:        cryptoEvt.ID,
+					SessionID: sess.ID,
+					Operation: cryptoEvt.Operation,
+					Algorithm: cryptoEvt.Algorithm,
+					Input:     cryptoEvt.Input,
+					Output:    cryptoEvt.Output,
+					Key:       cryptoEvt.Key,
+					IV:        cryptoEvt.IV,
+					Timestamp: cryptoEvt.Timestamp,
+				})
+			}
+		}
+
 		if msg.Type == "crash" {
 			var crash struct {
 				ID               string            `json:"id"`

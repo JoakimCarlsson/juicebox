@@ -70,6 +70,19 @@ CREATE TABLE IF NOT EXISTS crashes (
     timestamp         INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_crashes_session ON crashes(session_id, timestamp);
+
+CREATE TABLE IF NOT EXISTS crypto_events (
+    id         TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    operation  TEXT NOT NULL,
+    algorithm  TEXT NOT NULL DEFAULT '',
+    input      TEXT,
+    output     TEXT,
+    key        TEXT,
+    iv         TEXT,
+    timestamp  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_crypto_session ON crypto_events(session_id, timestamp);
 `
 
 func (d *DB) Migrate() error {
