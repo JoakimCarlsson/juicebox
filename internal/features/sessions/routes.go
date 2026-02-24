@@ -62,6 +62,7 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	r.GET("/sessions/{sessionId}/crypto", cryptoHandler.Handle)
 	r.POST("/sessions/{sessionId}/crypto/enable", cryptoHandler.Enable)
 	r.GET("/sessions/{sessionId}/crypto/keystore", cryptoHandler.Keystore)
+	r.GET("/sessions/{sessionId}/crypto/sharedprefs", cryptoHandler.SharedPrefs)
 
 	r.GET("/sessions/{sessionId}/classes", classesHandler.List)
 	r.GET("/sessions/{sessionId}/classes/detail", classesHandler.Detail)

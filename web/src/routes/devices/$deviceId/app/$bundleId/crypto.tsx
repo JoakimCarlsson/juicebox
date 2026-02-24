@@ -1,6 +1,6 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Search, Trash2, Lock, Shield, ShieldAlert, ShieldCheck, ShieldX, Key, RefreshCw, ChevronDown, ChevronRight, FileKey, Copy, Check } from "lucide-react"
+import { Search, Trash2, Lock, Shield, ShieldAlert, ShieldCheck, ShieldX, Key, RefreshCw, ChevronDown, ChevronRight, FileKey, Copy, Check, FileText, LockKeyhole } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,9 +9,10 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useSessionMessages } from "@/contexts/SessionMessageContext"
-import type { CryptoEvent, KeystoreEntry } from "@/types/session"
-import { enableCryptoHooks, fetchKeystoreEntries } from "@/features/sessions/api"
+import type { CryptoEvent, KeystoreEntry, SharedPrefsFile } from "@/types/session"
+import { enableCryptoHooks, fetchKeystoreEntries, fetchSharedPreferences } from "@/features/sessions/api"
 import { NoSessionEmptyState } from "@/components/sessions/NoSessionEmptyState"
 import { cn } from "@/lib/utils"
 
@@ -70,6 +71,8 @@ function CryptoPage() {
   const [showDecoded, setShowDecoded] = useState(false)
   const [keystoreEntries, setKeystoreEntries] = useState<KeystoreEntry[]>([])
   const [keystoreLoading, setKeystoreLoading] = useState(false)
+  const [prefsFiles, setPrefsFiles] = useState<SharedPrefsFile[]>([])
+  const [prefsLoading, setPrefsLoading] = useState(false)
   const [cryptoEnabled, setCryptoEnabled] = useState(false)
   const enabledRef = useRef(false)
 
@@ -92,9 +95,21 @@ function CryptoPage() {
       .finally(() => setKeystoreLoading(false))
   }, [sessionId])
 
+  const loadPrefs = useCallback(() => {
+    if (!sessionId) return
+    setPrefsLoading(true)
+    fetchSharedPreferences(sessionId)
+      .then((resp) => setPrefsFiles(resp.files))
+      .catch(() => {})
+      .finally(() => setPrefsLoading(false))
+  }, [sessionId])
+
   useEffect(() => {
-    if (sessionId) loadKeystore()
-  }, [sessionId, loadKeystore])
+    if (sessionId) {
+      loadKeystore()
+      loadPrefs()
+    }
+  }, [sessionId, loadKeystore, loadPrefs])
 
   const cryptoEvents = useMemo(() => {
     return messages
@@ -180,11 +195,40 @@ function CryptoPage() {
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={45} minSize={25}>
-            <KeystorePanel
-              entries={keystoreEntries}
-              loading={keystoreLoading}
-              onRefresh={loadKeystore}
-            />
+            <Tabs defaultValue="keystore" className="h-full">
+              <div className="border-b border-border px-2">
+                <TabsList className="h-8">
+                  <TabsTrigger value="keystore" className="text-xs gap-1.5 px-2.5">
+                    <Key className="h-3 w-3" />
+                    Keystore
+                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                      {keystoreEntries.length}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger value="sharedprefs" className="text-xs gap-1.5 px-2.5">
+                    <FileText className="h-3 w-3" />
+                    SharedPrefs
+                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                      {prefsFiles.length}
+                    </span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <TabsContent value="keystore" className="h-[calc(100%-2.5rem)] overflow-hidden">
+                <KeystorePanel
+                  entries={keystoreEntries}
+                  loading={keystoreLoading}
+                  onRefresh={loadKeystore}
+                />
+              </TabsContent>
+              <TabsContent value="sharedprefs" className="h-[calc(100%-2.5rem)] overflow-hidden">
+                <SharedPrefsPanel
+                  files={prefsFiles}
+                  loading={prefsLoading}
+                  onRefresh={loadPrefs}
+                />
+              </TabsContent>
+            </Tabs>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
@@ -322,9 +366,7 @@ function KeystorePanel({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2">
-        <Key className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs font-medium">Keystore</span>
+      <div className="flex items-center gap-2 px-4 py-1.5">
         <span className="text-[10px] text-muted-foreground tabular-nums">
           {entries.length} entr{entries.length !== 1 ? "ies" : "y"}
         </span>
@@ -404,6 +446,174 @@ function KeystorePanel({
             })}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function SharedPrefsPanel({
+  files,
+  loading,
+  onRefresh,
+}: {
+  files: SharedPrefsFile[]
+  loading: boolean
+  onRefresh: () => void
+}) {
+  const [expandedFile, setExpandedFile] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+
+  const filteredFiles = useMemo(() => {
+    if (!search.trim()) return files
+    const q = search.toLowerCase()
+    return files
+      .map((f) => ({
+        ...f,
+        entries: f.entries.filter(
+          (e) =>
+            e.key.toLowerCase().includes(q) ||
+            e.value.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((f) => f.entries.length > 0 || f.name.toLowerCase().includes(q))
+  }, [files, search])
+
+  const totalEntries = files.reduce((sum, f) => sum + f.entries.length, 0)
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-2 px-4 py-1.5">
+        <span className="text-[10px] text-muted-foreground tabular-nums">
+          {totalEntries} entr{totalEntries !== 1 ? "ies" : "y"}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 ml-auto"
+          onClick={onRefresh}
+          disabled={loading}
+        >
+          <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
+        </Button>
+      </div>
+
+      {files.length > 0 && (
+        <div className="px-3 pb-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Filter keys or values..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-7 h-7 text-xs"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 min-h-0 overflow-auto">
+        {files.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 h-full text-muted-foreground">
+            <FileText className="h-8 w-8 opacity-30" />
+            <p className="text-sm">
+              {loading ? "Loading preferences..." : "No SharedPreferences found"}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {filteredFiles.map((file) => {
+              const isExpanded = expandedFile === file.name
+              return (
+                <div key={file.name}>
+                  <button
+                    onClick={() => setExpandedFile(isExpanded ? null : file.name)}
+                    className={cn(
+                      "w-full text-left px-4 py-2.5 flex items-start gap-2.5 hover:bg-muted/50 transition-colors",
+                      isExpanded && "bg-muted/30",
+                    )}
+                  >
+                    <div className="mt-0.5 shrink-0">
+                      {isExpanded ? (
+                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        {file.encrypted ? (
+                          <LockKeyhole className="h-3 w-3 text-green-500 shrink-0" />
+                        ) : (
+                          <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                        )}
+                        <span className="text-xs font-mono truncate text-foreground">
+                          {file.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {file.encrypted && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500/30 text-green-600 dark:text-green-400">
+                            encrypted
+                          </Badge>
+                        )}
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {file.entries.length} entr{file.entries.length !== 1 ? "ies" : "y"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <SharedPrefsEntries entries={file.entries} />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SharedPrefsEntries({ entries }: { entries: SharedPrefsFile["entries"] }) {
+  if (entries.length === 0) {
+    return (
+      <div className="px-4 pb-3 pl-9">
+        <p className="text-xs text-muted-foreground">No entries</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="pl-9 pr-4 pb-3">
+      <div className="rounded border border-border overflow-hidden">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-muted/50 border-b border-border">
+              <th className="text-left px-2.5 py-1.5 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Key</th>
+              <th className="text-left px-2.5 py-1.5 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Value</th>
+              <th className="text-left px-2.5 py-1.5 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-16">Type</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {entries.map((entry) => (
+              <tr key={entry.key} className="hover:bg-muted/30">
+                <td className="px-2.5 py-1.5 font-mono text-foreground break-all max-w-[200px]">
+                  {entry.key}
+                </td>
+                <td className="px-2.5 py-1.5 font-mono text-foreground/80 break-all max-w-[300px]">
+                  {entry.value.length > 200 ? entry.value.substring(0, 200) + "..." : entry.value}
+                </td>
+                <td className="px-2.5 py-1.5">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                    {entry.type}
+                  </Badge>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )

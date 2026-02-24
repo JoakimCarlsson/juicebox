@@ -140,6 +140,7 @@ func (h *Handler) Handle(c *router.Context) {
 				chattools.NewGetCrashes(h.db, sessionID),
 				chattools.NewGetCryptoEvents(h.db, sessionID),
 				chattools.NewListKeystoreEntries(h.manager, sessionID),
+				chattools.NewListSharedPreferences(h.manager, sessionID),
 			)
 		}
 	}

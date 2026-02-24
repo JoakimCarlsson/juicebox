@@ -147,6 +147,24 @@ export interface KeystoreEntry {
   error: string | null
 }
 
+export interface SharedPrefEntry {
+  key: string
+  value: string
+  type: string
+}
+
+export interface SharedPrefsFile {
+  name: string
+  path: string
+  encrypted: boolean
+  entries: SharedPrefEntry[]
+}
+
+export interface SharedPrefsResponse {
+  files: SharedPrefsFile[]
+  total: number
+}
+
 export interface InterceptRule {
   id: string
   enabled: boolean

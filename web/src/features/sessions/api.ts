@@ -1,4 +1,4 @@
-import type { AttachResponse, EvasionConfig, SessionsResponse, MessagesResponse, LogsResponse, CrashesResponse, CryptoEventsResponse, KeystoreEntry, InterceptState, InterceptDecision, InterceptRule, PendingRequest } from "@/types/session"
+import type { AttachResponse, EvasionConfig, SessionsResponse, MessagesResponse, LogsResponse, CrashesResponse, CryptoEventsResponse, KeystoreEntry, SharedPrefsResponse, InterceptState, InterceptDecision, InterceptRule, PendingRequest } from "@/types/session"
 
 export async function attachApp(
   deviceId: string,
@@ -132,6 +132,14 @@ export async function fetchKeystoreEntries(
 ): Promise<{ entries: KeystoreEntry[]; total: number }> {
   const res = await fetch(`/api/v1/sessions/${sessionId}/crypto/keystore`)
   if (!res.ok) throw new Error("Failed to fetch keystore entries")
+  return res.json()
+}
+
+export async function fetchSharedPreferences(
+  sessionId: string,
+): Promise<SharedPrefsResponse> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/crypto/sharedprefs`)
+  if (!res.ok) throw new Error("Failed to fetch shared preferences")
   return res.json()
 }
 

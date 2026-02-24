@@ -80,6 +80,33 @@ func (h *Handler) Enable(c *router.Context) {
 	c.Writer.Write(raw) //nolint:errcheck
 }
 
+func (h *Handler) SharedPrefs(c *router.Context) {
+	sessionID := c.Param("sessionId")
+
+	sess := h.manager.GetSession(sessionID)
+	if sess == nil {
+		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		return
+	}
+
+	raw, err := h.manager.AgentInvoke(sessionID, "sharedprefs", "enumerate", []any{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	var files []json.RawMessage
+	if err := json.Unmarshal(raw, &files); err != nil {
+		c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to parse shared preferences"})
+		return
+	}
+
+	c.JSON(http.StatusOK, map[string]any{
+		"files": json.RawMessage(raw),
+		"total": len(files),
+	})
+}
+
 func (h *Handler) Keystore(c *router.Context) {
 	sessionID := c.Param("sessionId")
 
