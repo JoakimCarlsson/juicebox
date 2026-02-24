@@ -101,6 +101,33 @@ export interface CrashesResponse {
   total: number
 }
 
+export interface CryptoEvent {
+  id: string
+  operation: string
+  algorithm: string
+  input: string | null
+  output: string | null
+  key: string | null
+  iv: string | null
+  timestamp: number
+}
+
+export interface CryptoEventsResponse {
+  events: CryptoEvent[]
+  total: number
+}
+
+export interface KeystoreEntry {
+  alias: string
+  keyType: string
+  keySize: number
+  creationDate: string | null
+  purposes: string[]
+  authRequired: boolean
+  authValiditySeconds: number
+  hardwareBacked: boolean
+}
+
 export interface InterceptRule {
   id: string
   enabled: boolean

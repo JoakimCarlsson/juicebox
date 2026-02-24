@@ -138,6 +138,8 @@ func (h *Handler) Handle(c *router.Context) {
 				chattools.NewListClasses(h.manager, sessionID),
 				chattools.NewGetClassDetail(h.manager, sessionID),
 				chattools.NewGetCrashes(h.db, sessionID),
+				chattools.NewGetCryptoEvents(h.db, sessionID),
+				chattools.NewListKeystoreEntries(h.manager, sessionID),
 			)
 		}
 	}

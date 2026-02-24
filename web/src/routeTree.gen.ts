@@ -20,6 +20,7 @@ import { Route as DevicesDeviceIdAppBundleIdNetworkRouteImport } from './routes/
 import { Route as DevicesDeviceIdAppBundleIdLogsRouteImport } from './routes/devices/$deviceId/app/$bundleId/logs'
 import { Route as DevicesDeviceIdAppBundleIdHomeRouteImport } from './routes/devices/$deviceId/app/$bundleId/home'
 import { Route as DevicesDeviceIdAppBundleIdFilesRouteImport } from './routes/devices/$deviceId/app/$bundleId/files'
+import { Route as DevicesDeviceIdAppBundleIdCryptoRouteImport } from './routes/devices/$deviceId/app/$bundleId/crypto'
 import { Route as DevicesDeviceIdAppBundleIdCrashesRouteImport } from './routes/devices/$deviceId/app/$bundleId/crashes'
 import { Route as DevicesDeviceIdAppBundleIdClassesRouteImport } from './routes/devices/$deviceId/app/$bundleId/classes'
 
@@ -85,6 +86,12 @@ const DevicesDeviceIdAppBundleIdFilesRoute =
     path: '/files',
     getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
   } as any)
+const DevicesDeviceIdAppBundleIdCryptoRoute =
+  DevicesDeviceIdAppBundleIdCryptoRouteImport.update({
+    id: '/crypto',
+    path: '/crypto',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
 const DevicesDeviceIdAppBundleIdCrashesRoute =
   DevicesDeviceIdAppBundleIdCrashesRouteImport.update({
     id: '/crashes',
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/devices/$deviceId/app/$bundleId': typeof DevicesDeviceIdAppBundleIdRouteWithChildren
   '/devices/$deviceId/app/$bundleId/classes': typeof DevicesDeviceIdAppBundleIdClassesRoute
   '/devices/$deviceId/app/$bundleId/crashes': typeof DevicesDeviceIdAppBundleIdCrashesRoute
+  '/devices/$deviceId/app/$bundleId/crypto': typeof DevicesDeviceIdAppBundleIdCryptoRoute
   '/devices/$deviceId/app/$bundleId/files': typeof DevicesDeviceIdAppBundleIdFilesRoute
   '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
   '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
@@ -120,6 +128,7 @@ export interface FileRoutesByTo {
   '/devices/$deviceId': typeof DevicesDeviceIdIndexRoute
   '/devices/$deviceId/app/$bundleId/classes': typeof DevicesDeviceIdAppBundleIdClassesRoute
   '/devices/$deviceId/app/$bundleId/crashes': typeof DevicesDeviceIdAppBundleIdCrashesRoute
+  '/devices/$deviceId/app/$bundleId/crypto': typeof DevicesDeviceIdAppBundleIdCryptoRoute
   '/devices/$deviceId/app/$bundleId/files': typeof DevicesDeviceIdAppBundleIdFilesRoute
   '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
   '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
@@ -136,6 +145,7 @@ export interface FileRoutesById {
   '/devices/$deviceId/app/$bundleId': typeof DevicesDeviceIdAppBundleIdRouteWithChildren
   '/devices/$deviceId/app/$bundleId/classes': typeof DevicesDeviceIdAppBundleIdClassesRoute
   '/devices/$deviceId/app/$bundleId/crashes': typeof DevicesDeviceIdAppBundleIdCrashesRoute
+  '/devices/$deviceId/app/$bundleId/crypto': typeof DevicesDeviceIdAppBundleIdCryptoRoute
   '/devices/$deviceId/app/$bundleId/files': typeof DevicesDeviceIdAppBundleIdFilesRoute
   '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
   '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/app/$bundleId'
     | '/devices/$deviceId/app/$bundleId/classes'
     | '/devices/$deviceId/app/$bundleId/crashes'
+    | '/devices/$deviceId/app/$bundleId/crypto'
     | '/devices/$deviceId/app/$bundleId/files'
     | '/devices/$deviceId/app/$bundleId/home'
     | '/devices/$deviceId/app/$bundleId/logs'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/devices/$deviceId'
     | '/devices/$deviceId/app/$bundleId/classes'
     | '/devices/$deviceId/app/$bundleId/crashes'
+    | '/devices/$deviceId/app/$bundleId/crypto'
     | '/devices/$deviceId/app/$bundleId/files'
     | '/devices/$deviceId/app/$bundleId/home'
     | '/devices/$deviceId/app/$bundleId/logs'
@@ -181,6 +193,7 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/app/$bundleId'
     | '/devices/$deviceId/app/$bundleId/classes'
     | '/devices/$deviceId/app/$bundleId/crashes'
+    | '/devices/$deviceId/app/$bundleId/crypto'
     | '/devices/$deviceId/app/$bundleId/files'
     | '/devices/$deviceId/app/$bundleId/home'
     | '/devices/$deviceId/app/$bundleId/logs'
@@ -272,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevicesDeviceIdAppBundleIdFilesRouteImport
       parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
     }
+    '/devices/$deviceId/app/$bundleId/crypto': {
+      id: '/devices/$deviceId/app/$bundleId/crypto'
+      path: '/crypto'
+      fullPath: '/devices/$deviceId/app/$bundleId/crypto'
+      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdCryptoRouteImport
+      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
+    }
     '/devices/$deviceId/app/$bundleId/crashes': {
       id: '/devices/$deviceId/app/$bundleId/crashes'
       path: '/crashes'
@@ -292,6 +312,7 @@ declare module '@tanstack/react-router' {
 interface DevicesDeviceIdAppBundleIdRouteChildren {
   DevicesDeviceIdAppBundleIdClassesRoute: typeof DevicesDeviceIdAppBundleIdClassesRoute
   DevicesDeviceIdAppBundleIdCrashesRoute: typeof DevicesDeviceIdAppBundleIdCrashesRoute
+  DevicesDeviceIdAppBundleIdCryptoRoute: typeof DevicesDeviceIdAppBundleIdCryptoRoute
   DevicesDeviceIdAppBundleIdFilesRoute: typeof DevicesDeviceIdAppBundleIdFilesRoute
   DevicesDeviceIdAppBundleIdHomeRoute: typeof DevicesDeviceIdAppBundleIdHomeRoute
   DevicesDeviceIdAppBundleIdLogsRoute: typeof DevicesDeviceIdAppBundleIdLogsRoute
@@ -305,6 +326,8 @@ const DevicesDeviceIdAppBundleIdRouteChildren: DevicesDeviceIdAppBundleIdRouteCh
       DevicesDeviceIdAppBundleIdClassesRoute,
     DevicesDeviceIdAppBundleIdCrashesRoute:
       DevicesDeviceIdAppBundleIdCrashesRoute,
+    DevicesDeviceIdAppBundleIdCryptoRoute:
+      DevicesDeviceIdAppBundleIdCryptoRoute,
     DevicesDeviceIdAppBundleIdFilesRoute: DevicesDeviceIdAppBundleIdFilesRoute,
     DevicesDeviceIdAppBundleIdHomeRoute: DevicesDeviceIdAppBundleIdHomeRoute,
     DevicesDeviceIdAppBundleIdLogsRoute: DevicesDeviceIdAppBundleIdLogsRoute,

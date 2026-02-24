@@ -1,0 +1,460 @@
+import { createFileRoute, useSearch } from "@tanstack/react-router"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Search, Trash2, Lock, Shield, ShieldAlert, ShieldCheck, Key, RefreshCw, ChevronDown, ChevronRight } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable"
+import { useSessionMessages } from "@/contexts/SessionMessageContext"
+import type { CryptoEvent, KeystoreEntry } from "@/types/session"
+import { enableCryptoHooks, fetchKeystoreEntries } from "@/features/sessions/api"
+import { NoSessionEmptyState } from "@/components/sessions/NoSessionEmptyState"
+import { cn } from "@/lib/utils"
+
+export const Route = createFileRoute(
+  "/devices/$deviceId/app/$bundleId/crypto",
+)({
+  validateSearch: (search: Record<string, unknown>) => ({
+    sessionId: (search.sessionId as string) ?? "",
+  }),
+  component: CryptoPage,
+})
+
+function formatTimestamp(ts: number): string {
+  return new Date(ts).toLocaleString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3,
+    month: "short",
+    day: "numeric",
+  })
+}
+
+function hexToAscii(hex: string): string {
+  let result = ""
+  for (let i = 0; i < hex.length; i += 2) {
+    const code = parseInt(hex.substring(i, i + 2), 16)
+    result += code >= 32 && code < 127 ? String.fromCharCode(code) : "."
+  }
+  return result
+}
+
+function truncateHex(hex: string | null, maxLen = 64): string {
+  if (!hex) return "-"
+  if (hex.length <= maxLen) return hex
+  return hex.substring(0, maxLen) + "..."
+}
+
+const OP_COLORS: Record<string, string> = {
+  encrypt: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+  decrypt: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
+  mac: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+  digest: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20",
+  key_derivation: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+  key_generation: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+}
+
+function CryptoPage() {
+  const { sessionId } = useSearch({
+    from: "/devices/$deviceId/app/$bundleId/crypto",
+  })
+  const { messages } = useSessionMessages()
+  const [search, setSearch] = useState("")
+  const [clearIndex, setClearIndex] = useState(0)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [showDecoded, setShowDecoded] = useState(false)
+  const [keystoreEntries, setKeystoreEntries] = useState<KeystoreEntry[]>([])
+  const [keystoreLoading, setKeystoreLoading] = useState(false)
+  const [cryptoEnabled, setCryptoEnabled] = useState(false)
+  const enabledRef = useRef(false)
+
+  const clear = useCallback(() => setClearIndex(messages.length), [messages.length])
+
+  useEffect(() => {
+    if (!sessionId || enabledRef.current) return
+    enabledRef.current = true
+    enableCryptoHooks(sessionId)
+      .then(() => setCryptoEnabled(true))
+      .catch(() => {})
+  }, [sessionId])
+
+  const loadKeystore = useCallback(() => {
+    if (!sessionId) return
+    setKeystoreLoading(true)
+    fetchKeystoreEntries(sessionId)
+      .then((resp) => setKeystoreEntries(resp.entries))
+      .catch(() => {})
+      .finally(() => setKeystoreLoading(false))
+  }, [sessionId])
+
+  useEffect(() => {
+    if (sessionId) loadKeystore()
+  }, [sessionId, loadKeystore])
+
+  const cryptoEvents = useMemo(() => {
+    return messages
+      .slice(clearIndex)
+      .filter(
+        (m): m is { type: "crypto"; payload: CryptoEvent } =>
+          m.type === "crypto" && !!m.payload,
+      )
+      .map((m) => m.payload as unknown as CryptoEvent)
+  }, [messages, clearIndex])
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return cryptoEvents
+    const q = search.toLowerCase()
+    return cryptoEvents.filter(
+      (e) =>
+        e.algorithm.toLowerCase().includes(q) ||
+        e.operation.toLowerCase().includes(q),
+    )
+  }, [cryptoEvents, search])
+
+  const selectedEvent = useMemo(() => {
+    if (!selectedId) return null
+    return filtered.find((e) => e.id === selectedId) ?? null
+  }, [filtered, selectedId])
+
+  if (!sessionId) {
+    return <NoSessionEmptyState />
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-3 border-b border-border px-4 py-2">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Filter by algorithm or operation..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8 h-8 text-xs"
+          />
+        </div>
+        <Button variant="ghost" size="sm" className="h-8" onClick={clear}>
+          <Trash2 className="mr-1.5 h-3 w-3" />
+          Clear
+        </Button>
+        <span className="text-xs text-muted-foreground ml-auto tabular-nums">
+          {filtered.length} event{filtered.length !== 1 ? "s" : ""}
+          {!cryptoEnabled && " (enabling hooks...)"}
+        </span>
+      </div>
+
+      <div className="flex-1 min-h-0">
+        <ResizablePanelGroup orientation="horizontal">
+          <ResizablePanel defaultSize={55} minSize={30}>
+            {filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 h-full text-muted-foreground">
+                <Lock className="h-8 w-8 opacity-30" />
+                <p className="text-sm">
+                  {cryptoEvents.length === 0
+                    ? "Waiting for crypto operations..."
+                    : "No events match your filter"}
+                </p>
+              </div>
+            ) : (
+              <div className="flex h-full flex-col">
+                <div className="flex-1 min-h-0 overflow-auto">
+                  <EventList
+                    events={filtered}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                  />
+                </div>
+                {selectedEvent && (
+                  <EventDetail
+                    event={selectedEvent}
+                    showDecoded={showDecoded}
+                    onToggleDecoded={() => setShowDecoded((v) => !v)}
+                  />
+                )}
+              </div>
+            )}
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={45} minSize={25}>
+            <KeystorePanel
+              entries={keystoreEntries}
+              loading={keystoreLoading}
+              onRefresh={loadKeystore}
+            />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    </div>
+  )
+}
+
+function EventList({
+  events,
+  selectedId,
+  onSelect,
+}: {
+  events: CryptoEvent[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  const listRef = useRef<HTMLDivElement>(null)
+
+  return (
+    <div ref={listRef} className="divide-y divide-border">
+      {events.map((event) => {
+        const isSelected = event.id === selectedId
+        return (
+          <button
+            key={event.id}
+            onClick={() => onSelect(event.id)}
+            className={cn(
+              "w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-muted/50 transition-colors",
+              isSelected && "bg-muted/70",
+            )}
+          >
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] px-1.5 py-0 font-mono shrink-0",
+                OP_COLORS[event.operation] ?? "bg-muted",
+              )}
+            >
+              {event.operation}
+            </Badge>
+            <span className="text-xs font-mono truncate flex-1 text-foreground">
+              {event.algorithm}
+            </span>
+            <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
+              {formatTimestamp(event.timestamp)}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function EventDetail({
+  event,
+  showDecoded,
+  onToggleDecoded,
+}: {
+  event: CryptoEvent
+  showDecoded: boolean
+  onToggleDecoded: () => void
+}) {
+  return (
+    <div className="border-t border-border bg-muted/20 px-4 py-3 space-y-2 max-h-[50%] overflow-auto">
+      <div className="flex items-center gap-2 mb-2">
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-[10px] font-mono",
+            OP_COLORS[event.operation] ?? "",
+          )}
+        >
+          {event.operation}
+        </Badge>
+        <span className="text-xs font-mono text-foreground">{event.algorithm}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 text-[10px] ml-auto"
+          onClick={onToggleDecoded}
+        >
+          {showDecoded ? "Hex" : "Decoded"}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-1.5">
+        {event.key && (
+          <DataRow label="Key" hex={event.key} showDecoded={showDecoded} />
+        )}
+        {event.iv && (
+          <DataRow label="IV" hex={event.iv} showDecoded={showDecoded} />
+        )}
+        {event.input && (
+          <DataRow label="Input" hex={event.input} showDecoded={showDecoded} />
+        )}
+        {event.output && (
+          <DataRow label="Output" hex={event.output} showDecoded={showDecoded} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DataRow({
+  label,
+  hex,
+  showDecoded,
+}: {
+  label: string
+  hex: string
+  showDecoded: boolean
+}) {
+  return (
+    <div className="flex gap-2">
+      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground w-12 shrink-0 pt-0.5">
+        {label}
+      </span>
+      <code className="text-xs font-mono text-foreground break-all bg-muted/50 rounded px-1.5 py-0.5 flex-1">
+        {showDecoded ? hexToAscii(hex) : truncateHex(hex, 128)}
+      </code>
+    </div>
+  )
+}
+
+function KeystorePanel({
+  entries,
+  loading,
+  onRefresh,
+}: {
+  entries: KeystoreEntry[]
+  loading: boolean
+  onRefresh: () => void
+}) {
+  const [expandedAlias, setExpandedAlias] = useState<string | null>(null)
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+        <Key className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-xs font-medium">Keystore</span>
+        <span className="text-[10px] text-muted-foreground tabular-nums">
+          {entries.length} entr{entries.length !== 1 ? "ies" : "y"}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 ml-auto"
+          onClick={onRefresh}
+          disabled={loading}
+        >
+          <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
+        </Button>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-auto">
+        {entries.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 h-full text-muted-foreground">
+            <Shield className="h-8 w-8 opacity-30" />
+            <p className="text-sm">
+              {loading ? "Loading keystore..." : "No keystore entries found"}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {entries.map((entry) => {
+              const isExpanded = expandedAlias === entry.alias
+              return (
+                <div key={entry.alias}>
+                  <button
+                    onClick={() => setExpandedAlias(isExpanded ? null : entry.alias)}
+                    className={cn(
+                      "w-full text-left px-4 py-2.5 flex items-start gap-2.5 hover:bg-muted/50 transition-colors",
+                      isExpanded && "bg-muted/30",
+                    )}
+                  >
+                    <div className="mt-0.5 shrink-0">
+                      {isExpanded ? (
+                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-mono truncate text-foreground">
+                          {entry.alias}
+                        </span>
+                        {entry.hardwareBacked ? (
+                          <ShieldCheck className="h-3 w-3 text-green-500 shrink-0" />
+                        ) : (
+                          <ShieldAlert className="h-3 w-3 text-amber-500 shrink-0" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                          {entry.keyType}
+                        </Badge>
+                        {entry.keySize > 0 && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {entry.keySize}b
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <KeystoreDetail entry={entry} />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function KeystoreDetail({ entry }: { entry: KeystoreEntry }) {
+  return (
+    <div className="px-4 pb-3 pl-9 space-y-2">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+        <DetailField label="Key Type" value={entry.keyType} />
+        <DetailField label="Key Size" value={entry.keySize > 0 ? `${entry.keySize} bits` : "unknown"} />
+        <DetailField label="Hardware Backed" value={entry.hardwareBacked ? "Yes (TEE/StrongBox)" : "No (software)"} warn={!entry.hardwareBacked} />
+        <DetailField label="Auth Required" value={entry.authRequired ? "Yes" : "No"} warn={!entry.authRequired} />
+        {entry.authRequired && entry.authValiditySeconds > 0 && (
+          <DetailField label="Auth Validity" value={`${entry.authValiditySeconds}s`} />
+        )}
+        {entry.creationDate && (
+          <DetailField label="Created" value={entry.creationDate} />
+        )}
+      </div>
+
+      {entry.purposes.length > 0 && (
+        <div>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Purposes
+          </span>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {entry.purposes.map((p) => (
+              <Badge key={p} variant="outline" className="text-[10px] px-1.5 py-0">
+                {p}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DetailField({
+  label,
+  value,
+  warn,
+}: {
+  label: string
+  value: string
+  warn?: boolean
+}) {
+  return (
+    <div>
+      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <p className={cn("text-xs", warn ? "text-amber-600 dark:text-amber-400" : "text-foreground")}>
+        {value}
+      </p>
+    </div>
+  )
+}
