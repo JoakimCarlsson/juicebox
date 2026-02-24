@@ -23,6 +23,12 @@ type AppIcon struct {
 	Data   string `json:"data"`
 }
 
+type EvasionConfig struct {
+	FridaBypass    *bool `json:"frida_bypass,omitempty"`
+	RootBypass     *bool `json:"root_bypass,omitempty"`
+	EmulatorBypass *bool `json:"emulator_bypass,omitempty"`
+}
+
 type AttachResponse struct {
 	SessionID string `json:"sessionId"`
 	PID       int    `json:"pid"`

@@ -11,12 +11,14 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { appSessionsQueryOptions } from "@/features/sessions/queries"
 import { attachApp, renameSession } from "@/features/sessions/api"
 import { formatRelativeTime } from "@/lib/time"
 import type { App } from "@/types/device"
+import type { EvasionConfig } from "@/types/session"
 
 interface SessionPickerDialogProps {
   app: App | null
@@ -30,6 +32,11 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
   const [attaching, setAttaching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState("")
+  const [evasion, setEvasion] = useState<EvasionConfig>({
+    frida_bypass: true,
+    root_bypass: true,
+    emulator_bypass: true,
+  })
 
   const { data, isLoading } = useQuery({
     ...appSessionsQueryOptions(deviceId, app?.identifier ?? ""),
@@ -43,7 +50,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
     setAttaching(true)
     setError(null)
     try {
-      const resp = await attachApp(deviceId, app.identifier)
+      const resp = await attachApp(deviceId, app.identifier, undefined, evasion)
       if (name.trim()) {
         await renameSession(resp.sessionId, name.trim())
       }
@@ -66,7 +73,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
     setAttaching(true)
     setError(null)
     try {
-      const resp = await attachApp(deviceId, app.identifier, sessionId)
+      const resp = await attachApp(deviceId, app.identifier, sessionId, evasion)
       await queryClient.invalidateQueries({ queryKey: ["devices", deviceId, "sessions", app.identifier] })
       onClose()
       await navigate({
@@ -115,6 +122,28 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
                 <Play className="mr-1.5 h-3.5 w-3.5" />
                 New Session
               </Button>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Evasion
+              </p>
+              <div className="space-y-2">
+                {([
+                  { key: "frida_bypass" as const, label: "Frida bypass" },
+                  { key: "root_bypass" as const, label: "Root bypass" },
+                  { key: "emulator_bypass" as const, label: "Emulator bypass" },
+                ] as const).map(({ key, label }) => (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="text-sm text-foreground">{label}</span>
+                    <Switch
+                      checked={evasion[key] ?? true}
+                      onCheckedChange={(v) => setEvasion((prev) => ({ ...prev, [key]: v }))}
+                      disabled={attaching}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
             {error && (

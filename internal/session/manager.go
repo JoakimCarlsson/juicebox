@@ -59,7 +59,7 @@ type AttachResult struct {
 	Capabilities []string `json:"capabilities"`
 }
 
-func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachResult, error) {
+func (m *Manager) Attach(deviceId, bundleId, existingSessionId string, evasion *bridge.EvasionConfig) (*AttachResult, error) {
 	logger := slog.With("device_id", deviceId, "source", "manager")
 
 	isRestore := existingSessionId != ""
@@ -130,7 +130,7 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string) (*AttachR
 		return nil, fmt.Errorf("manager: prepare interception: %w", err)
 	}
 
-	bridgeResp, err := m.bridge.Attach(deviceId, bundleId)
+	bridgeResp, err := m.bridge.Attach(deviceId, bundleId, evasion)
 	if err != nil {
 		logger.Error("bridge attach failed", "error", err)
 		setup.CleanupInterception(deviceId)
