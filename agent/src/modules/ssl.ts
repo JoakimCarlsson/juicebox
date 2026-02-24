@@ -1,17 +1,7 @@
 /// <reference types="npm:@types/frida-gum" />
 
 import type { AgentModule } from "../types";
-
-declare const Java: {
-  available: boolean;
-  perform(fn: () => void): void;
-  use(className: string): any;
-  registerClass(spec: {
-    name: string;
-    implements: any[];
-    methods: Record<string, (...args: any[]) => any>;
-  }): any;
-};
+import Java from "frida-java-bridge";
 
 const nopVerifyCallback = new NativeCallback(
   (_ssl: NativePointer, _out_alert: NativePointer): number => 0,
@@ -133,16 +123,16 @@ interface BypassJavaResult {
   classLoader?: JavaHookResult;
 }
 
-function bypassJava(): BypassJavaResult {
+function bypassJava(): BypassJavaResult | Promise<BypassJavaResult> {
   if (_javaApplied) return { alreadyApplied: true };
 
-  if (typeof Java === "undefined" || !Java.available) {
+  if (!Java.available) {
     return { alreadyApplied: false };
   }
 
-  const results: BypassJavaResult = { alreadyApplied: false };
-
-  Java.perform(() => {
+  return new Promise<BypassJavaResult>((resolve) => {
+    Java.perform(() => {
+      const results: BypassJavaResult = { alreadyApplied: false };
     try {
       const CertificatePinner = Java.use("okhttp3.CertificatePinner");
       CertificatePinner.check.overload(
@@ -278,15 +268,16 @@ function bypassJava(): BypassJavaResult {
     } catch (e) {
       results.classLoader = { ok: false, error: String(e) };
     }
-  });
 
-  _javaApplied = true;
-  return results;
+      _javaApplied = true;
+      resolve(results);
+    });
+  });
 }
 
 interface BypassResult {
   native: BypassNativeResult;
-  java: BypassJavaResult;
+  java: BypassJavaResult | Promise<BypassJavaResult>;
 }
 
 function bypass(): BypassResult {

@@ -68,5 +68,5 @@ func (a *AndroidSetup) ListProcesses(deviceId string) ([]bridge.Process, error) 
 }
 
 func (a *AndroidSetup) Capabilities() []string {
-	return []string{"filesystem", "database", "logstream"}
+	return []string{"filesystem", "database", "logstream", "frida"}
 }
