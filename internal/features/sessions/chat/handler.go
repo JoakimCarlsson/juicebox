@@ -137,6 +137,7 @@ func (h *Handler) Handle(c *router.Context) {
 			sessionTools = append(sessionTools,
 				chattools.NewListClasses(h.manager, sessionID),
 				chattools.NewGetClassDetail(h.manager, sessionID),
+				chattools.NewGetCrashes(h.db, sessionID),
 			)
 		}
 	}

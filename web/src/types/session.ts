@@ -77,6 +77,24 @@ export interface LogsResponse {
   total: number
 }
 
+export interface CrashEvent {
+  id: string
+  crashType: "native" | "java"
+  signal: string | null
+  address: string | null
+  registers: Record<string, string> | null
+  backtrace: string[]
+  javaStackTrace: string | null
+  exceptionClass: string | null
+  exceptionMessage: string | null
+  timestamp: number
+}
+
+export interface CrashesResponse {
+  crashes: CrashEvent[]
+  total: number
+}
+
 export interface InterceptRule {
   id: string
   enabled: boolean

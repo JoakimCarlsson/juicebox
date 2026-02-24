@@ -302,6 +302,51 @@ func (m *Manager) bridgeSubscribeForward(sess *Session) {
 			continue
 		}
 		hub.Broadcast(data)
+
+		if msg.Type == "crash" {
+			var crash struct {
+				ID               string            `json:"id"`
+				CrashType        string            `json:"crashType"`
+				Signal           *string           `json:"signal"`
+				Address          *string           `json:"address"`
+				Registers        map[string]string `json:"registers"`
+				Backtrace        []string          `json:"backtrace"`
+				JavaStackTrace   *string           `json:"javaStackTrace"`
+				ExceptionClass   *string           `json:"exceptionClass"`
+				ExceptionMessage *string           `json:"exceptionMessage"`
+				Timestamp        int64             `json:"timestamp"`
+			}
+			if err := json.Unmarshal(msg.Payload, &crash); err == nil && crash.ID != "" {
+				var regsJSON *string
+				if crash.Registers != nil {
+					b, _ := json.Marshal(crash.Registers)
+					s := string(b)
+					regsJSON = &s
+				}
+				var btJSON *string
+				if crash.Backtrace != nil {
+					b, _ := json.Marshal(crash.Backtrace)
+					s := string(b)
+					btJSON = &s
+				}
+				if crash.Timestamp == 0 {
+					crash.Timestamp = time.Now().UnixMilli()
+				}
+				m.writer.WriteCrash(&db.CrashRow{
+					ID:               crash.ID,
+					SessionID:        sess.ID,
+					CrashType:        crash.CrashType,
+					Signal:           crash.Signal,
+					Address:          crash.Address,
+					Registers:        regsJSON,
+					Backtrace:        btJSON,
+					JavaStackTrace:   crash.JavaStackTrace,
+					ExceptionClass:   crash.ExceptionClass,
+					ExceptionMessage: crash.ExceptionMessage,
+					Timestamp:        crash.Timestamp,
+				})
+			}
+		}
 	}
 }
 

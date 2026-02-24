@@ -3,8 +3,9 @@ package db
 import "log/slog"
 
 type writeOp struct {
-	httpMessage  *HttpMessageRow
-	logcatEntry  *LogcatEntryRow
+	httpMessage *HttpMessageRow
+	logcatEntry *LogcatEntryRow
+	crashRow    *CrashRow
 }
 
 type AsyncWriter struct {
@@ -39,6 +40,14 @@ func (w *AsyncWriter) WriteLogcatEntry(e *LogcatEntryRow) {
 	}
 }
 
+func (w *AsyncWriter) WriteCrash(c *CrashRow) {
+	select {
+	case w.ch <- writeOp{crashRow: c}:
+	default:
+		slog.Warn("db write buffer full, dropping crash", "id", c.ID)
+	}
+}
+
 func (w *AsyncWriter) loop() {
 	defer close(w.done)
 	for op := range w.ch {
@@ -50,6 +59,11 @@ func (w *AsyncWriter) loop() {
 		if op.logcatEntry != nil {
 			if err := w.db.InsertLogcatEntry(op.logcatEntry); err != nil {
 				slog.Error("async write logcat entry", "error", err)
+			}
+		}
+		if op.crashRow != nil {
+			if err := w.db.InsertCrash(op.crashRow); err != nil {
+				slog.Error("async write crash", "error", err)
 			}
 		}
 	}

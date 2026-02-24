@@ -1,4 +1,4 @@
-import type { AttachResponse, SessionsResponse, MessagesResponse, LogsResponse, InterceptState, InterceptDecision, InterceptRule, PendingRequest } from "@/types/session"
+import type { AttachResponse, SessionsResponse, MessagesResponse, LogsResponse, CrashesResponse, InterceptState, InterceptDecision, InterceptRule, PendingRequest } from "@/types/session"
 
 export async function attachApp(
   deviceId: string,
@@ -87,6 +87,18 @@ export async function fetchSessionLogs(
     `/api/v1/sessions/${sessionId}/logs?limit=${limit}&offset=${offset}`,
   )
   if (!res.ok) throw new Error("Failed to fetch logs")
+  return res.json()
+}
+
+export async function fetchSessionCrashes(
+  sessionId: string,
+  limit = 500,
+  offset = 0,
+): Promise<CrashesResponse> {
+  const res = await fetch(
+    `/api/v1/sessions/${sessionId}/crashes?limit=${limit}&offset=${offset}`,
+  )
+  if (!res.ok) throw new Error("Failed to fetch crashes")
   return res.json()
 }
 

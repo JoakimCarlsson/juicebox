@@ -55,6 +55,21 @@ CREATE TABLE IF NOT EXISTS hook_events (
     timestamp  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_hook_session ON hook_events(session_id);
+
+CREATE TABLE IF NOT EXISTS crashes (
+    id                TEXT PRIMARY KEY,
+    session_id        TEXT NOT NULL REFERENCES sessions(id),
+    crash_type        TEXT NOT NULL,
+    signal            TEXT,
+    address           TEXT,
+    registers         TEXT,
+    backtrace         TEXT,
+    java_stack_trace  TEXT,
+    exception_class   TEXT,
+    exception_message TEXT,
+    timestamp         INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_crashes_session ON crashes(session_id, timestamp);
 `
 
 func (d *DB) Migrate() error {
