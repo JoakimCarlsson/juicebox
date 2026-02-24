@@ -568,3 +568,55 @@ func (d *DB) SearchLogcatEntries(sessionID, tag, text, level string, limit int) 
 	}
 	return result, rows.Err()
 }
+
+type ScriptRow struct {
+	ID        string
+	SessionID string
+	Code      string
+	Output    *string
+	Status    string
+	Timestamp int64
+}
+
+func (d *DB) InsertScript(s ScriptRow) error {
+	_, err := d.Conn.Exec(
+		`INSERT INTO scripts (id, session_id, code, output, status, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+		s.ID, s.SessionID, s.Code, s.Output, s.Status, s.Timestamp,
+	)
+	if err != nil {
+		return fmt.Errorf("db.InsertScript: %w", err)
+	}
+	return nil
+}
+
+func (d *DB) UpdateScriptOutput(id, output, status string) error {
+	_, err := d.Conn.Exec(
+		`UPDATE scripts SET output = ?, status = ? WHERE id = ?`,
+		output, status, id,
+	)
+	if err != nil {
+		return fmt.Errorf("db.UpdateScriptOutput: %w", err)
+	}
+	return nil
+}
+
+func (d *DB) GetScripts(sessionID string) ([]ScriptRow, error) {
+	rows, err := d.Conn.Query(
+		`SELECT id, session_id, code, output, status, timestamp FROM scripts WHERE session_id = ? ORDER BY timestamp DESC`,
+		sessionID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("db.GetScripts: %w", err)
+	}
+	defer rows.Close()
+
+	var result []ScriptRow
+	for rows.Next() {
+		var s ScriptRow
+		if err := rows.Scan(&s.ID, &s.SessionID, &s.Code, &s.Output, &s.Status, &s.Timestamp); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, rows.Err()
+}

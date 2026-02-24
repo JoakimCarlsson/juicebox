@@ -12,6 +12,7 @@ import (
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	chattools "github.com/joakimcarlsson/juicebox/internal/features/sessions/chat/tools"
 	sqlitepkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
 	"github.com/joakimcarlsson/juicebox/internal/session"
@@ -23,15 +24,17 @@ type Handler struct {
 	llmConfig     *config.LLMConfig
 	chatStore     *ChatSessionStore
 	sqliteHandler *sqlitepkg.Handler
+	hubManager    *devicehub.Manager
 }
 
-func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteHandler *sqlitepkg.Handler) *Handler {
+func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteHandler *sqlitepkg.Handler, hubManager *devicehub.Manager) *Handler {
 	return &Handler{
 		db:            database,
 		manager:       manager,
 		llmConfig:     llmConfig,
 		chatStore:     chatStore,
 		sqliteHandler: sqliteHandler,
+		hubManager:    hubManager,
 	}
 }
 
@@ -141,6 +144,7 @@ func (h *Handler) Handle(c *router.Context) {
 				chattools.NewGetCryptoEvents(h.db, sessionID),
 				chattools.NewListKeystoreEntries(h.manager, sessionID),
 				chattools.NewListSharedPreferences(h.manager, sessionID),
+				chattools.NewRunFridaScript(h.manager, h.db, sessionID, h.hubManager),
 			)
 		}
 	}

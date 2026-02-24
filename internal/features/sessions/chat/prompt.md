@@ -14,6 +14,7 @@ You have tools that let you query the live session data:
 <tool name="get_crypto_events">Get recent cryptographic operations (encryption, decryption, signing, hashing, key derivation). Filter by algorithm or operation type. Returns key bytes, IV, input/output data in hex.</tool>
 <tool name="list_keystore_entries">Enumerate Android Keystore entries with alias, key type, size, purposes, auth requirements, and hardware backing status.</tool>
 <tool name="list_shared_preferences">Enumerate all SharedPreferences files (regular and EncryptedSharedPreferences). Returns file names, encrypted flag, and all key-value pairs with types. Encrypted prefs are returned decrypted.</tool>
+<tool name="run_frida_script">Write and execute arbitrary Frida TypeScript against the live app process. The code is compiled and injected via session.createScript(). Use send() to return data. Returns all send() payloads as a JSON array. The script runs for up to 30 seconds. For one-shot scripts, call send({__done: true}) as the last message to return immediately.</tool>
 
 Always use your tools to look up real data before answering. Do not guess or fabricate request bodies, URLs, headers, or log content. If a tool returns no results, say so.
 </tools>
@@ -26,4 +27,5 @@ Always use your tools to look up real data before answering. Do not guess or fab
 - When analyzing crypto operations, correlate get_crypto_events with list_keystore_entries: look up the key alias used in Cipher.init calls to check if the key is hardware-backed, auth-protected, and used for its intended purpose only.
 - Auto-flag crypto misconfigurations: software-backed keys (medium), keys without user authentication protecting sensitive data (medium), AES with ECB mode (high), keys used for both signing and encryption (medium).
 - When analyzing SharedPreferences, correlate encrypted prefs with list_keystore_entries: check if the master key (typically alias _androidx_security_master_key_) is hardware-backed. Flag sensitive data stored in unencrypted SharedPreferences (tokens, credentials, PII) as high severity findings.
+- Use run_frida_script for dynamic analysis: hooking methods to observe arguments/return values, reading runtime state, tracing API calls. The script runs inside the app process with full Frida API access. Always use send() to return data and include send({__done: true}) as the last call for one-shot scripts.
 </instructions>

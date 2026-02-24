@@ -4,6 +4,7 @@ import (
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/attach"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/chat"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/classes"
@@ -16,11 +17,12 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/logs"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/messages"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/rename"
+	"github.com/joakimcarlsson/juicebox/internal/features/sessions/scripts"
 	sqlitepkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
-func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB, appConfig *config.Config, chatStore *chat.ChatSessionStore) {
+func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB, appConfig *config.Config, chatStore *chat.ChatSessionStore, hubManager *devicehub.Manager) {
 	attachHandler := attach.NewHandler(manager)
 	detachHandler := detach.NewHandler(manager)
 	listHandler := list.NewHandler(database, manager)
@@ -28,12 +30,13 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	logsHandler := logs.NewHandler(database)
 	renameHandler := rename.NewHandler(database)
 	sqliteHandler := sqlitepkg.NewHandler(manager)
-	chatHandler := chat.NewHandler(database, manager, &appConfig.LLM, chatStore, sqliteHandler)
+	chatHandler := chat.NewHandler(database, manager, &appConfig.LLM, chatStore, sqliteHandler, hubManager)
 	interceptHandler := intercept.NewHandler(manager)
 	fsHandler := filesystem.NewHandler(manager)
 	classesHandler := classes.NewHandler(manager)
 	crashesHandler := crashes.NewHandler(database)
 	cryptoHandler := cryptopkg.NewHandler(database, manager)
+	scriptsHandler := scripts.NewHandler(database, manager, hubManager)
 
 	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
@@ -68,4 +71,7 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	r.GET("/sessions/{sessionId}/classes/detail", classesHandler.Detail)
 	r.POST("/sessions/{sessionId}/classes/invoke", classesHandler.Invoke)
 	r.POST("/sessions/{sessionId}/classes/read-field", classesHandler.ReadField)
+
+	r.POST("/sessions/{sessionId}/scripts/run", scriptsHandler.Run)
+	r.GET("/sessions/{sessionId}/scripts", scriptsHandler.List)
 }

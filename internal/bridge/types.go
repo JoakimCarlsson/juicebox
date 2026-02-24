@@ -1,5 +1,7 @@
 package bridge
 
+import "encoding/json"
+
 type Device struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
@@ -75,4 +77,8 @@ type DatabaseColumn struct {
 	Type    string `json:"type"`
 	NotNull bool   `json:"notNull"`
 	PK      bool   `json:"pk"`
+}
+
+type RunScriptResponse struct {
+	Messages []json.RawMessage `json:"messages"`
 }

@@ -83,6 +83,16 @@ CREATE TABLE IF NOT EXISTS crypto_events (
     timestamp  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_crypto_session ON crypto_events(session_id, timestamp);
+
+CREATE TABLE IF NOT EXISTS scripts (
+    id         TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    code       TEXT NOT NULL,
+    output     TEXT,
+    status     TEXT NOT NULL DEFAULT 'running',
+    timestamp  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_scripts_session ON scripts(session_id, timestamp DESC);
 `
 
 func (d *DB) Migrate() error {

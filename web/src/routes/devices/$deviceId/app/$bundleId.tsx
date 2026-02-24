@@ -48,7 +48,7 @@ function getTabs(capabilities: string[] | null) {
     { value: "classes", label: "Classes", icon: Blocks, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/classes" as const },
     { value: "crashes", label: "Crashes", icon: AlertTriangle, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/crashes" as const },
     { value: "crypto", label: "Crypto", icon: Lock, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/crypto" as const },
-    { value: "hooks", label: "Hooks", icon: Code, enabled: false, to: "/devices/$deviceId/app/$bundleId/network" as const },
+    { value: "hooks", label: "Hooks", icon: Code, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/hooks" as const },
   ]
 }
 

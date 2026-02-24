@@ -198,3 +198,45 @@ export async function resolveAllInterceptRequests(
   )
   if (!res.ok) throw new Error("Failed to resolve all intercept requests")
 }
+
+export interface ScriptResult {
+  id: string
+  sessionId: string
+  code: string
+  output: unknown[]
+  status: string
+  timestamp: number
+  error?: string
+}
+
+export interface ScriptHistoryItem {
+  id: string
+  code: string
+  output: unknown[]
+  status: string
+  timestamp: number
+}
+
+export async function runScript(
+  sessionId: string,
+  code: string,
+): Promise<ScriptResult> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/scripts/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || "Failed to run script")
+  }
+  return res.json()
+}
+
+export async function fetchScriptHistory(
+  sessionId: string,
+): Promise<{ scripts: ScriptHistoryItem[] }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/scripts`)
+  if (!res.ok) throw new Error("Failed to fetch script history")
+  return res.json()
+}

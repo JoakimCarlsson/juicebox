@@ -239,6 +239,24 @@ func (c *Client) PullDatabase(deviceId, bundleId, dbPath string) (string, error)
 	return resp.LocalPath, nil
 }
 
+func (c *Client) RunScript(sessionId, code string, timeoutSecs int) (*RunScriptResponse, error) {
+	raw, err := c.call("runScript", map[string]any{
+		"sessionId": sessionId,
+		"code":      code,
+		"timeout":   timeoutSecs,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp RunScriptResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.RunScript: %w", err)
+	}
+
+	return &resp, nil
+}
+
 func (c *Client) AgentInvoke(sessionId, namespace, method string, args []any) (json.RawMessage, error) {
 	return c.call("agentInvoke", map[string]any{
 		"sessionId": sessionId,

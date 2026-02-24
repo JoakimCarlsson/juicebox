@@ -412,6 +412,83 @@ async function handleDetach(req: JsonRpcRequest): Promise<JsonRpcResponse> {
   return ok(req.id, { success: true });
 }
 
+async function handleRunScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+  const sessionId = req.params?.sessionId as string;
+  const code = req.params?.code as string;
+  const timeoutMs = ((req.params?.timeout as number) ?? 30) * 1000;
+  if (!sessionId) return fail(req.id, -32602, "missing param: sessionId");
+  if (!code) return fail(req.id, -32602, "missing param: code");
+
+  const state = sessions.get(sessionId);
+  if (!state) return fail(req.id, -32602, "session not found");
+
+  const tmpDir = Deno.env.get("TMPDIR") ?? "/tmp";
+  const tmpFile = `${tmpDir}/jb_script_${Date.now()}.ts`;
+  const outFile = tmpFile.replace(/\.ts$/, ".js");
+
+  try {
+    await Deno.writeTextFile(tmpFile, code);
+
+    const compilerBin = resolve(import.meta.dirname!, "node_modules/.bin/frida-compile");
+    const compile = new Deno.Command(compilerBin, {
+      args: [tmpFile, "-o", outFile],
+      stdout: "piped",
+      stderr: "piped",
+      cwd: import.meta.dirname!,
+    });
+    const compileOut = await compile.output();
+    if (compileOut.code !== 0) {
+      const stderr = new TextDecoder().decode(compileOut.stderr).trim();
+      return fail(req.id, -32000, `compilation failed: ${stderr}`);
+    }
+
+    const compiledJS = await Deno.readTextFile(outFile);
+    const userScript = await state.session.createScript(compiledJS);
+
+    const collected: unknown[] = [];
+    let resolveDone: (() => void) | null = null;
+    const donePromise = new Promise<void>((r) => { resolveDone = r; });
+
+    userScript.message.connect((_message: frida.Message, _data: Buffer | null) => {
+      const msg = _message as { type: string; payload?: unknown };
+      if (msg.type === "send" && msg.payload != null) {
+        collected.push(msg.payload);
+
+        const line = JSON.stringify({ type: "script_output", payload: msg.payload }) + "\n";
+        const encoded = new TextEncoder().encode(line);
+        for (const sub of state.subscribers) {
+          sub.write(encoded).catch(() => { state.subscribers.delete(sub); });
+        }
+
+        if (typeof msg.payload === "object" && msg.payload !== null && (msg.payload as Record<string, unknown>).__done === true) {
+          resolveDone?.();
+        }
+      } else if (msg.type === "error") {
+        const description = (msg as Record<string, unknown>).description ?? String(msg);
+        collected.push({ error: description });
+
+        const errLine = JSON.stringify({ type: "script_output", payload: { error: description } }) + "\n";
+        const errEncoded = new TextEncoder().encode(errLine);
+        for (const sub of state.subscribers) {
+          sub.write(errEncoded).catch(() => { state.subscribers.delete(sub); });
+        }
+      }
+    });
+
+    await userScript.load();
+
+    const timeout = new Promise<void>((r) => setTimeout(r, timeoutMs));
+    await Promise.race([donePromise, timeout]);
+
+    try { await userScript.unload(); } catch {}
+
+    return ok(req.id, { messages: collected });
+  } finally {
+    try { await Deno.remove(tmpFile); } catch {}
+    try { await Deno.remove(outFile); } catch {}
+  }
+}
+
 async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
   try {
     switch (req.method) {
@@ -512,6 +589,9 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
 
       case "detach":
         return await handleDetach(req);
+
+      case "runScript":
+        return await handleRunScript(req);
 
       case "agentInvoke": {
         const sessionId = req.params?.sessionId as string;
