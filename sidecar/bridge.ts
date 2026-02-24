@@ -306,8 +306,8 @@ async function handleAttach(
     }
   });
 
-  session.detached.connect(() => {
-    const line = JSON.stringify({ type: "detached" }) + "\n";
+  session.detached.connect((reason: frida.SessionDetachReason, crash: frida.Crash | null) => {
+    const line = JSON.stringify({ type: "detached", reason, crash: crash ? { summary: crash.summary, report: crash.report } : null }) + "\n";
     const encoded = new TextEncoder().encode(line);
     for (const sub of state.subscribers) {
       try {
@@ -319,17 +319,15 @@ async function handleAttach(
     }
     state.subscribers.clear();
     sessions.delete(sessionId);
-    console.log(`session ${sessionId} detached`);
+    console.log(`session ${sessionId} detached: reason=${reason}${crash ? ` crash=${crash.summary}` : ""}`);
   });
 
   await script.load();
 
-  try {
-    await script.exports.invoke("ssl", "bypass", []);
-  } catch (err) {
+  function logAgentError(label: string, err: unknown): void {
     const description = err instanceof Error ? err.message : String(err);
-    console.error(`[${sessionId}] ssl bypass failed:`, err);
-    const errLine = JSON.stringify({ type: "log", payload: { level: "error", source: "agent", message: `ssl bypass failed: ${description}` } }) + "\n";
+    console.error(`[${sessionId}] ${label}:`, err);
+    const errLine = JSON.stringify({ type: "log", payload: { level: "error", source: "agent", message: `${label}: ${description}` } }) + "\n";
     if (state.subscribers.size === 0) {
       state.messageBuffer.push(errLine);
     } else {
@@ -342,22 +340,44 @@ async function handleAttach(
     }
   }
 
+  const evasionConfig = req.params?.evasion as Record<string, boolean> | undefined;
+
+  if (evasionConfig) {
+    if (evasionConfig.frida_bypass !== false) {
+      try {
+        await script.exports.invoke("evasion", "bypassFrida", []);
+      } catch (err) {
+        logAgentError("frida bypass failed", err);
+      }
+    }
+
+    if (evasionConfig.root_bypass !== false) {
+      try {
+        await script.exports.invoke("evasion", "bypassRoot", []);
+      } catch (err) {
+        logAgentError("root bypass failed", err);
+      }
+    }
+
+    if (evasionConfig.emulator_bypass !== false) {
+      try {
+        await script.exports.invoke("evasion", "bypassEmulator", []);
+      } catch (err) {
+        logAgentError("emulator bypass failed", err);
+      }
+    }
+  }
+
+  try {
+    await script.exports.invoke("ssl", "bypass", []);
+  } catch (err) {
+    logAgentError("ssl bypass failed", err);
+  }
+
   try {
     await script.exports.invoke("crash", "enable", []);
   } catch (err) {
-    const description = err instanceof Error ? err.message : String(err);
-    console.error(`[${sessionId}] crash handler setup failed:`, err);
-    const errLine = JSON.stringify({ type: "log", payload: { level: "error", source: "agent", message: `crash handler setup failed: ${description}` } }) + "\n";
-    if (state.subscribers.size === 0) {
-      state.messageBuffer.push(errLine);
-    } else {
-      const errEncoded = new TextEncoder().encode(errLine);
-      for (const sub of state.subscribers) {
-        sub.write(errEncoded).catch(() => {
-          state.subscribers.delete(sub);
-        });
-      }
-    }
+    logAgentError("crash handler setup failed", err);
   }
 
   await device.resume(pid);

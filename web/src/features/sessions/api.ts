@@ -1,14 +1,19 @@
-import type { AttachResponse, SessionsResponse, MessagesResponse, LogsResponse, CrashesResponse, InterceptState, InterceptDecision, InterceptRule, PendingRequest } from "@/types/session"
+import type { AttachResponse, EvasionConfig, SessionsResponse, MessagesResponse, LogsResponse, CrashesResponse, InterceptState, InterceptDecision, InterceptRule, PendingRequest } from "@/types/session"
 
 export async function attachApp(
   deviceId: string,
   bundleId: string,
   sessionId?: string,
+  evasion?: EvasionConfig,
 ): Promise<AttachResponse> {
   const url = sessionId
     ? `/api/v1/devices/${deviceId}/apps/${bundleId}/attach?sessionId=${encodeURIComponent(sessionId)}`
     : `/api/v1/devices/${deviceId}/apps/${bundleId}/attach`
-  const res = await fetch(url, { method: "POST" })
+  const res = await fetch(url, {
+    method: "POST",
+    headers: evasion ? { "Content-Type": "application/json" } : undefined,
+    body: evasion ? JSON.stringify({ evasion }) : undefined,
+  })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.error || "Failed to attach")

@@ -160,8 +160,12 @@ func (c *Client) GetAppIcon(deviceId string, identifier string) ([]byte, string,
 	return data, icon.Format, nil
 }
 
-func (c *Client) Attach(deviceId string, identifier string) (*AttachResponse, error) {
-	raw, err := c.call("attach", map[string]string{"deviceId": deviceId, "identifier": identifier})
+func (c *Client) Attach(deviceId string, identifier string, evasion *EvasionConfig) (*AttachResponse, error) {
+	params := map[string]any{"deviceId": deviceId, "identifier": identifier}
+	if evasion != nil {
+		params["evasion"] = evasion
+	}
+	raw, err := c.call("attach", params)
 	if err != nil {
 		return nil, err
 	}

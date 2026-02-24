@@ -1,6 +1,7 @@
 package attach
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/joakimcarlsson/go-router/router"
@@ -25,7 +26,12 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
-	resp, err := h.manager.Attach(deviceId, bundleId, sessionId)
+	var body AttachRequestBody
+	if c.Request.Body != nil {
+		_ = json.NewDecoder(c.Request.Body).Decode(&body)
+	}
+
+	resp, err := h.manager.Attach(deviceId, bundleId, sessionId, body.Evasion)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

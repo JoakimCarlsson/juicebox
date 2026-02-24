@@ -1,3 +1,9 @@
+export interface EvasionConfig {
+  frida_bypass?: boolean
+  root_bypass?: boolean
+  emulator_bypass?: boolean
+}
+
 export interface AttachResponse {
   sessionId: string
   pid: number
