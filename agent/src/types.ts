@@ -1,4 +1,4 @@
-export type ModuleFn = (...args: unknown[]) => unknown;
+export type ModuleFn = (...args: unknown[]) => unknown | Promise<unknown>;
 
 export interface AgentModule {
   [method: string]: ModuleFn;

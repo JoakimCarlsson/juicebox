@@ -130,9 +130,14 @@ func (h *Handler) Handle(c *router.Context) {
 		chattools.NewDropRequest(h.manager, sessionID),
 	}
 	for _, cap := range setup.Capabilities() {
-		if cap == "logstream" {
+		switch cap {
+		case "logstream":
 			sessionTools = append(sessionTools, chattools.NewRunLogcatQuery(h.db, sessionID))
-			break
+		case "frida":
+			sessionTools = append(sessionTools,
+				chattools.NewListClasses(h.manager, sessionID),
+				chattools.NewGetClassDetail(h.manager, sessionID),
+			)
 		}
 	}
 	sessionTools = append(sessionTools,

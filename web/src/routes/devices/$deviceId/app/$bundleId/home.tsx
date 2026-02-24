@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useParams, useSearch } from "@tanstack/react-router"
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Globe, FileText, FolderOpen } from "lucide-react"
+import { Globe, FileText, FolderOpen, Blocks } from "lucide-react"
 import { appSessionsQueryOptions } from "@/features/sessions/queries"
 import { cn } from "@/lib/utils"
 
@@ -37,6 +37,14 @@ const ALL_MODULES = [
     icon: FolderOpen,
     to: "/devices/$deviceId/app/$bundleId/files" as const,
     capability: "filesystem",
+  },
+  {
+    value: "classes",
+    label: "Classes",
+    description: "Browse loaded Java classes, methods, fields, and interfaces",
+    icon: Blocks,
+    to: "/devices/$deviceId/app/$bundleId/classes" as const,
+    capability: "frida",
   },
 ]
 

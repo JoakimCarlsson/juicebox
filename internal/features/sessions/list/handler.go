@@ -9,7 +9,7 @@ import (
 )
 
 var platformCapabilities = map[string][]string{
-	"android": {"filesystem", "database", "logstream"},
+	"android": {"filesystem", "database", "logstream", "frida"},
 	"ios":     {},
 }
 

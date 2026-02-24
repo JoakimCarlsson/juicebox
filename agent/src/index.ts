@@ -55,8 +55,8 @@ function snapshot(): HookRule[] {
 }
 
 rpc.exports = {
-  invoke(namespace: string, method: string, args: unknown[]): unknown {
-    return invoke(namespace, method, args);
+  async invoke(namespace: string, method: string, args: unknown[]): Promise<unknown> {
+    return await invoke(namespace, method, args);
   },
 
   interfaces(): Record<string, string[]> {

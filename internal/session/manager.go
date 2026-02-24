@@ -255,6 +255,16 @@ func (m *Manager) GetSession(sessionId string) *Session {
 	return m.sessions[sessionId]
 }
 
+func (m *Manager) AgentInvoke(sessionID, namespace, method string, args []any) (json.RawMessage, error) {
+	m.mu.RLock()
+	sess, ok := m.sessions[sessionID]
+	m.mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("session %s not found", sessionID)
+	}
+	return m.bridge.AgentInvoke(sess.BridgeSession, namespace, method, args)
+}
+
 func (m *Manager) bridgeSubscribeForward(sess *Session) {
 	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sess.ID)
 
