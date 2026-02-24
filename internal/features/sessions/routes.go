@@ -7,6 +7,7 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/attach"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/chat"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/classes"
+	"github.com/joakimcarlsson/juicebox/internal/features/sessions/crashes"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/detach"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/filesystem"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/intercept"
@@ -30,6 +31,7 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	interceptHandler := intercept.NewHandler(manager)
 	fsHandler := filesystem.NewHandler(manager)
 	classesHandler := classes.NewHandler(manager)
+	crashesHandler := crashes.NewHandler(database)
 
 	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
@@ -53,6 +55,8 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	r.GET("/sessions/{sessionId}/sqlite/tables", sqliteHandler.Tables)
 	r.POST("/sessions/{sessionId}/sqlite/query", sqliteHandler.Query)
 	r.GET("/sessions/{sessionId}/sqlite/export", sqliteHandler.Export)
+
+	r.GET("/sessions/{sessionId}/crashes", crashesHandler.Handle)
 
 	r.GET("/sessions/{sessionId}/classes", classesHandler.List)
 	r.GET("/sessions/{sessionId}/classes/detail", classesHandler.Detail)

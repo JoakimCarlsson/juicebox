@@ -1,8 +1,9 @@
 import type { AgentModule } from "./types";
 import ssl from "./modules/ssl";
 import classes from "./modules/classes";
+import crash from "./modules/crash";
 
-const registry: Record<string, AgentModule> = { ssl, classes };
+const registry: Record<string, AgentModule> = { ssl, classes, crash };
 
 export function getModule(namespace: string): AgentModule | undefined {
   return registry[namespace];

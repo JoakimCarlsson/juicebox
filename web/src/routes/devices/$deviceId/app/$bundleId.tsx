@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { SessionStatusReporter } from "@/components/layout/SessionStatusReporter"
+import { CrashAlertDialog } from "@/components/sessions/CrashAlertDialog"
 import { SessionMessageProvider } from "@/contexts/SessionMessageContext"
 import { InterceptProvider } from "@/contexts/InterceptContext"
 import { ChatPanelProvider, useChatPanel } from "@/contexts/ChatPanelContext"
@@ -22,7 +23,7 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable"
 import { useDefaultLayout } from "react-resizable-panels"
-import { ArrowLeft, Home, Globe, FileText, Code, Terminal, MessageSquare, FolderOpen, Blocks } from "lucide-react"
+import { ArrowLeft, Home, Globe, FileText, Code, Terminal, MessageSquare, FolderOpen, Blocks, AlertTriangle } from "lucide-react"
 import { useEffect, useRef, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { appSessionsQueryOptions } from "@/features/sessions/queries"
@@ -45,6 +46,7 @@ function getTabs(capabilities: string[] | null) {
     { value: "logs", label: "Logs", icon: FileText, enabled: has("logstream"), to: "/devices/$deviceId/app/$bundleId/logs" as const },
     { value: "files", label: "Files", icon: FolderOpen, enabled: has("filesystem"), to: "/devices/$deviceId/app/$bundleId/files" as const },
     { value: "classes", label: "Classes", icon: Blocks, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/classes" as const },
+    { value: "crashes", label: "Crashes", icon: AlertTriangle, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/crashes" as const },
     { value: "hooks", label: "Hooks", icon: Code, enabled: false, to: "/devices/$deviceId/app/$bundleId/network" as const },
   ]
 }
@@ -121,6 +123,7 @@ function AppLayoutWithChat({
   return (
     <div className="flex h-full flex-col">
       {sessionId && <SessionStatusReporter sessionId={sessionId} bundleId={bundleId} />}
+      {sessionId && <CrashAlertDialog sessionId={sessionId} deviceId={deviceId} bundleId={bundleId} />}
 
       <div className="border-b border-border px-4 py-2">
         <div className="flex items-center justify-between">

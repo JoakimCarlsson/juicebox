@@ -342,6 +342,24 @@ async function handleAttach(
     }
   }
 
+  try {
+    await script.exports.invoke("crash", "enable", []);
+  } catch (err) {
+    const description = err instanceof Error ? err.message : String(err);
+    console.error(`[${sessionId}] crash handler setup failed:`, err);
+    const errLine = JSON.stringify({ type: "log", payload: { level: "error", source: "agent", message: `crash handler setup failed: ${description}` } }) + "\n";
+    if (state.subscribers.size === 0) {
+      state.messageBuffer.push(errLine);
+    } else {
+      const errEncoded = new TextEncoder().encode(errLine);
+      for (const sub of state.subscribers) {
+        sub.write(errEncoded).catch(() => {
+          state.subscribers.delete(sub);
+        });
+      }
+    }
+  }
+
   await device.resume(pid);
   console.log(`attached to ${identifier} (pid ${pid}), session ${sessionId}`);
 
