@@ -64,7 +64,7 @@ export function DeviceSocketProvider({ deviceId, children }: DeviceSocketProvide
               entry.fn(envelope)
             }
           }
-        } catch { /* parse error */ }
+        } catch {}
       }
     }
 

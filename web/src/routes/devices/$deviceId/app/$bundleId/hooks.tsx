@@ -746,7 +746,7 @@ function HooksPage() {
     try {
       const res = await fetchScriptFiles(sessionId)
       setFiles(res.files ?? [])
-    } catch { /* ignored */ }
+    } catch {}
   }, [sessionId])
 
   useEffect(() => {
@@ -811,7 +811,7 @@ function HooksPage() {
       await upsertScriptFile(sessionId, activeFileRef.current, codeRef.current)
       setDirty(false)
       await loadFiles()
-    } catch { /* ignored */ }
+    } catch {}
     setSaving(false)
   }, [sessionId, saving, loadFiles])
 
@@ -883,7 +883,7 @@ function HooksPage() {
           setCode('')
           setDirty(false)
         }
-      } catch { /* ignored */ }
+      } catch {}
     }
   }, [sessionId, loadFiles])
 

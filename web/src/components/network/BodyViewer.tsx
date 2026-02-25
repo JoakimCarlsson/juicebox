@@ -214,7 +214,7 @@ export function BodyViewer({
       let parsed: unknown = undefined
       try {
         parsed = JSON.parse(decoded)
-      } catch { /* parse error */ }
+      } catch {}
       if (parsed !== undefined) {
         return (
           <div>
