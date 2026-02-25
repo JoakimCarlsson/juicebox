@@ -40,7 +40,8 @@ lint:
 	cd sidecar && deno lint
 
 fmt:
-	goimports -w .
+	$(shell go env GOPATH)/bin/goimports -w .
+	$(shell go env GOPATH)/bin/golines -m 80 --ignored-dirs=deps -w .
 	cd web && bun prettier --write "src/**/*.{ts,tsx}"
 	cd agent && deno fmt
 	cd sidecar && deno fmt
