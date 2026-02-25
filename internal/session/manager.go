@@ -404,6 +404,10 @@ func (m *Manager) bridgeSubscribeForward(sess *Session) {
 			}
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		logger.Error("bridge subscribe stream error", "error", err)
+	}
 }
 
 func httpMessageToRow(sessionID string, msg *proxy.HttpMessage) *db.HttpMessageRow {

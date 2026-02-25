@@ -169,7 +169,7 @@ func (h *Handler) Run(c *router.Context) {
 		Timestamp:    now,
 	})
 
-	resp, err := h.manager.RunScript(sessionID, file.Content, req.Name, 30)
+	resp, err := h.manager.RunScript(sessionID, file.Content, req.Name, 5)
 	if err != nil {
 		_ = h.db.UpdateScriptRun(runID, "", "error")
 		c.JSON(http.StatusInternalServerError, map[string]any{
@@ -181,15 +181,31 @@ func (h *Handler) Run(c *router.Context) {
 		return
 	}
 
+	if resp.Mode == "oneshot" {
+		outputJSON, _ := json.Marshal(resp.Messages)
+		_ = h.db.UpdateScriptRun(runID, string(outputJSON), "done")
+
+		c.JSON(http.StatusOK, map[string]any{
+			"id":        runID,
+			"fileId":    file.ID,
+			"fileName":  file.Name,
+			"output":    resp.Messages,
+			"status":    "done",
+			"timestamp": now,
+		})
+		return
+	}
+
 	outputJSON, _ := json.Marshal(resp.Messages)
-	_ = h.db.UpdateScriptRun(runID, string(outputJSON), "done")
+	_ = h.db.UpdateScriptRun(runID, string(outputJSON), "running")
 
 	c.JSON(http.StatusOK, map[string]any{
 		"id":        runID,
 		"fileId":    file.ID,
 		"fileName":  file.Name,
 		"output":    resp.Messages,
-		"status":    "done",
+		"status":    "running",
+		"name":      req.Name,
 		"timestamp": now,
 	})
 }

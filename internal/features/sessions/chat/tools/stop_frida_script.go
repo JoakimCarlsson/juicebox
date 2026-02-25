@@ -7,6 +7,7 @@ import (
 
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/tool"
+	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
@@ -16,11 +17,12 @@ type StopFridaScriptParams struct {
 
 type StopFridaScriptTool struct {
 	manager   *session.Manager
+	db        *db.DB
 	sessionID string
 }
 
-func NewStopFridaScript(manager *session.Manager, sessionID string) *StopFridaScriptTool {
-	return &StopFridaScriptTool{manager: manager, sessionID: sessionID}
+func NewStopFridaScript(manager *session.Manager, database *db.DB, sessionID string) *StopFridaScriptTool {
+	return &StopFridaScriptTool{manager: manager, db: database, sessionID: sessionID}
 }
 
 func (t *StopFridaScriptTool) Info() tool.ToolInfo {
@@ -44,6 +46,11 @@ func (t *StopFridaScriptTool) Run(ctx context.Context, params tool.ToolCall) (to
 	resp, err := t.manager.StopScript(t.sessionID, input.Name)
 	if err != nil {
 		return tool.NewTextErrorResponse(fmt.Sprintf("failed to stop script: %v", err)), nil
+	}
+
+	if file, err := t.db.GetScriptFile(t.sessionID, input.Name); err == nil && file != nil {
+		outputJSON, _ := json.Marshal(resp.Messages)
+		_ = t.db.CompleteScriptRunByFile(t.sessionID, file.ID, string(outputJSON))
 	}
 
 	if len(resp.Messages) == 0 {

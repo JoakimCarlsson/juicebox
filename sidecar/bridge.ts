@@ -320,12 +320,8 @@ async function handleAttach(
     const line = JSON.stringify({ type: "detached", reason, crash: crash ? { summary: crash.summary, report: crash.report } : null }) + "\n";
     const encoded = new TextEncoder().encode(line);
     for (const sub of state.subscribers) {
-      try {
-        sub.write(encoded);
-      } catch {}
-      try {
-        sub.close();
-      } catch {}
+      sub.write(encoded).catch(() => {});
+      try { sub.close(); } catch {}
     }
     state.subscribers.clear();
     for (const [, us] of state.userScripts) {
@@ -450,8 +446,10 @@ async function handleRunScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
 
   const tmpDir = resolve(import.meta.dirname!, ".tmp");
   await Deno.mkdir(tmpDir, { recursive: true });
-  const tmpFile = `${tmpDir}/jb_script_${Date.now()}.ts`;
+  const tmpFile = `${tmpDir}/jb_script_${crypto.randomUUID()}.ts`;
   const outFile = tmpFile.replace(/\.ts$/, ".js");
+
+  let userScript: frida.Script | null = null;
 
   try {
     await Deno.writeTextFile(tmpFile, code);
@@ -472,7 +470,7 @@ async function handleRunScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
     }
 
     const compiledJS = await Deno.readTextFile(outFile);
-    const userScript = await state.session.createScript(compiledJS);
+    userScript = await state.session.createScript(compiledJS);
 
     const scriptState: UserScriptState = {
       name,
@@ -530,6 +528,9 @@ async function handleRunScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
       messages: scriptState.messages.slice(0, 20),
     });
   } finally {
+    if (userScript && !state.userScripts.has(name)) {
+      try { await userScript.unload(); } catch {}
+    }
     try { await Deno.remove(tmpFile); } catch {}
     try { await Deno.remove(outFile); } catch {}
   }

@@ -680,6 +680,17 @@ func (d *DB) UpdateScriptRun(id, output, status string) error {
 	return nil
 }
 
+func (d *DB) CompleteScriptRunByFile(sessionID, scriptFileID, output string) error {
+	_, err := d.Conn.Exec(
+		`UPDATE script_runs SET output = ?, status = 'done' WHERE session_id = ? AND script_file_id = ? AND status = 'running'`,
+		output, sessionID, scriptFileID,
+	)
+	if err != nil {
+		return fmt.Errorf("db.CompleteScriptRunByFile: %w", err)
+	}
+	return nil
+}
+
 func (d *DB) GetScriptRuns(sessionID string) ([]ScriptRunRow, error) {
 	rows, err := d.Conn.Query(
 		`SELECT id, session_id, script_file_id, output, status, timestamp FROM script_runs WHERE session_id = ? ORDER BY timestamp DESC`,
