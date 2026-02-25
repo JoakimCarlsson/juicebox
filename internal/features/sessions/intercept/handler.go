@@ -21,7 +21,11 @@ func NewHandler(manager *session.Manager) *Handler {
 func (h *Handler) GetState(c *router.Context) {
 	sess := h.manager.GetSession(c.Param("sessionId"))
 	if sess == nil || sess.Intercept == nil {
-		response.Error(c, http.StatusNotFound, "session not found or not active")
+		response.Error(
+			c,
+			http.StatusNotFound,
+			"session not found or not active",
+		)
 		return
 	}
 
@@ -36,7 +40,11 @@ func (h *Handler) GetState(c *router.Context) {
 func (h *Handler) UpdateState(c *router.Context) {
 	sess := h.manager.GetSession(c.Param("sessionId"))
 	if sess == nil || sess.Intercept == nil {
-		response.Error(c, http.StatusNotFound, "session not found or not active")
+		response.Error(
+			c,
+			http.StatusNotFound,
+			"session not found or not active",
+		)
 		return
 	}
 
@@ -64,7 +72,11 @@ func (h *Handler) UpdateState(c *router.Context) {
 func (h *Handler) ListPending(c *router.Context) {
 	sess := h.manager.GetSession(c.Param("sessionId"))
 	if sess == nil || sess.Intercept == nil {
-		response.Error(c, http.StatusNotFound, "session not found or not active")
+		response.Error(
+			c,
+			http.StatusNotFound,
+			"session not found or not active",
+		)
 		return
 	}
 
@@ -75,7 +87,11 @@ func (h *Handler) ListPending(c *router.Context) {
 func (h *Handler) Resolve(c *router.Context) {
 	sess := h.manager.GetSession(c.Param("sessionId"))
 	if sess == nil || sess.Intercept == nil {
-		response.Error(c, http.StatusNotFound, "session not found or not active")
+		response.Error(
+			c,
+			http.StatusNotFound,
+			"session not found or not active",
+		)
 		return
 	}
 
@@ -96,7 +112,11 @@ func (h *Handler) Resolve(c *router.Context) {
 func (h *Handler) ResolveAll(c *router.Context) {
 	sess := h.manager.GetSession(c.Param("sessionId"))
 	if sess == nil || sess.Intercept == nil {
-		response.Error(c, http.StatusNotFound, "session not found or not active")
+		response.Error(
+			c,
+			http.StatusNotFound,
+			"session not found or not active",
+		)
 		return
 	}
 

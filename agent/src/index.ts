@@ -22,8 +22,9 @@ function invoke(
   if (!mod) throw new Error(`unknown namespace: ${namespace}`);
 
   const fn = mod[method];
-  if (typeof fn !== "function")
+  if (typeof fn !== "function") {
     throw new Error(`unknown method: ${namespace}.${method}`);
+  }
 
   const result = fn(...args);
 
@@ -55,7 +56,11 @@ function snapshot(): HookRule[] {
 }
 
 rpc.exports = {
-  async invoke(namespace: string, method: string, args: unknown[]): Promise<unknown> {
+  async invoke(
+    namespace: string,
+    method: string,
+    args: unknown[],
+  ): Promise<unknown> {
     return await invoke(namespace, method, args);
   },
 

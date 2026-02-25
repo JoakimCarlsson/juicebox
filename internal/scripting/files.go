@@ -27,7 +27,9 @@ type ScriptFile struct {
 	UpdatedAt int64
 }
 
-func (fm *FileManager) Upsert(sessionID, name, content string) (*ScriptFile, error) {
+func (fm *FileManager) Upsert(
+	sessionID, name, content string,
+) (*ScriptFile, error) {
 	now := time.Now().UnixMilli()
 	fileID := fmt.Sprintf("sf_%d", time.Now().UnixNano())
 
@@ -44,7 +46,9 @@ func (fm *FileManager) Upsert(sessionID, name, content string) (*ScriptFile, err
 
 	f, err := fm.db.GetScriptFile(sessionID, name)
 	if err != nil || f == nil {
-		return nil, fmt.Errorf("scripting.Upsert: failed to read back script file")
+		return nil, fmt.Errorf(
+			"scripting.Upsert: failed to read back script file",
+		)
 	}
 
 	fm.broadcastFileWrite(sessionID, name)

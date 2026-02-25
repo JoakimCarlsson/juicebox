@@ -54,7 +54,11 @@ function extractEntries(map: any): SharedPrefEntry[] {
       while (setIter.hasNext()) {
         items.push(setIter.next().toString());
       }
-      entries.push({ key: k, value: JSON.stringify(items), type: "string_set" });
+      entries.push({
+        key: k,
+        value: JSON.stringify(items),
+        type: "string_set",
+      });
     } else {
       entries.push({ key: k, value: v.toString(), type: cls });
     }
@@ -76,7 +80,8 @@ function enumerate(): SharedPrefsFile[] | Promise<SharedPrefsFile[]> {
 
       try {
         const ActivityThread = Java.use("android.app.ActivityThread");
-        const context = ActivityThread.currentApplication().getApplicationContext();
+        const context = ActivityThread.currentApplication()
+          .getApplicationContext();
         const dataDir = context.getFilesDir().getParent();
         const prefsDir = Java.use("java.io.File").$new(dataDir, "shared_prefs");
 

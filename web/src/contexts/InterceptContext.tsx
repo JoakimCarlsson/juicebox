@@ -1,23 +1,16 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
-import { useDeviceSocket } from "@/contexts/DeviceSocketContext"
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
 import {
   fetchInterceptState,
   updateInterceptState,
   resolveAllInterceptRequests,
-} from "@/features/sessions/api"
+} from '@/features/sessions/api'
 import type {
   PendingRequest,
   InterceptRule,
   InterceptDecision,
   DeviceEnvelope,
-} from "@/types/session"
+} from '@/types/session'
 
 interface InterceptContextValue {
   enabled: boolean
@@ -37,10 +30,7 @@ interface InterceptProviderProps {
   children: React.ReactNode
 }
 
-export function InterceptProvider({
-  sessionId,
-  children,
-}: InterceptProviderProps) {
+export function InterceptProvider({ sessionId, children }: InterceptProviderProps) {
   const { subscribe, send } = useDeviceSocket()
   const [enabled, setEnabled] = useState(false)
   const [rules, setRules] = useState<InterceptRule[]>([])
@@ -61,7 +51,7 @@ export function InterceptProvider({
   useEffect(() => {
     if (!sessionId) return
 
-    const unsub1 = subscribe("intercept", (envelope: DeviceEnvelope) => {
+    const unsub1 = subscribe('intercept', (envelope: DeviceEnvelope) => {
       if (envelope.sessionId !== sessionId) return
       const pending = envelope.payload as PendingRequest
       if (pending?.id) {
@@ -69,29 +59,23 @@ export function InterceptProvider({
       }
     })
 
-    const unsub2 = subscribe(
-      "intercept_resolved",
-      (envelope: DeviceEnvelope) => {
-        if (envelope.sessionId !== sessionId) return
-        const payload = envelope.payload as { id?: string }
-        if (payload?.id) {
-          setPendingRequests((prev) => prev.filter((p) => p.id !== payload.id))
-        }
-      },
-    )
+    const unsub2 = subscribe('intercept_resolved', (envelope: DeviceEnvelope) => {
+      if (envelope.sessionId !== sessionId) return
+      const payload = envelope.payload as { id?: string }
+      if (payload?.id) {
+        setPendingRequests((prev) => prev.filter((p) => p.id !== payload.id))
+      }
+    })
 
-    const unsub3 = subscribe(
-      "intercept_state",
-      (envelope: DeviceEnvelope) => {
-        if (envelope.sessionId !== sessionId) return
-        const state = envelope.payload as {
-          enabled?: boolean
-          rules?: InterceptRule[]
-        }
-        if (state?.enabled !== undefined) setEnabled(state.enabled)
-        if (state?.rules) setRules(state.rules)
-      },
-    )
+    const unsub3 = subscribe('intercept_state', (envelope: DeviceEnvelope) => {
+      if (envelope.sessionId !== sessionId) return
+      const state = envelope.payload as {
+        enabled?: boolean
+        rules?: InterceptRule[]
+      }
+      if (state?.enabled !== undefined) setEnabled(state.enabled)
+      if (state?.rules) setRules(state.rules)
+    })
 
     return () => {
       unsub1()
@@ -104,11 +88,9 @@ export function InterceptProvider({
     (value: boolean) => {
       if (!sessionId) return
       setEnabled(value)
-      updateInterceptState(sessionId, { enabled: value }).catch(() =>
-        setEnabled(!value),
-      )
+      updateInterceptState(sessionId, { enabled: value }).catch(() => setEnabled(!value))
     },
-    [sessionId],
+    [sessionId]
   )
 
   const updateRulesHandler = useCallback(
@@ -117,32 +99,30 @@ export function InterceptProvider({
       setRules(newRules)
       updateInterceptState(sessionId, { rules: newRules }).catch(() => {})
     },
-    [sessionId],
+    [sessionId]
   )
 
   const sendDecision = useCallback(
     (decision: InterceptDecision) => {
       send({
-        type: "intercept_decision",
+        type: 'intercept_decision',
         sessionId: sessionIdRef.current,
         payload: decision,
       })
-      setPendingRequests((prev) =>
-        prev.filter((p) => p.id !== decision.requestId),
-      )
+      setPendingRequests((prev) => prev.filter((p) => p.id !== decision.requestId))
     },
-    [send],
+    [send]
   )
 
   const forwardAll = useCallback(() => {
     if (!sessionId) return
-    resolveAllInterceptRequests(sessionId, "forward").catch(() => {})
+    resolveAllInterceptRequests(sessionId, 'forward').catch(() => {})
     setPendingRequests([])
   }, [sessionId])
 
   const dropAll = useCallback(() => {
     if (!sessionId) return
-    resolveAllInterceptRequests(sessionId, "drop").catch(() => {})
+    resolveAllInterceptRequests(sessionId, 'drop').catch(() => {})
     setPendingRequests([])
   }, [sessionId])
 
@@ -166,7 +146,6 @@ export function InterceptProvider({
 
 export function useIntercept(): InterceptContextValue {
   const ctx = useContext(InterceptContext)
-  if (!ctx)
-    throw new Error("useIntercept must be used within InterceptProvider")
+  if (!ctx) throw new Error('useIntercept must be used within InterceptProvider')
   return ctx
 }

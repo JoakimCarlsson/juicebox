@@ -3,10 +3,10 @@ package db
 import "log/slog"
 
 type writeOp struct {
-	httpMessage  *HttpMessageRow
-	logcatEntry  *LogcatEntryRow
-	crashRow     *CrashRow
-	cryptoEvent  *CryptoEventRow
+	httpMessage *HttpMessageRow
+	logcatEntry *LogcatEntryRow
+	crashRow    *CrashRow
+	cryptoEvent *CryptoEventRow
 }
 
 type AsyncWriter struct {

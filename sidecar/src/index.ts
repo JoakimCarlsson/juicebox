@@ -1,4 +1,4 @@
-import { SOCKET_PATH, handleConnection } from "./server.ts";
+import { handleConnection, SOCKET_PATH } from "./server.ts";
 
 try {
   await Deno.remove(SOCKET_PATH);

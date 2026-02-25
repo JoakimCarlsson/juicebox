@@ -18,7 +18,10 @@ type RunFridaScriptTool struct {
 	sessionID string
 }
 
-func NewRunFridaScript(runner *scripting.Runner, sessionID string) *RunFridaScriptTool {
+func NewRunFridaScript(
+	runner *scripting.Runner,
+	sessionID string,
+) *RunFridaScriptTool {
 	return &RunFridaScriptTool{runner: runner, sessionID: sessionID}
 }
 
@@ -30,10 +33,15 @@ func (t *RunFridaScriptTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *RunFridaScriptTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *RunFridaScriptTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[RunFridaScriptParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	if input.Name == "" {
@@ -42,16 +50,22 @@ func (t *RunFridaScriptTool) Run(ctx context.Context, params tool.ToolCall) (too
 
 	res, err := t.runner.Run(t.sessionID, input.Name, 3)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("script execution failed: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("script execution failed: %v", err),
+		), nil
 	}
 
 	if res.Error != "" {
-		return tool.NewTextErrorResponse(fmt.Sprintf("script execution failed: %s", res.Error)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("script execution failed: %s", res.Error),
+		), nil
 	}
 
 	if res.Mode == "oneshot" {
 		if len(res.Messages) == 0 {
-			return tool.NewTextResponse("Script executed successfully but produced no send() output."), nil
+			return tool.NewTextResponse(
+				"Script executed successfully but produced no send() output.",
+			), nil
 		}
 		return tool.NewJSONResponse(res.Messages), nil
 	}

@@ -15,7 +15,10 @@ type ListProcessesTool struct {
 	deviceID string
 }
 
-func NewListProcesses(setup session.DeviceSetup, deviceID string) *ListProcessesTool {
+func NewListProcesses(
+	setup session.DeviceSetup,
+	deviceID string,
+) *ListProcessesTool {
 	return &ListProcessesTool{setup: setup, deviceID: deviceID}
 }
 
@@ -27,10 +30,15 @@ func (t *ListProcessesTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *ListProcessesTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *ListProcessesTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	processes, err := t.setup.ListProcesses(t.deviceID)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("failed to list processes: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("failed to list processes: %v", err),
+		), nil
 	}
 
 	if len(processes) == 0 {

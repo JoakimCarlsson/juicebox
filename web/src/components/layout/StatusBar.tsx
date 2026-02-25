@@ -1,5 +1,5 @@
-import { useAppStatus } from "@/contexts/AppStatusContext"
-import { cn } from "@/lib/utils"
+import { useAppStatus } from '@/contexts/AppStatusContext'
+import { cn } from '@/lib/utils'
 
 export function StatusBar() {
   const { status } = useAppStatus()
@@ -9,20 +9,16 @@ export function StatusBar() {
       <div className="flex items-center gap-1.5">
         <div
           className={cn(
-            "h-2 w-2 rounded-full",
+            'h-2 w-2 rounded-full',
             status.connected
-              ? "bg-green-500"
+              ? 'bg-green-500'
               : status.deviceId
-                ? "bg-red-500"
-                : "bg-muted-foreground/40",
+                ? 'bg-red-500'
+                : 'bg-muted-foreground/40'
           )}
         />
         <span className="text-muted-foreground">
-          {status.connected
-            ? "Connected"
-            : status.deviceId
-              ? "Disconnected"
-              : "No device"}
+          {status.connected ? 'Connected' : status.deviceId ? 'Disconnected' : 'No device'}
         </span>
       </div>
 

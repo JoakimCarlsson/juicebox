@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joho/godotenv"
 	"github.com/joakimcarlsson/ai/model"
 	llm "github.com/joakimcarlsson/ai/providers"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -53,12 +53,20 @@ func (c *LLMConfig) NewClient() (llm.LLM, error) {
 	switch provider {
 	case "openai":
 		m := resolveModel(c.Model, model.OpenAIModels, model.GPT41Mini)
-		opts = append(opts, llm.WithModel(m), llm.WithMaxTokens(m.DefaultMaxTokens))
+		opts = append(
+			opts,
+			llm.WithModel(m),
+			llm.WithMaxTokens(m.DefaultMaxTokens),
+		)
 		return llm.NewLLM(model.ProviderOpenAI, opts...)
 
 	case "anthropic":
 		m := resolveModel(c.Model, model.AnthropicModels, model.Claude45Haiku)
-		opts = append(opts, llm.WithModel(m), llm.WithMaxTokens(m.DefaultMaxTokens))
+		opts = append(
+			opts,
+			llm.WithModel(m),
+			llm.WithMaxTokens(m.DefaultMaxTokens),
+		)
 		return llm.NewLLM(model.ProviderAnthropic, opts...)
 
 	case "ollama":
@@ -75,19 +83,29 @@ func (c *LLMConfig) NewClient() (llm.LLM, error) {
 			model.WithAPIModel(modelID),
 			model.WithContextWindow(128_000),
 		)
-		ollamaProvider := llm.RegisterCustomProvider("ollama", llm.CustomProviderConfig{
-			BaseURL:      baseURL,
-			DefaultModel: ollamaModel,
-		})
+		ollamaProvider := llm.RegisterCustomProvider(
+			"ollama",
+			llm.CustomProviderConfig{
+				BaseURL:      baseURL,
+				DefaultModel: ollamaModel,
+			},
+		)
 		opts = append(opts, llm.WithMaxTokens(4096))
 		return llm.NewLLM(ollamaProvider, opts...)
 
 	default:
-		return nil, fmt.Errorf("unsupported LLM provider: %s (supported: openai, anthropic, ollama)", provider)
+		return nil, fmt.Errorf(
+			"unsupported LLM provider: %s (supported: openai, anthropic, ollama)",
+			provider,
+		)
 	}
 }
 
-func resolveModel(override string, models map[model.ModelID]model.Model, fallback model.ModelID) model.Model {
+func resolveModel(
+	override string,
+	models map[model.ModelID]model.Model,
+	fallback model.ModelID,
+) model.Model {
 	if override != "" {
 		if m, ok := models[model.ModelID(override)]; ok {
 			return m

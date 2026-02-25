@@ -1,9 +1,9 @@
-import { createRootRouteWithContext, Outlet, useLocation } from "@tanstack/react-router"
-import type { QueryClient } from "@tanstack/react-query"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { AppStatusProvider } from "@/contexts/AppStatusContext"
-import { Sidebar } from "@/components/layout/Sidebar"
-import { StatusBar } from "@/components/layout/StatusBar"
+import { createRootRouteWithContext, Outlet, useLocation } from '@tanstack/react-router'
+import type { QueryClient } from '@tanstack/react-query'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { AppStatusProvider } from '@/contexts/AppStatusContext'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { StatusBar } from '@/components/layout/StatusBar'
 
 interface RouterContext {
   queryClient: QueryClient
@@ -15,7 +15,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootLayout() {
   const location = useLocation()
-  const hideSidebar = location.pathname.includes("/app/")
+  const hideSidebar = location.pathname.includes('/app/')
 
   return (
     <AppStatusProvider>

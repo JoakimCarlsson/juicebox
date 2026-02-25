@@ -11,7 +11,10 @@ export async function getFridaVersion(): Promise<string> {
     "node_modules/.deno/frida@*/node_modules/frida/package.json",
   );
   const glob = new Deno.Command("sh", {
-    args: ["-c", `cat ${pkgPath} 2>/dev/null || cat node_modules/frida/package.json`],
+    args: [
+      "-c",
+      `cat ${pkgPath} 2>/dev/null || cat node_modules/frida/package.json`,
+    ],
     stdout: "piped",
     stderr: "piped",
     cwd: SIDECAR_ROOT,
@@ -22,7 +25,13 @@ export async function getFridaVersion(): Promise<string> {
 }
 
 export async function isFridaServerRunning(deviceId: string): Promise<boolean> {
-  const { stdout } = await exec(["adb", "-s", deviceId, "shell", "ps -A | grep frida-server"]);
+  const { stdout } = await exec([
+    "adb",
+    "-s",
+    deviceId,
+    "shell",
+    "ps -A | grep frida-server",
+  ]);
   return stdout.includes("frida-server");
 }
 
@@ -31,7 +40,13 @@ export async function ensureFridaServer(deviceId: string): Promise<void> {
 
   console.log(`frida-server not running on ${deviceId}, installing...`);
 
-  const { stdout: abi } = await exec(["adb", "-s", deviceId, "shell", "getprop ro.product.cpu.abi"]);
+  const { stdout: abi } = await exec([
+    "adb",
+    "-s",
+    deviceId,
+    "shell",
+    "getprop ro.product.cpu.abi",
+  ]);
   const archMap: Record<string, string> = {
     "arm64-v8a": "arm64",
     "armeabi-v7a": "arm",
@@ -49,11 +64,16 @@ export async function ensureFridaServer(deviceId: string): Promise<void> {
   } catch {
     await Deno.mkdir(BIN_DIR, { recursive: true });
 
-    const url = `https://github.com/frida/frida/releases/download/${version}/${binName}.xz`;
+    const url =
+      `https://github.com/frida/frida/releases/download/${version}/${binName}.xz`;
     console.log(`downloading ${url}`);
 
     const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`failed to download frida-server: ${resp.status} from ${url}`);
+    if (!resp.ok) {
+      throw new Error(
+        `failed to download frida-server: ${resp.status} from ${url}`,
+      );
+    }
 
     const xzData = new Uint8Array(await resp.arrayBuffer());
     const tmpXz = `${localBin}.xz`;
@@ -66,10 +86,23 @@ export async function ensureFridaServer(deviceId: string): Promise<void> {
   }
 
   console.log("pushing frida-server to device...");
-  const push = await exec(["adb", "-s", deviceId, "push", localBin, DEVICE_SERVER_PATH]);
+  const push = await exec([
+    "adb",
+    "-s",
+    deviceId,
+    "push",
+    localBin,
+    DEVICE_SERVER_PATH,
+  ]);
   if (push.code !== 0) throw new Error(`adb push failed: ${push.stderr}`);
 
-  await exec(["adb", "-s", deviceId, "shell", `chmod 755 ${DEVICE_SERVER_PATH}`]);
+  await exec([
+    "adb",
+    "-s",
+    deviceId,
+    "shell",
+    `chmod 755 ${DEVICE_SERVER_PATH}`,
+  ]);
 
   await exec(["adb", "-s", deviceId, "root"]);
   await new Promise((r) => setTimeout(r, 1000));

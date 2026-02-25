@@ -117,7 +117,13 @@ func (cm *CertManager) generateCA(certPath, keyPath string) error {
 		MaxPathLen:            0,
 	}
 
-	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	certDER, err := x509.CreateCertificate(
+		rand.Reader,
+		tmpl,
+		tmpl,
+		&key.PublicKey,
+		key,
+	)
 	if err != nil {
 		return fmt.Errorf("certmanager: create ca cert: %w", err)
 	}
@@ -127,13 +133,17 @@ func (cm *CertManager) generateCA(certPath, keyPath string) error {
 		return fmt.Errorf("certmanager: parse generated ca: %w", err)
 	}
 
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	certPEM := pem.EncodeToMemory(
+		&pem.Block{Type: "CERTIFICATE", Bytes: certDER},
+	)
 
 	keyDER, err := x509.MarshalECPrivateKey(key)
 	if err != nil {
 		return fmt.Errorf("certmanager: marshal ca key: %w", err)
 	}
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	keyPEM := pem.EncodeToMemory(
+		&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER},
+	)
 
 	if err := os.WriteFile(certPath, certPEM, 0o644); err != nil {
 		return fmt.Errorf("certmanager: write ca cert: %w", err)
@@ -177,7 +187,13 @@ func (cm *CertManager) GetCert(hostname string) (*tls.Certificate, error) {
 		},
 	}
 
-	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, cm.caCert, &key.PublicKey, cm.caKey)
+	certDER, err := x509.CreateCertificate(
+		rand.Reader,
+		tmpl,
+		cm.caCert,
+		&key.PublicKey,
+		cm.caKey,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("certmanager: create leaf cert: %w", err)
 	}

@@ -61,29 +61,30 @@ func ParseEditBlocks(content string) []EditBlock {
 				break
 			}
 
-		i++
-		var replaceLines []string
-		for i < len(lines) {
-			stripped := strings.TrimRight(lines[i], "\r\n")
-			if updatedPattern.MatchString(stripped) {
+			i++
+			var replaceLines []string
+			for i < len(lines) {
+				stripped := strings.TrimRight(lines[i], "\r\n")
+				if updatedPattern.MatchString(stripped) {
+					break
+				}
+				replaceLines = append(replaceLines, lines[i])
+				i++
+			}
+
+			complete := i < len(lines) &&
+				updatedPattern.MatchString(strings.TrimRight(lines[i], "\r\n"))
+			if !complete {
 				break
 			}
-			replaceLines = append(replaceLines, lines[i])
 			i++
-		}
 
-		complete := i < len(lines) && updatedPattern.MatchString(strings.TrimRight(lines[i], "\r\n"))
-		if !complete {
-			break
-		}
-		i++
-
-		blocks = append(blocks, EditBlock{
-			Filename: currentFilename,
-			Search:   joinLines(searchLines),
-			Replace:  joinLines(replaceLines),
-		})
-		continue
+			blocks = append(blocks, EditBlock{
+				Filename: currentFilename,
+				Search:   joinLines(searchLines),
+				Replace:  joinLines(replaceLines),
+			})
+			continue
 		}
 
 		if fenceOpen.MatchString(line) {
@@ -92,7 +93,9 @@ func ParseEditBlocks(content string) []EditBlock {
 				bodyStart := i + 1
 				j := bodyStart
 				for j < len(lines) {
-					if fenceClose.MatchString(strings.TrimRight(lines[j], "\r\n")) {
+					if fenceClose.MatchString(
+						strings.TrimRight(lines[j], "\r\n"),
+					) {
 						break
 					}
 					j++
@@ -138,7 +141,9 @@ func findFilename(lines []string, headIdx int) string {
 		if strings.HasPrefix(line, "```") {
 			lang := strings.TrimPrefix(line, "```")
 			lang = strings.TrimSpace(lang)
-			if lang != "" && !strings.Contains(lang, " ") && !strings.Contains(lang, "/") && !strings.Contains(lang, ".") {
+			if lang != "" && !strings.Contains(lang, " ") &&
+				!strings.Contains(lang, "/") &&
+				!strings.Contains(lang, ".") {
 				continue
 			}
 			if strings.Contains(lang, ".") || strings.Contains(lang, "/") {

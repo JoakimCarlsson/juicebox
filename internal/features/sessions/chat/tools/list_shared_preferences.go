@@ -16,7 +16,10 @@ type ListSharedPreferencesTool struct {
 	sessionID string
 }
 
-func NewListSharedPreferences(manager *session.Manager, sessionID string) *ListSharedPreferencesTool {
+func NewListSharedPreferences(
+	manager *session.Manager,
+	sessionID string,
+) *ListSharedPreferencesTool {
 	return &ListSharedPreferencesTool{manager: manager, sessionID: sessionID}
 }
 
@@ -28,15 +31,27 @@ func (t *ListSharedPreferencesTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *ListSharedPreferencesTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
-	raw, err := t.manager.AgentInvoke(t.sessionID, "sharedprefs", "enumerate", []any{})
+func (t *ListSharedPreferencesTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
+	raw, err := t.manager.AgentInvoke(
+		t.sessionID,
+		"sharedprefs",
+		"enumerate",
+		[]any{},
+	)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("failed to enumerate shared preferences: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("failed to enumerate shared preferences: %v", err),
+		), nil
 	}
 
 	var files []json.RawMessage
 	if err := json.Unmarshal(raw, &files); err != nil {
-		return tool.NewTextErrorResponse("failed to parse shared preferences"), nil
+		return tool.NewTextErrorResponse(
+			"failed to parse shared preferences",
+		), nil
 	}
 
 	if len(files) == 0 {

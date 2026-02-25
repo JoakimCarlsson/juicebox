@@ -1,13 +1,7 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useRef,
-  useState,
-} from "react"
-import type { PanelImperativeHandle } from "react-resizable-panels"
+import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import type { PanelImperativeHandle } from 'react-resizable-panels'
 
-export type PanelTab = "console" | "problems" | "output"
+export type PanelTab = 'console' | 'problems' | 'output'
 
 interface BottomPanelContextValue {
   isOpen: boolean
@@ -22,13 +16,9 @@ interface BottomPanelContextValue {
 
 const BottomPanelContext = createContext<BottomPanelContextValue | null>(null)
 
-export function BottomPanelProvider({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export function BottomPanelProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(true)
-  const [activeTab, setActiveTab] = useState<PanelTab>("console")
+  const [activeTab, setActiveTab] = useState<PanelTab>('console')
   const panelRef = useRef<PanelImperativeHandle | null>(null)
   const lastExpandedSize = useRef(25)
 
@@ -83,7 +73,6 @@ export function BottomPanelProvider({
 
 export function useBottomPanel() {
   const ctx = useContext(BottomPanelContext)
-  if (!ctx)
-    throw new Error("useBottomPanel must be used within BottomPanelProvider")
+  if (!ctx) throw new Error('useBottomPanel must be used within BottomPanelProvider')
   return ctx
 }

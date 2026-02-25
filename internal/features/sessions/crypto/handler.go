@@ -90,7 +90,12 @@ func (h *Handler) SharedPrefs(c *router.Context) {
 		return
 	}
 
-	raw, err := h.manager.AgentInvoke(sessionID, "sharedprefs", "enumerate", []any{})
+	raw, err := h.manager.AgentInvoke(
+		sessionID,
+		"sharedprefs",
+		"enumerate",
+		[]any{},
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -98,7 +103,11 @@ func (h *Handler) SharedPrefs(c *router.Context) {
 
 	var files []json.RawMessage
 	if err := json.Unmarshal(raw, &files); err != nil {
-		response.Error(c, http.StatusInternalServerError, "failed to parse shared preferences")
+		response.Error(
+			c,
+			http.StatusInternalServerError,
+			"failed to parse shared preferences",
+		)
 		return
 	}
 
@@ -117,7 +126,12 @@ func (h *Handler) Keystore(c *router.Context) {
 		return
 	}
 
-	raw, err := h.manager.AgentInvoke(sessionID, "keystore", "enumerate", []any{})
+	raw, err := h.manager.AgentInvoke(
+		sessionID,
+		"keystore",
+		"enumerate",
+		[]any{},
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -125,7 +139,11 @@ func (h *Handler) Keystore(c *router.Context) {
 
 	var entries []json.RawMessage
 	if err := json.Unmarshal(raw, &entries); err != nil {
-		response.Error(c, http.StatusInternalServerError, "failed to parse keystore entries")
+		response.Error(
+			c,
+			http.StatusInternalServerError,
+			"failed to parse keystore entries",
+		)
 		return
 	}
 

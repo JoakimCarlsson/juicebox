@@ -15,7 +15,10 @@ type ApplyResult struct {
 	Failed  []EditResult
 }
 
-func ApplyEdits(blocks []EditBlock, getContent func(filename string) (string, bool)) ApplyResult {
+func ApplyEdits(
+	blocks []EditBlock,
+	getContent func(filename string) (string, bool),
+) ApplyResult {
 	var result ApplyResult
 	overlay := make(map[string]string)
 
@@ -109,7 +112,9 @@ func whitespaceFlexibleReplace(content, search, replace string) string {
 
 	minLeading := -1
 	for _, l := range searchLeading {
-		if strings.TrimSpace(searchStripped[searchLeading_indexOf(searchLeading, l)]) == "" {
+		if strings.TrimSpace(
+			searchStripped[searchLeading_indexOf(searchLeading, l)],
+		) == "" {
 			continue
 		}
 		if minLeading == -1 || len(l) < minLeading {
@@ -123,7 +128,10 @@ func whitespaceFlexibleReplace(content, search, replace string) string {
 	numSearch := len(searchLines)
 
 	for i := 0; i <= len(contentLines)-numSearch; i++ {
-		addLeading := matchIgnoringLeadingWhitespace(contentLines[i:i+numSearch], searchStripped)
+		addLeading := matchIgnoringLeadingWhitespace(
+			contentLines[i:i+numSearch],
+			searchStripped,
+		)
 		if addLeading == "" && i <= len(contentLines)-numSearch {
 			continue
 		}
@@ -141,7 +149,11 @@ func whitespaceFlexibleReplace(content, search, replace string) string {
 			}
 		}
 
-		result := make([]string, 0, len(contentLines)-numSearch+len(adjustedReplace))
+		result := make(
+			[]string,
+			0,
+			len(contentLines)-numSearch+len(adjustedReplace),
+		)
 		result = append(result, contentLines[:i]...)
 		result = append(result, adjustedReplace...)
 		result = append(result, contentLines[i+numSearch:]...)
@@ -160,7 +172,9 @@ func searchLeading_indexOf(slice []string, target string) int {
 	return 0
 }
 
-func matchIgnoringLeadingWhitespace(contentChunk, searchStripped []string) string {
+func matchIgnoringLeadingWhitespace(
+	contentChunk, searchStripped []string,
+) string {
 	if len(contentChunk) != len(searchStripped) {
 		return ""
 	}

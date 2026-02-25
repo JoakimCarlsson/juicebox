@@ -35,7 +35,12 @@ func (h *Handler) Handle(c *router.Context) {
 	var err error
 
 	if bundleID != "" {
-		sessions, err = h.db.ListSessionsByBundle(deviceID, bundleID, limit, offset)
+		sessions, err = h.db.ListSessionsByBundle(
+			deviceID,
+			bundleID,
+			limit,
+			offset,
+		)
 		if err != nil {
 			response.Error(c, http.StatusInternalServerError, err.Error())
 			return
@@ -87,7 +92,8 @@ func capabilitiesFor(mgr *session.Manager, row db.SessionRow) []string {
 		return sess.Setup.Capabilities()
 	}
 	var caps []string
-	if err := json.Unmarshal([]byte(row.Capabilities), &caps); err == nil && len(caps) > 0 {
+	if err := json.Unmarshal([]byte(row.Capabilities), &caps); err == nil &&
+		len(caps) > 0 {
 		return caps
 	}
 	return []string{}

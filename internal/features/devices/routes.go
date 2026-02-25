@@ -13,7 +13,12 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
-func RegisterRoutes(r *router.Router, client *bridge.Client, hubManager *devicehub.Manager, sessionManager *session.Manager) {
+func RegisterRoutes(
+	r *router.Router,
+	client *bridge.Client,
+	hubManager *devicehub.Manager,
+	sessionManager *session.Manager,
+) {
 	listHandler := list.NewHandler(client)
 	appsHandler := apps.NewHandler(client)
 	infoHandler := info.NewHandler(client)

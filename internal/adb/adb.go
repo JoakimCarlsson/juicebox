@@ -13,7 +13,12 @@ func run(args ...string) error {
 	cmd := exec.Command("adb", args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("adb %s: %s: %w", strings.Join(args, " "), string(out), err)
+		return fmt.Errorf(
+			"adb %s: %s: %w",
+			strings.Join(args, " "),
+			string(out),
+			err,
+		)
 	}
 	return nil
 }
@@ -23,7 +28,10 @@ func shell(deviceID string, command string) error {
 }
 
 func SetProxy(deviceID string, host string, port int) error {
-	return shell(deviceID, fmt.Sprintf("settings put global http_proxy %s:%d", host, port))
+	return shell(
+		deviceID,
+		fmt.Sprintf("settings put global http_proxy %s:%d", host, port),
+	)
 }
 
 func ClearProxy(deviceID string) error {
@@ -31,11 +39,23 @@ func ClearProxy(deviceID string) error {
 }
 
 func ReversePort(deviceID string, remotePort, localPort int) error {
-	return run("-s", deviceID, "reverse", fmt.Sprintf("tcp:%d", remotePort), fmt.Sprintf("tcp:%d", localPort))
+	return run(
+		"-s",
+		deviceID,
+		"reverse",
+		fmt.Sprintf("tcp:%d", remotePort),
+		fmt.Sprintf("tcp:%d", localPort),
+	)
 }
 
 func RemoveReverse(deviceID string, remotePort int) error {
-	return run("-s", deviceID, "reverse", "--remove", fmt.Sprintf("tcp:%d", remotePort))
+	return run(
+		"-s",
+		deviceID,
+		"reverse",
+		"--remove",
+		fmt.Sprintf("tcp:%d", remotePort),
+	)
 }
 
 func InstallCACert(deviceID string, pemPath string) error {
@@ -156,7 +176,16 @@ func RemoveCACert(deviceID string, pemPath string) error {
 }
 
 func certSubjectHash(pemPath string) (string, error) {
-	cmd := exec.Command("openssl", "x509", "-inform", "PEM", "-subject_hash_old", "-noout", "-in", pemPath)
+	cmd := exec.Command(
+		"openssl",
+		"x509",
+		"-inform",
+		"PEM",
+		"-subject_hash_old",
+		"-noout",
+		"-in",
+		pemPath,
+	)
 	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("adb: openssl subject_hash_old: %w", err)

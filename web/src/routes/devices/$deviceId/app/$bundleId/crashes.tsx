@@ -1,36 +1,42 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router"
-import { useCallback, useMemo, useState } from "react"
-import { AlertTriangle, Download, ChevronDown, ChevronRight, Cpu, Coffee, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { useSessionMessages } from "@/contexts/SessionMessageContext"
-import type { CrashEvent } from "@/types/session"
-import { cn } from "@/lib/utils"
-import { NoSessionEmptyState } from "@/components/sessions/NoSessionEmptyState"
+import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { useCallback, useMemo, useState } from 'react'
+import {
+  AlertTriangle,
+  Download,
+  ChevronDown,
+  ChevronRight,
+  Cpu,
+  Coffee,
+  Trash2,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import type { CrashEvent } from '@/types/session'
+import { cn } from '@/lib/utils'
+import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
 
-export const Route = createFileRoute(
-  "/devices/$deviceId/app/$bundleId/crashes",
-)({
+export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/crashes')({
   validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? "",
+    sessionId: (search.sessionId as string) ?? '',
   }),
   component: CrashesPage,
 })
 
 function formatTimestamp(ts: number): string {
   return new Date(ts).toLocaleString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
     fractionalSecondDigits: 3,
-    month: "short",
-    day: "numeric",
+    month: 'short',
+    day: 'numeric',
   })
 }
 
 function CrashesPage() {
   const { sessionId } = useSearch({
-    from: "/devices/$deviceId/app/$bundleId/crashes",
+    from: '/devices/$deviceId/app/$bundleId/crashes',
   })
   const { messages } = useSessionMessages()
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -41,19 +47,16 @@ function CrashesPage() {
   const crashes = useMemo(() => {
     return messages
       .slice(clearIndex)
-      .filter(
-        (m): m is { type: "crash"; payload: CrashEvent } =>
-          m.type === "crash" && !!m.payload,
-      )
+      .filter((m): m is { type: 'crash'; payload: CrashEvent } => m.type === 'crash' && !!m.payload)
       .map((m) => m.payload as unknown as CrashEvent)
       .reverse()
   }, [messages, clearIndex])
 
   const exportCrashes = useCallback(() => {
     const data = JSON.stringify(crashes, null, 2)
-    const blob = new Blob([data], { type: "application/json" })
+    const blob = new Blob([data], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
+    const a = document.createElement('a')
     a.href = url
     a.download = `crashes-${sessionId}-${Date.now()}.json`
     a.click()
@@ -62,9 +65,9 @@ function CrashesPage() {
 
   const exportSingle = useCallback((crash: CrashEvent) => {
     const data = JSON.stringify(crash, null, 2)
-    const blob = new Blob([data], { type: "application/json" })
+    const blob = new Blob([data], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
+    const a = document.createElement('a')
     a.href = url
     a.download = `crash-${crash.id}.json`
     a.click()
@@ -79,7 +82,7 @@ function CrashesPage() {
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">
         <span className="text-xs text-muted-foreground">
-          {crashes.length} crash{crashes.length !== 1 ? "es" : ""}
+          {crashes.length} crash{crashes.length !== 1 ? 'es' : ''}
         </span>
         <div className="ml-auto flex items-center gap-1">
           <Button variant="ghost" size="sm" className="h-8" onClick={clear}>
@@ -108,14 +111,14 @@ function CrashesPage() {
           <div className="divide-y divide-border">
             {crashes.map((crash) => {
               const isExpanded = expandedId === crash.id
-              const isNative = crash.crashType === "native"
+              const isNative = crash.crashType === 'native'
               return (
                 <div key={crash.id} className="group">
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : crash.id)}
                     className={cn(
-                      "w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-muted/50 transition-colors",
-                      isExpanded && "bg-muted/30",
+                      'w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-muted/50 transition-colors',
+                      isExpanded && 'bg-muted/30'
                     )}
                   >
                     <div className="mt-0.5">
@@ -129,7 +132,7 @@ function CrashesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <Badge
-                          variant={isNative ? "destructive" : "secondary"}
+                          variant={isNative ? 'destructive' : 'secondary'}
                           className="text-[10px] px-1.5 py-0"
                         >
                           {isNative ? (
@@ -137,10 +140,13 @@ function CrashesPage() {
                           ) : (
                             <Coffee className="mr-1 h-2.5 w-2.5" />
                           )}
-                          {isNative ? "NATIVE" : "JAVA"}
+                          {isNative ? 'NATIVE' : 'JAVA'}
                         </Badge>
                         {crash.signal && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono text-red-600 dark:text-red-400">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 font-mono text-red-600 dark:text-red-400"
+                          >
                             {crash.signal}
                           </Badge>
                         )}
@@ -156,15 +162,13 @@ function CrashesPage() {
 
                       <p className="text-xs text-muted-foreground truncate font-mono">
                         {isNative
-                          ? crash.backtrace?.[0] ?? `Crash at ${crash.address ?? "unknown"}`
-                          : crash.exceptionMessage ?? "Uncaught exception"}
+                          ? (crash.backtrace?.[0] ?? `Crash at ${crash.address ?? 'unknown'}`)
+                          : (crash.exceptionMessage ?? 'Uncaught exception')}
                       </p>
                     </div>
                   </button>
 
-                  {isExpanded && (
-                    <CrashDetail crash={crash} onExport={exportSingle} />
-                  )}
+                  {isExpanded && <CrashDetail crash={crash} onExport={exportSingle} />}
                 </div>
               )
             })}
@@ -182,7 +186,7 @@ function CrashDetail({
   crash: CrashEvent
   onExport: (crash: CrashEvent) => void
 }) {
-  const isNative = crash.crashType === "native"
+  const isNative = crash.crashType === 'native'
 
   return (
     <div className="px-4 pb-4 pl-11 space-y-3">
@@ -242,9 +246,7 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
       <h4 className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1.5">
         {title}
       </h4>
-      <div className="rounded-md border border-border bg-muted/30 p-3">
-        {children}
-      </div>
+      <div className="rounded-md border border-border bg-muted/30 p-3">{children}</div>
     </div>
   )
 }

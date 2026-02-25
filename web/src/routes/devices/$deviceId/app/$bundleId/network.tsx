@@ -1,35 +1,29 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Search, Trash2, Wifi, Pause, FastForward } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable"
-import { useSessionMessages } from "@/contexts/SessionMessageContext"
-import { useIntercept } from "@/contexts/InterceptContext"
-import type { HttpMessage } from "@/types/session"
-import { RequestList } from "@/components/network/RequestList"
-import { RequestDetail } from "@/components/network/RequestDetail"
-import { PendingRequestEditor } from "@/components/network/PendingRequestEditor"
-import { NoSessionEmptyState } from "@/components/sessions/NoSessionEmptyState"
-import { cn } from "@/lib/utils"
+import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Search, Trash2, Wifi, Pause, FastForward } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
+import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import { useIntercept } from '@/contexts/InterceptContext'
+import type { HttpMessage } from '@/types/session'
+import { RequestList } from '@/components/network/RequestList'
+import { RequestDetail } from '@/components/network/RequestDetail'
+import { PendingRequestEditor } from '@/components/network/PendingRequestEditor'
+import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
+import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute(
-  "/devices/$deviceId/app/$bundleId/network",
-)({
+export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/network')({
   validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? "",
+    sessionId: (search.sessionId as string) ?? '',
   }),
   component: NetworkPage,
 })
 
 function NetworkPage() {
   const { sessionId } = useSearch({
-    from: "/devices/$deviceId/app/$bundleId/network",
+    from: '/devices/$deviceId/app/$bundleId/network',
   })
   const { messages } = useSessionMessages()
   const {
@@ -39,7 +33,7 @@ function NetworkPage() {
     sendDecision,
     forwardAll,
   } = useIntercept()
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [clearIndex, setClearIndex] = useState(0)
 
@@ -48,10 +42,7 @@ function NetworkPage() {
   const httpMessages = useMemo(() => {
     return messages
       .slice(clearIndex)
-      .filter(
-        (m): m is { type: "http"; payload: HttpMessage } =>
-          m.type === "http" && !!m.payload,
-      )
+      .filter((m): m is { type: 'http'; payload: HttpMessage } => m.type === 'http' && !!m.payload)
       .map((m) => m.payload as unknown as HttpMessage)
   }, [messages, clearIndex])
 
@@ -62,7 +53,7 @@ function NetworkPage() {
       (m) =>
         m.url.toLowerCase().includes(q) ||
         m.method.toLowerCase().includes(q) ||
-        String(m.statusCode).includes(q),
+        String(m.statusCode).includes(q)
     )
   }, [httpMessages, search])
 
@@ -75,10 +66,10 @@ function NetworkPage() {
       requestBody: p.body,
       requestBodyEncoding: p.bodyEncoding,
       requestBodySize: 0,
-      statusCode: p.phase === "response" ? (p.statusCode ?? 0) : 0,
-      responseHeaders: p.phase === "response" ? (p.responseHeaders ?? {}) : {},
-      responseBody: p.phase === "response" ? p.responseBody : undefined,
-      responseBodyEncoding: p.phase === "response" ? p.responseBodyEncoding : undefined,
+      statusCode: p.phase === 'response' ? (p.statusCode ?? 0) : 0,
+      responseHeaders: p.phase === 'response' ? (p.responseHeaders ?? {}) : {},
+      responseBody: p.phase === 'response' ? p.responseBody : undefined,
+      responseBodyEncoding: p.phase === 'response' ? p.responseBodyEncoding : undefined,
       timestamp: p.timestamp,
     }))
   }, [pendingRequests])
@@ -87,10 +78,7 @@ function NetworkPage() {
     return [...filtered, ...pendingAsHttp]
   }, [filtered, pendingAsHttp])
 
-  const pendingIds = useMemo(
-    () => new Set(pendingRequests.map((p) => p.id)),
-    [pendingRequests],
-  )
+  const pendingIds = useMemo(() => new Set(pendingRequests.map((p) => p.id)), [pendingRequests])
 
   const selectedMessage = useMemo(() => {
     if (!selectedId) return null
@@ -131,13 +119,9 @@ function NetworkPage() {
         </div>
         <div className="flex items-center gap-1.5">
           <Button
-            variant={interceptEnabled ? "default" : "ghost"}
+            variant={interceptEnabled ? 'default' : 'ghost'}
             size="sm"
-            className={cn(
-              "h-8",
-              interceptEnabled &&
-                "bg-amber-600 hover:bg-amber-700 text-white",
-            )}
+            className={cn('h-8', interceptEnabled && 'bg-amber-600 hover:bg-amber-700 text-white')}
             onClick={() => toggleIntercept(!interceptEnabled)}
           >
             <Pause className="mr-1.5 h-3 w-3" />
@@ -148,12 +132,7 @@ function NetworkPage() {
               <Badge variant="destructive" className="text-[10px] tabular-nums">
                 {pendingRequests.length}
               </Badge>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8"
-                onClick={forwardAll}
-              >
+              <Button variant="ghost" size="sm" className="h-8" onClick={forwardAll}>
                 <FastForward className="mr-1.5 h-3 w-3" />
                 Forward All
               </Button>
@@ -165,7 +144,7 @@ function NetworkPage() {
           Clear
         </Button>
         <span className="text-xs text-muted-foreground ml-auto tabular-nums">
-          {allMessages.length} request{allMessages.length !== 1 ? "s" : ""}
+          {allMessages.length} request{allMessages.length !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -175,8 +154,8 @@ function NetworkPage() {
             <Wifi className="h-8 w-8 opacity-30" />
             <p className="text-sm">
               {httpMessages.length === 0
-                ? "Waiting for network requests..."
-                : "No requests match your filter"}
+                ? 'Waiting for network requests...'
+                : 'No requests match your filter'}
             </p>
           </div>
         ) : (
@@ -192,10 +171,7 @@ function NetworkPage() {
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={60} minSize={30}>
               {selectedPending ? (
-                <PendingRequestEditor
-                  pending={selectedPending}
-                  onDecision={sendDecision}
-                />
+                <PendingRequestEditor pending={selectedPending} onDecision={sendDecision} />
               ) : (
                 <RequestDetail message={selectedMessage} />
               )}

@@ -1,71 +1,86 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Search, Trash2, Lock, Shield, ShieldAlert, ShieldCheck, ShieldX, Key, RefreshCw, ChevronDown, ChevronRight, FileKey, Copy, Check, FileText, LockKeyhole } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useSessionMessages } from "@/contexts/SessionMessageContext"
-import type { CryptoEvent, KeystoreEntry, SharedPrefsFile } from "@/types/session"
-import { enableCryptoHooks, fetchKeystoreEntries, fetchSharedPreferences } from "@/features/sessions/api"
-import { NoSessionEmptyState } from "@/components/sessions/NoSessionEmptyState"
-import { cn } from "@/lib/utils"
+  Search,
+  Trash2,
+  Lock,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldX,
+  Key,
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  FileKey,
+  Copy,
+  Check,
+  FileText,
+  LockKeyhole,
+} from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import type { CryptoEvent, KeystoreEntry, SharedPrefsFile } from '@/types/session'
+import {
+  enableCryptoHooks,
+  fetchKeystoreEntries,
+  fetchSharedPreferences,
+} from '@/features/sessions/api'
+import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
+import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute(
-  "/devices/$deviceId/app/$bundleId/crypto",
-)({
+export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/crypto')({
   validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? "",
+    sessionId: (search.sessionId as string) ?? '',
   }),
   component: CryptoPage,
 })
 
 function formatTimestamp(ts: number): string {
   return new Date(ts).toLocaleString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
     fractionalSecondDigits: 3,
-    month: "short",
-    day: "numeric",
+    month: 'short',
+    day: 'numeric',
   })
 }
 
 function hexToAscii(hex: string): string {
-  let result = ""
+  let result = ''
   for (let i = 0; i < hex.length; i += 2) {
     const code = parseInt(hex.substring(i, i + 2), 16)
-    result += code >= 32 && code < 127 ? String.fromCharCode(code) : "."
+    result += code >= 32 && code < 127 ? String.fromCharCode(code) : '.'
   }
   return result
 }
 
 function truncateHex(hex: string | null, maxLen = 64): string {
-  if (!hex) return "-"
+  if (!hex) return '-'
   if (hex.length <= maxLen) return hex
-  return hex.substring(0, maxLen) + "..."
+  return hex.substring(0, maxLen) + '...'
 }
 
 const OP_COLORS: Record<string, string> = {
-  encrypt: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-  decrypt: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
-  mac: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-  digest: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20",
-  key_derivation: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-  key_generation: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+  encrypt: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+  decrypt: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20',
+  mac: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+  digest: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+  key_derivation: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+  key_generation: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
 }
 
 function CryptoPage() {
   const { sessionId } = useSearch({
-    from: "/devices/$deviceId/app/$bundleId/crypto",
+    from: '/devices/$deviceId/app/$bundleId/crypto',
   })
   const { messages } = useSessionMessages()
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState('')
   const [clearIndex, setClearIndex] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showDecoded, setShowDecoded] = useState(false)
@@ -115,8 +130,7 @@ function CryptoPage() {
     return messages
       .slice(clearIndex)
       .filter(
-        (m): m is { type: "crypto"; payload: CryptoEvent } =>
-          m.type === "crypto" && !!m.payload,
+        (m): m is { type: 'crypto'; payload: CryptoEvent } => m.type === 'crypto' && !!m.payload
       )
       .map((m) => m.payload as unknown as CryptoEvent)
   }, [messages, clearIndex])
@@ -125,9 +139,7 @@ function CryptoPage() {
     if (!search.trim()) return cryptoEvents
     const q = search.toLowerCase()
     return cryptoEvents.filter(
-      (e) =>
-        e.algorithm.toLowerCase().includes(q) ||
-        e.operation.toLowerCase().includes(q),
+      (e) => e.algorithm.toLowerCase().includes(q) || e.operation.toLowerCase().includes(q)
     )
   }, [cryptoEvents, search])
 
@@ -157,8 +169,8 @@ function CryptoPage() {
           Clear
         </Button>
         <span className="text-xs text-muted-foreground ml-auto tabular-nums">
-          {filtered.length} event{filtered.length !== 1 ? "s" : ""}
-          {!cryptoEnabled && " (enabling hooks...)"}
+          {filtered.length} event{filtered.length !== 1 ? 's' : ''}
+          {!cryptoEnabled && ' (enabling hooks...)'}
         </span>
       </div>
 
@@ -170,18 +182,14 @@ function CryptoPage() {
                 <Lock className="h-8 w-8 opacity-30" />
                 <p className="text-sm">
                   {cryptoEvents.length === 0
-                    ? "Waiting for crypto operations..."
-                    : "No events match your filter"}
+                    ? 'Waiting for crypto operations...'
+                    : 'No events match your filter'}
                 </p>
               </div>
             ) : (
               <div className="flex h-full flex-col">
                 <div className="flex-1 min-h-0 overflow-auto">
-                  <EventList
-                    events={filtered}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                  />
+                  <EventList events={filtered} selectedId={selectedId} onSelect={setSelectedId} />
                 </div>
                 {selectedEvent && (
                   <EventDetail
@@ -222,11 +230,7 @@ function CryptoPage() {
                 />
               </TabsContent>
               <TabsContent value="sharedprefs" className="h-[calc(100%-2.5rem)] overflow-hidden">
-                <SharedPrefsPanel
-                  files={prefsFiles}
-                  loading={prefsLoading}
-                  onRefresh={loadPrefs}
-                />
+                <SharedPrefsPanel files={prefsFiles} loading={prefsLoading} onRefresh={loadPrefs} />
               </TabsContent>
             </Tabs>
           </ResizablePanel>
@@ -256,15 +260,15 @@ function EventList({
             key={event.id}
             onClick={() => onSelect(event.id)}
             className={cn(
-              "w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-muted/50 transition-colors",
-              isSelected && "bg-muted/70",
+              'w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-muted/50 transition-colors',
+              isSelected && 'bg-muted/70'
             )}
           >
             <Badge
               variant="outline"
               className={cn(
-                "text-[10px] px-1.5 py-0 font-mono shrink-0",
-                OP_COLORS[event.operation] ?? "bg-muted",
+                'text-[10px] px-1.5 py-0 font-mono shrink-0',
+                OP_COLORS[event.operation] ?? 'bg-muted'
               )}
             >
               {event.operation}
@@ -296,10 +300,7 @@ function EventDetail({
       <div className="flex items-center gap-2 mb-2">
         <Badge
           variant="outline"
-          className={cn(
-            "text-[10px] font-mono",
-            OP_COLORS[event.operation] ?? "",
-          )}
+          className={cn('text-[10px] font-mono', OP_COLORS[event.operation] ?? '')}
         >
           {event.operation}
         </Badge>
@@ -310,23 +311,15 @@ function EventDetail({
           className="h-6 text-[10px] ml-auto"
           onClick={onToggleDecoded}
         >
-          {showDecoded ? "Hex" : "Decoded"}
+          {showDecoded ? 'Hex' : 'Decoded'}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-1.5">
-        {event.key && (
-          <DataRow label="Key" hex={event.key} showDecoded={showDecoded} />
-        )}
-        {event.iv && (
-          <DataRow label="IV" hex={event.iv} showDecoded={showDecoded} />
-        )}
-        {event.input && (
-          <DataRow label="Input" hex={event.input} showDecoded={showDecoded} />
-        )}
-        {event.output && (
-          <DataRow label="Output" hex={event.output} showDecoded={showDecoded} />
-        )}
+        {event.key && <DataRow label="Key" hex={event.key} showDecoded={showDecoded} />}
+        {event.iv && <DataRow label="IV" hex={event.iv} showDecoded={showDecoded} />}
+        {event.input && <DataRow label="Input" hex={event.input} showDecoded={showDecoded} />}
+        {event.output && <DataRow label="Output" hex={event.output} showDecoded={showDecoded} />}
       </div>
     </div>
   )
@@ -368,7 +361,7 @@ function KeystorePanel({
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 px-4 py-1.5">
         <span className="text-[10px] text-muted-foreground tabular-nums">
-          {entries.length} entr{entries.length !== 1 ? "ies" : "y"}
+          {entries.length} entr{entries.length !== 1 ? 'ies' : 'y'}
         </span>
         <Button
           variant="ghost"
@@ -377,7 +370,7 @@ function KeystorePanel({
           onClick={onRefresh}
           disabled={loading}
         >
-          <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
+          <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} />
         </Button>
       </div>
 
@@ -386,7 +379,7 @@ function KeystorePanel({
           <div className="flex flex-col items-center justify-center gap-2 h-full text-muted-foreground">
             <Shield className="h-8 w-8 opacity-30" />
             <p className="text-sm">
-              {loading ? "Loading keystore..." : "No keystore entries found"}
+              {loading ? 'Loading keystore...' : 'No keystore entries found'}
             </p>
           </div>
         ) : (
@@ -398,8 +391,8 @@ function KeystorePanel({
                   <button
                     onClick={() => setExpandedAlias(isExpanded ? null : entry.alias)}
                     className={cn(
-                      "w-full text-left px-4 py-2.5 flex items-start gap-2.5 hover:bg-muted/50 transition-colors",
-                      isExpanded && "bg-muted/30",
+                      'w-full text-left px-4 py-2.5 flex items-start gap-2.5 hover:bg-muted/50 transition-colors',
+                      isExpanded && 'bg-muted/30'
                     )}
                   >
                     <div className="mt-0.5 shrink-0">
@@ -431,16 +424,17 @@ function KeystorePanel({
                             {entry.keySize}b
                           </Badge>
                         )}
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0 text-muted-foreground"
+                        >
                           {entry.entryClass}
                         </Badge>
                       </div>
                     </div>
                   </button>
 
-                  {isExpanded && (
-                    <KeystoreDetail entry={entry} />
-                  )}
+                  {isExpanded && <KeystoreDetail entry={entry} />}
                 </div>
               )
             })}
@@ -461,7 +455,7 @@ function SharedPrefsPanel({
   onRefresh: () => void
 }) {
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState('')
 
   const filteredFiles = useMemo(() => {
     if (!search.trim()) return files
@@ -470,9 +464,7 @@ function SharedPrefsPanel({
       .map((f) => ({
         ...f,
         entries: f.entries.filter(
-          (e) =>
-            e.key.toLowerCase().includes(q) ||
-            e.value.toLowerCase().includes(q),
+          (e) => e.key.toLowerCase().includes(q) || e.value.toLowerCase().includes(q)
         ),
       }))
       .filter((f) => f.entries.length > 0 || f.name.toLowerCase().includes(q))
@@ -484,7 +476,7 @@ function SharedPrefsPanel({
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 px-4 py-1.5">
         <span className="text-[10px] text-muted-foreground tabular-nums">
-          {totalEntries} entr{totalEntries !== 1 ? "ies" : "y"}
+          {totalEntries} entr{totalEntries !== 1 ? 'ies' : 'y'}
         </span>
         <Button
           variant="ghost"
@@ -493,7 +485,7 @@ function SharedPrefsPanel({
           onClick={onRefresh}
           disabled={loading}
         >
-          <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
+          <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} />
         </Button>
       </div>
 
@@ -516,7 +508,7 @@ function SharedPrefsPanel({
           <div className="flex flex-col items-center justify-center gap-2 h-full text-muted-foreground">
             <FileText className="h-8 w-8 opacity-30" />
             <p className="text-sm">
-              {loading ? "Loading preferences..." : "No SharedPreferences found"}
+              {loading ? 'Loading preferences...' : 'No SharedPreferences found'}
             </p>
           </div>
         ) : (
@@ -528,8 +520,8 @@ function SharedPrefsPanel({
                   <button
                     onClick={() => setExpandedFile(isExpanded ? null : file.name)}
                     className={cn(
-                      "w-full text-left px-4 py-2.5 flex items-start gap-2.5 hover:bg-muted/50 transition-colors",
-                      isExpanded && "bg-muted/30",
+                      'w-full text-left px-4 py-2.5 flex items-start gap-2.5 hover:bg-muted/50 transition-colors',
+                      isExpanded && 'bg-muted/30'
                     )}
                   >
                     <div className="mt-0.5 shrink-0">
@@ -552,20 +544,21 @@ function SharedPrefsPanel({
                       </div>
                       <div className="flex items-center gap-1.5">
                         {file.encrypted && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500/30 text-green-600 dark:text-green-400">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 border-green-500/30 text-green-600 dark:text-green-400"
+                          >
                             encrypted
                           </Badge>
                         )}
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {file.entries.length} entr{file.entries.length !== 1 ? "ies" : "y"}
+                          {file.entries.length} entr{file.entries.length !== 1 ? 'ies' : 'y'}
                         </Badge>
                       </div>
                     </div>
                   </button>
 
-                  {isExpanded && (
-                    <SharedPrefsEntries entries={file.entries} />
-                  )}
+                  {isExpanded && <SharedPrefsEntries entries={file.entries} />}
                 </div>
               )
             })}
@@ -576,7 +569,7 @@ function SharedPrefsPanel({
   )
 }
 
-function SharedPrefsEntries({ entries }: { entries: SharedPrefsFile["entries"] }) {
+function SharedPrefsEntries({ entries }: { entries: SharedPrefsFile['entries'] }) {
   if (entries.length === 0) {
     return (
       <div className="px-4 pb-3 pl-9">
@@ -591,9 +584,15 @@ function SharedPrefsEntries({ entries }: { entries: SharedPrefsFile["entries"] }
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-muted/50 border-b border-border">
-              <th className="text-left px-2.5 py-1.5 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Key</th>
-              <th className="text-left px-2.5 py-1.5 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Value</th>
-              <th className="text-left px-2.5 py-1.5 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-16">Type</th>
+              <th className="text-left px-2.5 py-1.5 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
+                Key
+              </th>
+              <th className="text-left px-2.5 py-1.5 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">
+                Value
+              </th>
+              <th className="text-left px-2.5 py-1.5 font-medium text-muted-foreground text-[10px] uppercase tracking-wider w-16">
+                Type
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -603,7 +602,7 @@ function SharedPrefsEntries({ entries }: { entries: SharedPrefsFile["entries"] }
                   {entry.key}
                 </td>
                 <td className="px-2.5 py-1.5 font-mono text-foreground/80 break-all max-w-[300px]">
-                  {entry.value.length > 200 ? entry.value.substring(0, 200) + "..." : entry.value}
+                  {entry.value.length > 200 ? entry.value.substring(0, 200) + '...' : entry.value}
                 </td>
                 <td className="px-2.5 py-1.5">
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
@@ -653,19 +652,21 @@ function HexBlock({ label, hex }: { label: string; hex: string }) {
           {label}
         </span>
         <button onClick={handleCopy} className="p-0.5 hover:bg-muted rounded">
-          {copied ? <Check className="h-2.5 w-2.5 text-green-500" /> : <Copy className="h-2.5 w-2.5 text-muted-foreground" />}
+          {copied ? (
+            <Check className="h-2.5 w-2.5 text-green-500" />
+          ) : (
+            <Copy className="h-2.5 w-2.5 text-muted-foreground" />
+          )}
         </button>
       </div>
       <div className="mt-1 rounded border border-border bg-muted/30 px-2 py-1.5 max-h-24 overflow-auto">
-        <p className="text-[10px] font-mono break-all text-foreground/80 select-all">
-          {hex}
-        </p>
+        <p className="text-[10px] font-mono break-all text-foreground/80 select-all">{hex}</p>
       </div>
     </div>
   )
 }
 
-function CertificateBlock({ cert }: { cert: NonNullable<KeystoreEntry["certificate"]> }) {
+function CertificateBlock({ cert }: { cert: NonNullable<KeystoreEntry['certificate']> }) {
   return (
     <div>
       <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -708,16 +709,25 @@ function KeystoreDetail({ entry }: { entry: KeystoreEntry }) {
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
         <DetailField label="Entry Class" value={entry.entryClass} />
         <DetailField label="Key Type" value={entry.keyType} />
-        <DetailField label="Key Size" value={entry.keySize > 0 ? `${entry.keySize} bits` : "unknown"} />
+        <DetailField
+          label="Key Size"
+          value={entry.keySize > 0 ? `${entry.keySize} bits` : 'unknown'}
+        />
         {entry.keyFormat && <DetailField label="Key Format" value={entry.keyFormat} />}
-        <DetailField label="Hardware Backed" value={entry.hardwareBacked ? "Yes (TEE/StrongBox)" : "No (software)"} warn={!entry.hardwareBacked} />
-        <DetailField label="Auth Required" value={entry.authRequired ? "Yes" : "No"} warn={!entry.authRequired} />
+        <DetailField
+          label="Hardware Backed"
+          value={entry.hardwareBacked ? 'Yes (TEE/StrongBox)' : 'No (software)'}
+          warn={!entry.hardwareBacked}
+        />
+        <DetailField
+          label="Auth Required"
+          value={entry.authRequired ? 'Yes' : 'No'}
+          warn={!entry.authRequired}
+        />
         {entry.authRequired && entry.authValiditySeconds > 0 && (
           <DetailField label="Auth Validity" value={`${entry.authValiditySeconds}s`} />
         )}
-        {entry.creationDate && (
-          <DetailField label="Created" value={entry.creationDate} />
-        )}
+        {entry.creationDate && <DetailField label="Created" value={entry.creationDate} />}
       </div>
 
       {entry.encodedKey && <HexBlock label="Raw Key (hex)" hex={entry.encodedKey} />}
@@ -733,21 +743,13 @@ function KeystoreDetail({ entry }: { entry: KeystoreEntry }) {
   )
 }
 
-function DetailField({
-  label,
-  value,
-  warn,
-}: {
-  label: string
-  value: string
-  warn?: boolean
-}) {
+function DetailField({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
     <div>
       <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <p className={cn("text-xs", warn ? "text-amber-600 dark:text-amber-400" : "text-foreground")}>
+      <p className={cn('text-xs', warn ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>
         {value}
       </p>
     </div>

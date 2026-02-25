@@ -1,20 +1,15 @@
-import { useCallback, useEffect, useState } from "react"
-import { useDeviceSocket } from "@/contexts/DeviceSocketContext"
-import type { DeviceEnvelope } from "@/types/session"
+import { useCallback, useEffect, useState } from 'react'
+import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
+import type { DeviceEnvelope } from '@/types/session'
 
 interface UseDeviceMessagesOptions {
   type: string
   sessionId?: string | null
 }
 
-export function useDeviceMessages<T = unknown>({
-  type,
-  sessionId,
-}: UseDeviceMessagesOptions) {
+export function useDeviceMessages<T = unknown>({ type, sessionId }: UseDeviceMessagesOptions) {
   const { subscribe, connected } = useDeviceSocket()
-  const [messages, setMessages] = useState<
-    Array<{ sessionId?: string; payload: T }>
-  >([])
+  const [messages, setMessages] = useState<Array<{ sessionId?: string; payload: T }>>([])
 
   const clear = useCallback(() => setMessages([]), [])
 

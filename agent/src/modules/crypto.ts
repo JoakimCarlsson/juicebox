@@ -58,11 +58,16 @@ function extractIvBytes(paramsObj: any): string | null {
 
 function opModeToString(mode: number): string {
   switch (mode) {
-    case 1: return "encrypt";
-    case 2: return "decrypt";
-    case 3: return "wrap";
-    case 4: return "unwrap";
-    default: return `mode_${mode}`;
+    case 1:
+      return "encrypt";
+    case 2:
+      return "decrypt";
+    case 3:
+      return "wrap";
+    case 4:
+      return "unwrap";
+    default:
+      return `mode_${mode}`;
   }
 }
 
@@ -92,7 +97,11 @@ function hookCipher(): void {
     return this.init(mode, key);
   };
 
-  Cipher.init.overload("int", "java.security.Key", "java.security.spec.AlgorithmParameterSpec").implementation = function (
+  Cipher.init.overload(
+    "int",
+    "java.security.Key",
+    "java.security.spec.AlgorithmParameterSpec",
+  ).implementation = function (
     mode: number,
     key: any,
     params: any,
@@ -107,7 +116,11 @@ function hookCipher(): void {
     return this.init(mode, key, params);
   };
 
-  Cipher.init.overload("int", "java.security.Key", "java.security.AlgorithmParameters").implementation = function (
+  Cipher.init.overload(
+    "int",
+    "java.security.Key",
+    "java.security.AlgorithmParameters",
+  ).implementation = function (
     mode: number,
     key: any,
     params: any,
@@ -194,7 +207,10 @@ function hookMac(): void {
     return this.init(key);
   };
 
-  Mac.init.overload("java.security.Key", "java.security.spec.AlgorithmParameterSpec").implementation = function (key: any, params: any) {
+  Mac.init.overload(
+    "java.security.Key",
+    "java.security.spec.AlgorithmParameterSpec",
+  ).implementation = function (key: any, params: any) {
     (this as any).__jb_key = extractKeyBytes(key);
     return this.init(key, params);
   };
@@ -279,23 +295,24 @@ function hookMessageDigest(): void {
 function hookSecretKeyFactory(): void {
   try {
     const SecretKeyFactory = Java.use("javax.crypto.SecretKeyFactory");
-    SecretKeyFactory.generateSecret.overload("java.security.spec.KeySpec").implementation = function (spec: any) {
-      const key = this.generateSecret(spec);
-      send({
-        type: "crypto",
-        payload: {
-          id: generateId(),
-          operation: "key_derivation",
-          algorithm: this.getAlgorithm(),
-          input: null,
-          output: null,
-          key: extractKeyBytes(key),
-          iv: null,
-          timestamp: Date.now(),
-        },
-      });
-      return key;
-    };
+    SecretKeyFactory.generateSecret.overload("java.security.spec.KeySpec")
+      .implementation = function (spec: any) {
+        const key = this.generateSecret(spec);
+        send({
+          type: "crypto",
+          payload: {
+            id: generateId(),
+            operation: "key_derivation",
+            algorithm: this.getAlgorithm(),
+            input: null,
+            output: null,
+            key: extractKeyBytes(key),
+            iv: null,
+            timestamp: Date.now(),
+          },
+        });
+        return key;
+      };
   } catch (_) {}
 }
 
@@ -328,11 +345,21 @@ function enable(): { enabled: boolean } {
   if (!Java.available) return { enabled: false };
 
   Java.perform(() => {
-    try { hookCipher(); } catch (_) {}
-    try { hookMac(); } catch (_) {}
-    try { hookMessageDigest(); } catch (_) {}
-    try { hookSecretKeyFactory(); } catch (_) {}
-    try { hookKeyGenerator(); } catch (_) {}
+    try {
+      hookCipher();
+    } catch (_) {}
+    try {
+      hookMac();
+    } catch (_) {}
+    try {
+      hookMessageDigest();
+    } catch (_) {}
+    try {
+      hookSecretKeyFactory();
+    } catch (_) {}
+    try {
+      hookKeyGenerator();
+    } catch (_) {}
   });
 
   _enabled = true;

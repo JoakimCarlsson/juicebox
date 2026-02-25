@@ -34,7 +34,10 @@ type Handler struct {
 	sessionManager *session.Manager
 }
 
-func NewHandler(hubManager *devicehub.Manager, sessionManager *session.Manager) *Handler {
+func NewHandler(
+	hubManager *devicehub.Manager,
+	sessionManager *session.Manager,
+) *Handler {
 	return &Handler{hubManager: hubManager, sessionManager: sessionManager}
 }
 

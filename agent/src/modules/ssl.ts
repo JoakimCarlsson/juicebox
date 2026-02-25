@@ -83,7 +83,9 @@ interface BypassNativeResult {
 }
 
 function bypassNative(): BypassNativeResult {
-  if (_nativeApplied) return { alreadyApplied: true, hookedCount: hookedModules.size };
+  if (_nativeApplied) {
+    return { alreadyApplied: true, hookedCount: hookedModules.size };
+  }
 
   for (const mod of Process.enumerateModules()) {
     if (!SSL_LIB_PATTERN.test(mod.name)) continue;
@@ -133,141 +135,141 @@ function bypassJava(): BypassJavaResult | Promise<BypassJavaResult> {
   return new Promise<BypassJavaResult>((resolve) => {
     Java.perform(() => {
       const results: BypassJavaResult = { alreadyApplied: false };
-    try {
-      const CertificatePinner = Java.use("okhttp3.CertificatePinner");
-      CertificatePinner.check.overload(
-        "java.lang.String",
-        "java.util.List",
-      ).implementation = function () {};
-
       try {
-        CertificatePinner["check$okhttp"].overload(
+        const CertificatePinner = Java.use("okhttp3.CertificatePinner");
+        CertificatePinner.check.overload(
           "java.lang.String",
           "java.util.List",
         ).implementation = function () {};
-      } catch (_) {}
 
-      results.certificatePinner = { ok: true };
-    } catch (e) {
-      results.certificatePinner = { ok: false, error: String(e) };
-    }
+        try {
+          CertificatePinner["check$okhttp"].overload(
+            "java.lang.String",
+            "java.util.List",
+          ).implementation = function () {};
+        } catch (_) {}
 
-    try {
-      const OkHostnameVerifier = Java.use(
-        "okhttp3.internal.tls.OkHostnameVerifier",
-      );
-      OkHostnameVerifier.verify.overload(
-        "java.lang.String",
-        "javax.net.ssl.SSLSession",
-      ).implementation = function (): boolean {
-        return true;
-      };
-
-      results.okHostnameVerifier = { ok: true };
-    } catch (e) {
-      results.okHostnameVerifier = { ok: false, error: String(e) };
-    }
-
-    try {
-      const X509TrustManager = Java.use("javax.net.ssl.X509TrustManager");
-      const SSLContext = Java.use("javax.net.ssl.SSLContext");
-
-      const TrustAll = Java.registerClass({
-        name: "com.juicebox.TrustAll",
-        implements: [X509TrustManager],
-        methods: {
-          checkClientTrusted() {},
-          checkServerTrusted() {},
-          getAcceptedIssuers() {
-            return [];
-          },
-        },
-      });
-      const trustAll = TrustAll.$new();
-
-      SSLContext.init.implementation = function (
-        km: any,
-        _tm: any,
-        sr: any,
-      ) {
-        this.init(km, [trustAll], sr);
-      };
-
-      results.trustManager = { ok: true };
-    } catch (e) {
-      results.trustManager = { ok: false, error: String(e) };
-    }
-
-    try {
-      const TrustManagerImpl = Java.use(
-        "com.android.org.conscrypt.TrustManagerImpl",
-      );
-
-      TrustManagerImpl.verifyChain.overload(
-        "[Ljava.security.cert.X509Certificate;",
-        "[[B",
-        "[B",
-        "java.lang.String",
-        "java.lang.String",
-        "boolean",
-      ).implementation = function (
-        untrustedChain: any,
-        _ocspResponses: any,
-        _tlsSctData: any,
-        _authType: any,
-        _host: any,
-        _clientAuth: any,
-      ): any {
-        return Java.use("java.util.Arrays").asList(untrustedChain);
-      };
-
-      results.conscrypt = { ok: true };
-    } catch (e) {
-      results.conscrypt = { ok: false, error: String(e) };
-    }
-
-    try {
-      const TrustManagerImpl = Java.use(
-        "com.android.org.conscrypt.TrustManagerImpl",
-      );
-
-      TrustManagerImpl.checkServerTrusted.overload(
-        "[Ljava.security.cert.X509Certificate;",
-        "java.lang.String",
-      ).implementation = function () {};
+        results.certificatePinner = { ok: true };
+      } catch (e) {
+        results.certificatePinner = { ok: false, error: String(e) };
+      }
 
       try {
+        const OkHostnameVerifier = Java.use(
+          "okhttp3.internal.tls.OkHostnameVerifier",
+        );
+        OkHostnameVerifier.verify.overload(
+          "java.lang.String",
+          "javax.net.ssl.SSLSession",
+        ).implementation = function (): boolean {
+          return true;
+        };
+
+        results.okHostnameVerifier = { ok: true };
+      } catch (e) {
+        results.okHostnameVerifier = { ok: false, error: String(e) };
+      }
+
+      try {
+        const X509TrustManager = Java.use("javax.net.ssl.X509TrustManager");
+        const SSLContext = Java.use("javax.net.ssl.SSLContext");
+
+        const TrustAll = Java.registerClass({
+          name: "com.juicebox.TrustAll",
+          implements: [X509TrustManager],
+          methods: {
+            checkClientTrusted() {},
+            checkServerTrusted() {},
+            getAcceptedIssuers() {
+              return [];
+            },
+          },
+        });
+        const trustAll = TrustAll.$new();
+
+        SSLContext.init.implementation = function (
+          km: any,
+          _tm: any,
+          sr: any,
+        ) {
+          this.init(km, [trustAll], sr);
+        };
+
+        results.trustManager = { ok: true };
+      } catch (e) {
+        results.trustManager = { ok: false, error: String(e) };
+      }
+
+      try {
+        const TrustManagerImpl = Java.use(
+          "com.android.org.conscrypt.TrustManagerImpl",
+        );
+
+        TrustManagerImpl.verifyChain.overload(
+          "[Ljava.security.cert.X509Certificate;",
+          "[[B",
+          "[B",
+          "java.lang.String",
+          "java.lang.String",
+          "boolean",
+        ).implementation = function (
+          untrustedChain: any,
+          _ocspResponses: any,
+          _tlsSctData: any,
+          _authType: any,
+          _host: any,
+          _clientAuth: any,
+        ): any {
+          return Java.use("java.util.Arrays").asList(untrustedChain);
+        };
+
+        results.conscrypt = { ok: true };
+      } catch (e) {
+        results.conscrypt = { ok: false, error: String(e) };
+      }
+
+      try {
+        const TrustManagerImpl = Java.use(
+          "com.android.org.conscrypt.TrustManagerImpl",
+        );
+
         TrustManagerImpl.checkServerTrusted.overload(
           "[Ljava.security.cert.X509Certificate;",
           "java.lang.String",
-          "java.lang.String",
-        ).implementation = function () {
-          return Java.use("java.util.ArrayList").$new();
-        };
+        ).implementation = function () {};
+
+        try {
+          TrustManagerImpl.checkServerTrusted.overload(
+            "[Ljava.security.cert.X509Certificate;",
+            "java.lang.String",
+            "java.lang.String",
+          ).implementation = function () {
+            return Java.use("java.util.ArrayList").$new();
+          };
+        } catch (_) {}
       } catch (_) {}
-    } catch (_) {}
 
-    try {
-      const ClassLoader = Java.use("java.lang.ClassLoader");
-      ClassLoader.loadClass.overload("java.lang.String").implementation =
-        function (name: string): any {
-          const klass = this.loadClass(name);
-          if (name === "okhttp3.CertificatePinner") {
-            try {
-              const CP = Java.use("okhttp3.CertificatePinner");
-              CP.check.overload(
-                "java.lang.String",
-                "java.util.List",
-              ).implementation = function () {};
-            } catch (_) {}
-          }
-          return klass;
-        };
+      try {
+        const ClassLoader = Java.use("java.lang.ClassLoader");
+        ClassLoader.loadClass.overload("java.lang.String").implementation =
+          function (name: string): any {
+            const klass = this.loadClass(name);
+            if (name === "okhttp3.CertificatePinner") {
+              try {
+                const CP = Java.use("okhttp3.CertificatePinner");
+                CP.check.overload(
+                  "java.lang.String",
+                  "java.util.List",
+                ).implementation = function () {};
+              } catch (_) {}
+            }
+            return klass;
+          };
 
-      results.classLoader = { ok: true };
-    } catch (e) {
-      results.classLoader = { ok: false, error: String(e) };
-    }
+        results.classLoader = { ok: true };
+      } catch (e) {
+        results.classLoader = { ok: false, error: String(e) };
+      }
 
       _javaApplied = true;
       resolve(results);

@@ -120,7 +120,10 @@ function defaults(): KeystoreEntry {
   };
 }
 
-function extractPublicKeyInfo(pubKey: any, result: Partial<KeystoreEntry>): void {
+function extractPublicKeyInfo(
+  pubKey: any,
+  result: Partial<KeystoreEntry>,
+): void {
   try {
     result.publicKey = byteArrayToHex(pubKey.getEncoded());
   } catch (_) {}
@@ -136,7 +139,8 @@ function extractPublicKeyInfo(pubKey: any, result: Partial<KeystoreEntry>): void
   try {
     const ECPublicKey = Java.use("java.security.interfaces.ECPublicKey");
     if (ECPublicKey.class.isInstance(pubKey)) {
-      result.keySize = Java.cast(pubKey, ECPublicKey).getParams().getOrder().bitLength();
+      result.keySize = Java.cast(pubKey, ECPublicKey).getParams().getOrder()
+        .bitLength();
       return;
     }
   } catch (_) {}
@@ -272,11 +276,14 @@ function enumerate(): KeystoreEntry[] | Promise<KeystoreEntry[]> {
           entry.certificate = info.certificate ?? entry.certificate;
           entry.purposes = info.purposes ?? entry.purposes;
           entry.blockModes = info.blockModes ?? entry.blockModes;
-          entry.encryptionPaddings = info.encryptionPaddings ?? entry.encryptionPaddings;
-          entry.signaturePaddings = info.signaturePaddings ?? entry.signaturePaddings;
+          entry.encryptionPaddings = info.encryptionPaddings ??
+            entry.encryptionPaddings;
+          entry.signaturePaddings = info.signaturePaddings ??
+            entry.signaturePaddings;
           entry.digests = info.digests ?? entry.digests;
           entry.authRequired = info.authRequired ?? entry.authRequired;
-          entry.authValiditySeconds = info.authValiditySeconds ?? entry.authValiditySeconds;
+          entry.authValiditySeconds = info.authValiditySeconds ??
+            entry.authValiditySeconds;
           entry.hardwareBacked = info.hardwareBacked ?? entry.hardwareBacked;
           entry.error = info.error ?? null;
 

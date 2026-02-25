@@ -1,47 +1,40 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Search, Trash2, FileText, ArrowDown } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { useSessionMessages } from "@/contexts/SessionMessageContext"
-import type { LogcatEntry } from "@/types/session"
-import { cn } from "@/lib/utils"
-import { NoSessionEmptyState } from "@/components/sessions/NoSessionEmptyState"
+import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Search, Trash2, FileText, ArrowDown } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import type { LogcatEntry } from '@/types/session'
+import { cn } from '@/lib/utils'
+import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
 
-export const Route = createFileRoute(
-  "/devices/$deviceId/app/$bundleId/logs",
-)({
+export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/logs')({
   validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? "",
+    sessionId: (search.sessionId as string) ?? '',
   }),
   component: LogsPage,
 })
 
-const LEVEL_CONFIG: Record<
-  string,
-  { color: string; bg: string }
-> = {
-  V: { color: "text-muted-foreground", bg: "" },
-  D: { color: "text-blue-600 dark:text-blue-400", bg: "" },
-  I: { color: "text-green-600 dark:text-green-400", bg: "" },
-  W: { color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/5" },
-  E: { color: "text-red-600 dark:text-red-400", bg: "bg-red-500/10" },
-  F: { color: "text-red-700 dark:text-red-300", bg: "bg-red-500/20" },
+const LEVEL_CONFIG: Record<string, { color: string; bg: string }> = {
+  V: { color: 'text-muted-foreground', bg: '' },
+  D: { color: 'text-blue-600 dark:text-blue-400', bg: '' },
+  I: { color: 'text-green-600 dark:text-green-400', bg: '' },
+  W: { color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/5' },
+  E: { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' },
+  F: { color: 'text-red-700 dark:text-red-300', bg: 'bg-red-500/20' },
 }
 
-const ALL_LEVELS = ["V", "D", "I", "W", "E", "F"] as const
+const ALL_LEVELS = ['V', 'D', 'I', 'W', 'E', 'F'] as const
 const MAX_ENTRIES = 10000
 
 function LogsPage() {
   const { sessionId } = useSearch({
-    from: "/devices/$deviceId/app/$bundleId/logs",
+    from: '/devices/$deviceId/app/$bundleId/logs',
   })
   const { messages } = useSessionMessages()
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState('')
   const [clearIndex, setClearIndex] = useState(0)
-  const [activeLevels, setActiveLevels] = useState<Set<string>>(
-    new Set(["D", "I", "W", "E", "F"]),
-  )
+  const [activeLevels, setActiveLevels] = useState<Set<string>>(new Set(['D', 'I', 'W', 'E', 'F']))
 
   const clear = useCallback(() => setClearIndex(messages.length), [messages.length])
 
@@ -49,8 +42,7 @@ function LogsPage() {
     const all = messages
       .slice(clearIndex)
       .filter(
-        (m): m is { type: "logcat"; payload: LogcatEntry } =>
-          m.type === "logcat" && !!m.payload,
+        (m): m is { type: 'logcat'; payload: LogcatEntry } => m.type === 'logcat' && !!m.payload
       )
       .map((m) => m.payload as unknown as LogcatEntry)
     return all.length > MAX_ENTRIES ? all.slice(all.length - MAX_ENTRIES) : all
@@ -61,10 +53,7 @@ function LogsPage() {
       if (!activeLevels.has(entry.level)) return false
       if (search.trim()) {
         const q = search.toLowerCase()
-        return (
-          entry.tag.toLowerCase().includes(q) ||
-          entry.message.toLowerCase().includes(q)
-        )
+        return entry.tag.toLowerCase().includes(q) || entry.message.toLowerCase().includes(q)
       }
       return true
     })
@@ -124,10 +113,10 @@ function LogsPage() {
                 key={level}
                 onClick={() => toggleLevel(level)}
                 className={cn(
-                  "px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-colors",
+                  'px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-colors',
                   isActive
-                    ? cn(config.color, "bg-muted")
-                    : "text-muted-foreground/40 hover:text-muted-foreground",
+                    ? cn(config.color, 'bg-muted')
+                    : 'text-muted-foreground/40 hover:text-muted-foreground'
                 )}
               >
                 {level}
@@ -154,7 +143,7 @@ function LogsPage() {
         </Button>
 
         <span className="text-xs text-muted-foreground ml-auto">
-          {filtered.length} log{filtered.length !== 1 ? "s" : ""}
+          {filtered.length} log{filtered.length !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -164,8 +153,8 @@ function LogsPage() {
             <FileText className="h-8 w-8 opacity-30" />
             <p className="text-sm">
               {logcatMessages.length === 0
-                ? "Waiting for log output..."
-                : "No logs match your filter"}
+                ? 'Waiting for log output...'
+                : 'No logs match your filter'}
             </p>
           </div>
         ) : (
@@ -199,33 +188,14 @@ function LogsPage() {
                   {filtered.map((entry) => {
                     const config = LEVEL_CONFIG[entry.level] ?? LEVEL_CONFIG.D
                     return (
-                      <tr
-                        key={entry.id}
-                        className={cn(
-                          "border-b border-border/50",
-                          config.bg,
-                        )}
-                      >
+                      <tr key={entry.id} className={cn('border-b border-border/50', config.bg)}>
                         <td className="px-2 py-0.5 text-muted-foreground whitespace-nowrap">
                           {entry.timestamp}
                         </td>
-                        <td
-                          className={cn(
-                            "px-2 py-0.5 font-bold",
-                            config.color,
-                          )}
-                        >
-                          {entry.level}
-                        </td>
-                        <td className="px-2 py-0.5 text-muted-foreground">
-                          {entry.tid}
-                        </td>
-                        <td className="px-2 py-0.5 truncate max-w-[200px]">
-                          {entry.tag}
-                        </td>
-                        <td className="px-2 py-0.5 break-all">
-                          {entry.message}
-                        </td>
+                        <td className={cn('px-2 py-0.5 font-bold', config.color)}>{entry.level}</td>
+                        <td className="px-2 py-0.5 text-muted-foreground">{entry.tid}</td>
+                        <td className="px-2 py-0.5 truncate max-w-[200px]">{entry.tag}</td>
+                        <td className="px-2 py-0.5 break-all">{entry.message}</td>
                       </tr>
                     )
                   })}

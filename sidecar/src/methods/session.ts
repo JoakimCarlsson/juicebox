@@ -1,12 +1,19 @@
 import frida from "frida";
 import { Buffer } from "node:buffer";
 import { resolve } from "node:path";
-import type { JsonRpcRequest, JsonRpcResponse, SessionState } from "../types.ts";
-import { sessions, generateSessionId, ok, fail, broadcast } from "../state.ts";
+import type {
+  JsonRpcRequest,
+  JsonRpcResponse,
+  SessionState,
+} from "../types.ts";
+import { broadcast, fail, generateSessionId, ok, sessions } from "../state.ts";
 import { normalizePlatform } from "../utils.ts";
 import { ensureFridaServer } from "../frida-server.ts";
 
-const AGENT_PATH = resolve(import.meta.dirname!, "../../../agent/dist/agent.js");
+const AGENT_PATH = resolve(
+  import.meta.dirname!,
+  "../../../agent/dist/agent.js",
+);
 
 export async function handleAttach(
   req: JsonRpcRequest,
@@ -51,35 +58,67 @@ export async function handleAttach(
     } else if (msg.type === "error") {
       const description = (msg as any).description ?? String(msg);
       console.error(`[${sessionId}] agent error:`, description);
-      broadcast(state, JSON.stringify({ type: "log", payload: { level: "error", source: "agent", message: description } }) + "\n");
+      broadcast(
+        state,
+        JSON.stringify({
+          type: "log",
+          payload: { level: "error", source: "agent", message: description },
+        }) + "\n",
+      );
     }
   });
 
-  session.detached.connect((reason: frida.SessionDetachReason, crash: frida.Crash | null) => {
-    const line = JSON.stringify({ type: "detached", reason, crash: crash ? { summary: crash.summary, report: crash.report } : null }) + "\n";
-    const encoded = new TextEncoder().encode(line);
-    for (const sub of state.subscribers) {
-      sub.write(encoded).catch(() => {});
-      try { sub.close(); } catch {}
-    }
-    state.subscribers.clear();
-    for (const [, us] of state.userScripts) {
-      try { us.script.unload(); } catch {}
-    }
-    state.userScripts.clear();
-    sessions.delete(sessionId);
-    console.log(`session ${sessionId} detached: reason=${reason}${crash ? ` crash=${crash.summary}` : ""}`);
-  });
+  session.detached.connect(
+    (reason: frida.SessionDetachReason, crash: frida.Crash | null) => {
+      const line = JSON.stringify({
+        type: "detached",
+        reason,
+        crash: crash ? { summary: crash.summary, report: crash.report } : null,
+      }) + "\n";
+      const encoded = new TextEncoder().encode(line);
+      for (const sub of state.subscribers) {
+        sub.write(encoded).catch(() => {});
+        try {
+          sub.close();
+        } catch {}
+      }
+      state.subscribers.clear();
+      for (const [, us] of state.userScripts) {
+        try {
+          us.script.unload();
+        } catch {}
+      }
+      state.userScripts.clear();
+      sessions.delete(sessionId);
+      console.log(
+        `session ${sessionId} detached: reason=${reason}${
+          crash ? ` crash=${crash.summary}` : ""
+        }`,
+      );
+    },
+  );
 
   await script.load();
 
   function logAgentError(label: string, err: unknown): void {
     const description = err instanceof Error ? err.message : String(err);
     console.error(`[${sessionId}] ${label}:`, err);
-    broadcast(state, JSON.stringify({ type: "log", payload: { level: "error", source: "agent", message: `${label}: ${description}` } }) + "\n");
+    broadcast(
+      state,
+      JSON.stringify({
+        type: "log",
+        payload: {
+          level: "error",
+          source: "agent",
+          message: `${label}: ${description}`,
+        },
+      }) + "\n",
+    );
   }
 
-  const evasionConfig = req.params?.evasion as Record<string, boolean> | undefined;
+  const evasionConfig = req.params?.evasion as
+    | Record<string, boolean>
+    | undefined;
 
   if (evasionConfig) {
     if (evasionConfig.frida_bypass !== false) {
@@ -125,7 +164,9 @@ export async function handleAttach(
   return ok(req.id, { sessionId, pid });
 }
 
-export async function handleDetach(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleDetach(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const sessionId = req.params?.sessionId as string;
   if (!sessionId) return fail(req.id, -32602, "missing param: sessionId");
 
@@ -133,7 +174,9 @@ export async function handleDetach(req: JsonRpcRequest): Promise<JsonRpcResponse
   if (!state) return fail(req.id, -32602, "session not found");
 
   for (const [, us] of state.userScripts) {
-    try { await us.script.unload(); } catch {}
+    try {
+      await us.script.unload();
+    } catch {}
   }
   state.userScripts.clear();
 

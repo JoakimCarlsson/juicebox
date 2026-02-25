@@ -1,6 +1,6 @@
-import { useNavigate, useParams } from "@tanstack/react-router"
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useNavigate, useParams } from '@tanstack/react-router'
+import { ArrowLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export function NoSessionEmptyState() {
   const { deviceId } = useParams({ strict: false })
@@ -14,7 +14,7 @@ export function NoSessionEmptyState() {
         size="sm"
         onClick={() =>
           navigate({
-            to: "/devices/$deviceId/apps",
+            to: '/devices/$deviceId/apps',
             params: { deviceId: deviceId! },
           })
         }

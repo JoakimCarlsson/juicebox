@@ -1,14 +1,14 @@
-import { useState, useCallback } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { FileTree } from "./FileTree"
-import { FileViewer } from "./FileViewer"
-import { findFilesQueryOptions } from "@/features/filesystem/queries"
-import type { FileEntry } from "@/features/filesystem/api"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Search, X, FolderOpen, FileText, AlertCircle, RefreshCw } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { FileTree } from './FileTree'
+import { FileViewer } from './FileViewer'
+import { findFilesQueryOptions } from '@/features/filesystem/queries'
+import type { FileEntry } from '@/features/filesystem/api'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Search, X, FolderOpen, FileText, AlertCircle, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface FileBrowserProps {
   sessionId: string
@@ -18,8 +18,8 @@ interface FileBrowserProps {
 export function FileBrowser({ sessionId, bundleId }: FileBrowserProps) {
   const rootPath = `/data/data/${bundleId}`
   const [selectedFile, setSelectedFile] = useState<FileEntry | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [activeSearch, setActiveSearch] = useState("")
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeSearch, setActiveSearch] = useState('')
   const [searchRefreshKey, setSearchRefreshKey] = useState(0)
 
   const handleSelect = useCallback((entry: FileEntry) => {
@@ -34,8 +34,8 @@ export function FileBrowser({ sessionId, bundleId }: FileBrowserProps) {
   }, [searchQuery])
 
   const clearSearch = useCallback(() => {
-    setSearchQuery("")
-    setActiveSearch("")
+    setSearchQuery('')
+    setActiveSearch('')
   }, [])
 
   return (
@@ -49,16 +49,29 @@ export function FileBrowser({ sessionId, bundleId }: FileBrowserProps) {
                 placeholder="Search files..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSearch() }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSearch()
+                }}
                 className="pl-7 h-7 text-xs"
               />
             </div>
             {activeSearch ? (
-              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={clearSearch}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={clearSearch}
+              >
                 <X className="h-3 w-3" />
               </Button>
             ) : (
-              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleSearch} disabled={!searchQuery.trim()}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={handleSearch}
+                disabled={!searchQuery.trim()}
+              >
                 <Search className="h-3 w-3" />
               </Button>
             )}
@@ -124,7 +137,9 @@ function SearchResults({
   selectedPath: string | null
   onSelect: (entry: FileEntry) => void
 }) {
-  const { data, isLoading, error, refetch } = useQuery(findFilesQueryOptions(sessionId, pattern, basePath))
+  const { data, isLoading, error, refetch } = useQuery(
+    findFilesQueryOptions(sessionId, pattern, basePath)
+  )
 
   if (isLoading) {
     return (
@@ -152,7 +167,9 @@ function SearchResults({
   if (!data?.paths.length) {
     return (
       <div className="flex flex-col items-center justify-center gap-1 p-4 text-muted-foreground">
-        <p className="text-xs">No files matching <span className="font-mono">{pattern}</span></p>
+        <p className="text-xs">
+          No files matching <span className="font-mono">{pattern}</span>
+        </p>
       </div>
     )
   }
@@ -160,29 +177,52 @@ function SearchResults({
   return (
     <div className="py-1">
       <div className="px-3 py-1">
-        <span className="text-[10px] text-muted-foreground">{data.paths.length} result{data.paths.length !== 1 ? "s" : ""}</span>
+        <span className="text-[10px] text-muted-foreground">
+          {data.paths.length} result{data.paths.length !== 1 ? 's' : ''}
+        </span>
       </div>
       {data.paths.map((filePath) => {
-        const name = filePath.split("/").pop() ?? filePath
-        const dir = filePath.slice(0, filePath.lastIndexOf("/"))
+        const name = filePath.split('/').pop() ?? filePath
+        const dir = filePath.slice(0, filePath.lastIndexOf('/'))
         const isSelected = selectedPath === filePath
         return (
           <div
             key={filePath}
             role="button"
             tabIndex={0}
-            onClick={() => onSelect({ name, path: filePath, type: "file", size: 0, permissions: "", modifiedAt: "" })}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect({ name, path: filePath, type: "file", size: 0, permissions: "", modifiedAt: "" }) }}
+            onClick={() =>
+              onSelect({
+                name,
+                path: filePath,
+                type: 'file',
+                size: 0,
+                permissions: '',
+                modifiedAt: '',
+              })
+            }
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ')
+                onSelect({
+                  name,
+                  path: filePath,
+                  type: 'file',
+                  size: 0,
+                  permissions: '',
+                  modifiedAt: '',
+                })
+            }}
             className={cn(
-              "flex flex-col px-3 py-1.5 cursor-pointer hover:bg-muted/50 transition-colors",
-              isSelected && "bg-muted",
+              'flex flex-col px-3 py-1.5 cursor-pointer hover:bg-muted/50 transition-colors',
+              isSelected && 'bg-muted'
             )}
           >
             <div className="flex items-center gap-1.5">
               <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
               <span className="text-xs font-mono truncate">{name}</span>
             </div>
-            <span className="text-[10px] text-muted-foreground/60 font-mono truncate ml-4.5">{dir}</span>
+            <span className="text-[10px] text-muted-foreground/60 font-mono truncate ml-4.5">
+              {dir}
+            </span>
           </div>
         )
       })}

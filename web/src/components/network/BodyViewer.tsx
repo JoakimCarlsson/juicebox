@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { formatBytes } from "./helpers"
+import { useEffect, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { formatBytes } from './helpers'
 
 const TEXT_TYPES = /text\/|json|xml|html|javascript|css|csv|svg|yaml|toml|plain|urlencoded/i
 
@@ -11,16 +11,13 @@ function b64ToBytes(b64: string): Uint8Array {
   return bytes
 }
 
-async function decompressBytes(
-  bytes: Uint8Array,
-  encoding: string,
-): Promise<Uint8Array> {
+async function decompressBytes(bytes: Uint8Array, encoding: string): Promise<Uint8Array> {
   let format: string | null = null
-  if (encoding === "gzip" || encoding === "x-gzip") format = "gzip"
-  else if (encoding === "deflate") format = "deflate"
+  if (encoding === 'gzip' || encoding === 'x-gzip') format = 'gzip'
+  else if (encoding === 'deflate') format = 'deflate'
   if (!format) return bytes
   try {
-    const ds = new DecompressionStream(format as "gzip" | "deflate")
+    const ds = new DecompressionStream(format as 'gzip' | 'deflate')
     const writer = ds.writable.getWriter()
     writer.write(bytes as unknown as BufferSource)
     writer.close()
@@ -48,12 +45,14 @@ async function decompressBytes(
 function useDecodedBody(
   body: string,
   headers: Record<string, string>,
-  bodyEncoding?: string,
+  bodyEncoding?: string
 ): { decoded: string | null; isImage: boolean; imageDataUri: string | null; loading: boolean } {
-  const contentType = headers["content-type"] ?? headers["Content-Type"] ?? ""
-  const contentEncoding = (headers["content-encoding"] ?? headers["Content-Encoding"] ?? "").trim().toLowerCase()
-  const mimeType = contentType.split(";")[0].trim().toLowerCase()
-  const isImage = mimeType.startsWith("image/")
+  const contentType = headers['content-type'] ?? headers['Content-Type'] ?? ''
+  const contentEncoding = (headers['content-encoding'] ?? headers['Content-Encoding'] ?? '')
+    .trim()
+    .toLowerCase()
+  const mimeType = contentType.split(';')[0].trim().toLowerCase()
+  const isImage = mimeType.startsWith('image/')
   const isText = TEXT_TYPES.test(contentType)
 
   const [decoded, setDecoded] = useState<string | null>(null)
@@ -64,7 +63,7 @@ function useDecodedBody(
     let cancelled = false
     ;(async () => {
       try {
-        if (bodyEncoding === "utf8") {
+        if (bodyEncoding === 'utf8') {
           if (cancelled) return
           if (isText || !contentType) {
             setDecoded(body)
@@ -86,7 +85,7 @@ function useDecodedBody(
           setImageDataUri(`data:${mimeType};base64,${b64}`)
           setDecoded(null)
         } else if (isText || !contentType) {
-          setDecoded(new TextDecoder("utf-8", { fatal: false }).decode(bytes))
+          setDecoded(new TextDecoder('utf-8', { fatal: false }).decode(bytes))
           setImageDataUri(null)
         } else {
           setDecoded(null)
@@ -99,73 +98,61 @@ function useDecodedBody(
         if (!cancelled) setLoading(false)
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [body, bodyEncoding, contentEncoding, isImage, isText, mimeType, contentType])
 
   return { decoded, isImage, imageDataUri, loading }
 }
 
-function JsonRenderer({
-  value,
-  indent = 0,
-}: {
-  value: unknown
-  indent?: number
-}) {
-  const pad = "  ".repeat(indent)
-  const innerPad = "  ".repeat(indent + 1)
+function JsonRenderer({ value, indent = 0 }: { value: unknown; indent?: number }) {
+  const pad = '  '.repeat(indent)
+  const innerPad = '  '.repeat(indent + 1)
 
   if (value === null) return <span className="text-orange-500">null</span>
-  if (typeof value === "boolean")
-    return <span className="text-orange-500">{String(value)}</span>
-  if (typeof value === "number")
-    return <span className="text-blue-500">{value}</span>
-  if (typeof value === "string")
-    return (
-      <span className="text-green-600 dark:text-green-400">
-        &quot;{value}&quot;
-      </span>
-    )
+  if (typeof value === 'boolean') return <span className="text-orange-500">{String(value)}</span>
+  if (typeof value === 'number') return <span className="text-blue-500">{value}</span>
+  if (typeof value === 'string')
+    return <span className="text-green-600 dark:text-green-400">&quot;{value}&quot;</span>
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return <span>{"[]"}</span>
+    if (value.length === 0) return <span>{'[]'}</span>
     return (
       <span>
-        {"[\n"}
+        {'[\n'}
         {value.map((item, i) => (
           <span key={i}>
             {innerPad}
             <JsonRenderer value={item} indent={indent + 1} />
-            {i < value.length - 1 ? "," : ""}
-            {"\n"}
+            {i < value.length - 1 ? ',' : ''}
+            {'\n'}
           </span>
         ))}
         {pad}
-        {"]"}
+        {']'}
       </span>
     )
   }
 
-  if (typeof value === "object") {
+  if (typeof value === 'object') {
     const entries = Object.entries(value as Record<string, unknown>)
-    if (entries.length === 0) return <span>{"{}"}</span>
+    if (entries.length === 0) return <span>{'{}'}</span>
     return (
       <span>
-        {"{\n"}
+        {'{\n'}
         {entries.map(([key, val], i) => (
           <span key={key}>
             {innerPad}
-            <span className="text-purple-600 dark:text-purple-400">
-              &quot;{key}&quot;
-            </span>
-            {": "}
+            <span className="text-purple-600 dark:text-purple-400">&quot;{key}&quot;</span>
+            {': '}
             <JsonRenderer value={val} indent={indent + 1} />
-            {i < entries.length - 1 ? "," : ""}
-            {"\n"}
+            {i < entries.length - 1 ? ',' : ''}
+            {'\n'}
           </span>
         ))}
         {pad}
-        {"}"}
+        {'}'}
       </span>
     )
   }
@@ -184,8 +171,8 @@ export function BodyViewer({
   size?: number
   bodyEncoding?: string
 }) {
-  const contentType = headers["content-type"] ?? headers["Content-Type"] ?? ""
-  const mimeType = contentType.split(";")[0].trim() || "unknown"
+  const contentType = headers['content-type'] ?? headers['Content-Type'] ?? ''
+  const mimeType = contentType.split(';')[0].trim() || 'unknown'
   const { decoded, isImage, imageDataUri, loading } = useDecodedBody(body, headers, bodyEncoding)
 
   if (loading) {
@@ -220,9 +207,9 @@ export function BodyViewer({
 
   if (decoded !== null) {
     if (
-      contentType.includes("json") ||
-      decoded.trimStart().startsWith("{") ||
-      decoded.trimStart().startsWith("[")
+      contentType.includes('json') ||
+      decoded.trimStart().startsWith('{') ||
+      decoded.trimStart().startsWith('[')
     ) {
       try {
         const parsed = JSON.parse(decoded)
@@ -241,8 +228,7 @@ export function BodyViewer({
             </pre>
           </div>
         )
-      } catch {
-      }
+      } catch {}
     }
 
     return (

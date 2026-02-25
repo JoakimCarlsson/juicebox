@@ -19,7 +19,10 @@ type ReadFileTool struct {
 	bundleID string
 }
 
-func NewReadFile(setup session.DeviceSetup, deviceID, bundleID string) *ReadFileTool {
+func NewReadFile(
+	setup session.DeviceSetup,
+	deviceID, bundleID string,
+) *ReadFileTool {
 	return &ReadFileTool{setup: setup, deviceID: deviceID, bundleID: bundleID}
 }
 
@@ -31,10 +34,15 @@ func (t *ReadFileTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *ReadFileTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *ReadFileTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[ReadFileParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	if input.Path == "" {
@@ -43,7 +51,9 @@ func (t *ReadFileTool) Run(ctx context.Context, params tool.ToolCall) (tool.Tool
 
 	content, err := t.setup.ReadFile(t.deviceID, t.bundleID, input.Path)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("read_file failed: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("read_file failed: %v", err),
+		), nil
 	}
 
 	type result struct {

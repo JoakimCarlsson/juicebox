@@ -1,63 +1,69 @@
-import { useRef, useEffect, useState, type KeyboardEvent } from "react"
-import { useChatPanel } from "@/contexts/ChatPanelContext"
-import type { ChatMessage as ChatMessageType, MessagePart } from "@/contexts/ChatPanelContext"
-import { UserMessage, TextBlock, ToolCallBlock, StreamingCursor } from "@/components/chat/ChatMessage"
+import { useRef, useEffect, useState, type KeyboardEvent } from 'react'
+import { useChatPanel } from '@/contexts/ChatPanelContext'
+import type { ChatMessage as ChatMessageType, MessagePart } from '@/contexts/ChatPanelContext'
+import {
+  UserMessage,
+  TextBlock,
+  ToolCallBlock,
+  StreamingCursor,
+} from '@/components/chat/ChatMessage'
 
-import { Button } from "@/components/ui/button"
-import { Send, BotMessageSquare, Settings } from "lucide-react"
+import { Button } from '@/components/ui/button'
+import { Send, BotMessageSquare, Settings } from 'lucide-react'
 
 type RenderItem =
-  | { kind: "user"; key: string; content: string }
-  | { kind: "text"; key: string; content: string; isStreaming: boolean; isLast: boolean }
-  | { kind: "tool_call"; key: string; part: Extract<MessagePart, { type: "tool_call" }> }
-  | { kind: "cursor"; key: string }
+  | { kind: 'user'; key: string; content: string }
+  | { kind: 'text'; key: string; content: string; isStreaming: boolean; isLast: boolean }
+  | { kind: 'tool_call'; key: string; part: Extract<MessagePart, { type: 'tool_call' }> }
+  | { kind: 'cursor'; key: string }
 
 function flattenMessages(messages: ChatMessageType[]): RenderItem[] {
   const items: RenderItem[] = []
   for (const msg of messages) {
-    if (msg.role === "user") {
-      items.push({ kind: "user", key: msg.id, content: msg.content })
+    if (msg.role === 'user') {
+      items.push({ kind: 'user', key: msg.id, content: msg.content })
       continue
     }
     const parts = msg.parts
     if (!parts || parts.length === 0) {
       if (msg.content) {
-        items.push({ kind: "text", key: msg.id, content: msg.content, isStreaming: false, isLast: false })
+        items.push({
+          kind: 'text',
+          key: msg.id,
+          content: msg.content,
+          isStreaming: false,
+          isLast: false,
+        })
       }
       continue
     }
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i]
       const isLast = i === parts.length - 1
-      if (part.type === "text") {
+      if (part.type === 'text') {
         if (!part.content) continue
         items.push({
-          kind: "text",
+          kind: 'text',
           key: `${msg.id}-${i}`,
           content: part.content,
           isStreaming: !!msg.isStreaming && isLast,
           isLast,
         })
       } else {
-        items.push({ kind: "tool_call", key: `${msg.id}-${part.id}`, part })
+        items.push({ kind: 'tool_call', key: `${msg.id}-${part.id}`, part })
       }
     }
-    if (msg.isStreaming && parts[parts.length - 1]?.type !== "text") {
-      items.push({ kind: "cursor", key: `${msg.id}-cursor` })
+    if (msg.isStreaming && parts[parts.length - 1]?.type !== 'text') {
+      items.push({ kind: 'cursor', key: `${msg.id}-cursor` })
     }
   }
   return items
 }
 
 export function ChatPanel() {
-  const {
-    messages,
-    isStreaming,
-    configured,
-    sendMessage,
-  } = useChatPanel()
+  const { messages, isStreaming, configured, sendMessage } = useChatPanel()
 
-  const [input, setInput] = useState("")
+  const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -71,14 +77,14 @@ export function ChatPanel() {
   function handleSend() {
     if (!input.trim() || isStreaming) return
     sendMessage(input)
-    setInput("")
+    setInput('')
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto"
+      textareaRef.current.style.height = 'auto'
     }
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
@@ -87,8 +93,8 @@ export function ChatPanel() {
   function handleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value)
     const el = e.target
-    el.style.height = "auto"
-    el.style.height = Math.min(el.scrollHeight, 120) + "px"
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
   }
 
   if (configured === false) {
@@ -125,22 +131,26 @@ export function ChatPanel() {
           <div className="flex h-full items-center justify-center p-6">
             <div className="text-center space-y-2">
               <BotMessageSquare className="h-8 w-8 text-muted-foreground mx-auto" />
-              <p className="text-sm text-muted-foreground">
-                Ask anything about this session
-              </p>
+              <p className="text-sm text-muted-foreground">Ask anything about this session</p>
             </div>
           </div>
         ) : (
           <div className="flex flex-col gap-4 p-4">
             {flattenMessages(messages).map((item) => {
               switch (item.kind) {
-                case "user":
+                case 'user':
                   return <UserMessage key={item.key} content={item.content} />
-                case "text":
-                  return <TextBlock key={item.key} content={item.content} isStreaming={item.isStreaming} />
-                case "tool_call":
+                case 'text':
+                  return (
+                    <TextBlock
+                      key={item.key}
+                      content={item.content}
+                      isStreaming={item.isStreaming}
+                    />
+                  )
+                case 'tool_call':
                   return <ToolCallBlock key={item.key} part={item.part} />
-                case "cursor":
+                case 'cursor':
                   return <StreamingCursor key={item.key} />
               }
             })}

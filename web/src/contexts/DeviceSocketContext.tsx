@@ -1,12 +1,5 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
-import type { DeviceEnvelope } from "@/types/session"
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import type { DeviceEnvelope } from '@/types/session'
 
 type Listener = (envelope: DeviceEnvelope) => void
 type Unsubscribe = () => void
@@ -26,15 +19,10 @@ interface DeviceSocketProviderProps {
   children: React.ReactNode
 }
 
-export function DeviceSocketProvider({
-  deviceId,
-  children,
-}: DeviceSocketProviderProps) {
+export function DeviceSocketProvider({ deviceId, children }: DeviceSocketProviderProps) {
   const [connected, setConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
-  const listenersRef = useRef<Map<number, { type: string | null; fn: Listener }>>(
-    new Map(),
-  )
+  const listenersRef = useRef<Map<number, { type: string | null; fn: Listener }>>(new Map())
   const nextIdRef = useRef(0)
 
   useEffect(() => {
@@ -45,10 +33,8 @@ export function DeviceSocketProvider({
     function connect() {
       if (disposed) return
 
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-      const ws = new WebSocket(
-        `${protocol}//${window.location.host}/api/v1/ws/devices/${deviceId}`,
-      )
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const ws = new WebSocket(`${protocol}//${window.location.host}/api/v1/ws/devices/${deviceId}`)
       wsRef.current = ws
 
       ws.onopen = () => {
@@ -59,10 +45,7 @@ export function DeviceSocketProvider({
       ws.onclose = () => {
         setConnected(false)
         if (disposed) return
-        const delay =
-          RECONNECT_DELAYS[
-            Math.min(reconnectAttempt, RECONNECT_DELAYS.length - 1)
-          ]
+        const delay = RECONNECT_DELAYS[Math.min(reconnectAttempt, RECONNECT_DELAYS.length - 1)]
         reconnectTimer = setTimeout(() => {
           reconnectAttempt++
           connect()
@@ -95,16 +78,13 @@ export function DeviceSocketProvider({
     }
   }, [deviceId])
 
-  const subscribe = useCallback(
-    (type: string | null, fn: Listener): Unsubscribe => {
-      const id = nextIdRef.current++
-      listenersRef.current.set(id, { type, fn })
-      return () => {
-        listenersRef.current.delete(id)
-      }
-    },
-    [],
-  )
+  const subscribe = useCallback((type: string | null, fn: Listener): Unsubscribe => {
+    const id = nextIdRef.current++
+    listenersRef.current.set(id, { type, fn })
+    return () => {
+      listenersRef.current.delete(id)
+    }
+  }, [])
 
   const send = useCallback((data: unknown) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -121,7 +101,6 @@ export function DeviceSocketProvider({
 
 export function useDeviceSocket(): DeviceSocketContextValue {
   const ctx = useContext(DeviceSocketContext)
-  if (!ctx)
-    throw new Error("useDeviceSocket must be used within DeviceSocketProvider")
+  if (!ctx) throw new Error('useDeviceSocket must be used within DeviceSocketProvider')
   return ctx
 }

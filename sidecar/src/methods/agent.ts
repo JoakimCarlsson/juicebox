@@ -1,7 +1,9 @@
 import type { JsonRpcRequest, JsonRpcResponse } from "../types.ts";
-import { sessions, ok, fail } from "../state.ts";
+import { fail, ok, sessions } from "../state.ts";
 
-export async function handleAgentInvoke(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleAgentInvoke(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const sessionId = req.params?.sessionId as string;
   const namespace = req.params?.namespace as string;
   const method = req.params?.method as string;
@@ -15,7 +17,9 @@ export async function handleAgentInvoke(req: JsonRpcRequest): Promise<JsonRpcRes
   return ok(req.id, result);
 }
 
-export async function handleAgentInterfaces(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleAgentInterfaces(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const sessionId = req.params?.sessionId as string;
   if (!sessionId) return fail(req.id, -32602, "missing param: sessionId");
   const state = sessions.get(sessionId);
@@ -24,7 +28,9 @@ export async function handleAgentInterfaces(req: JsonRpcRequest): Promise<JsonRp
   return ok(req.id, result);
 }
 
-export async function handleAgentSnapshot(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleAgentSnapshot(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const sessionId = req.params?.sessionId as string;
   if (!sessionId) return fail(req.id, -32602, "missing param: sessionId");
   const state = sessions.get(sessionId);
@@ -33,7 +39,9 @@ export async function handleAgentSnapshot(req: JsonRpcRequest): Promise<JsonRpcR
   return ok(req.id, result);
 }
 
-export async function handleAgentRestore(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleAgentRestore(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const sessionId = req.params?.sessionId as string;
   const rules = req.params?.rules as unknown[];
   if (!sessionId) return fail(req.id, -32602, "missing param: sessionId");

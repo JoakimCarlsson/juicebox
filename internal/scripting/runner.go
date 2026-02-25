@@ -30,7 +30,10 @@ type RunResult struct {
 	Timestamp int64
 }
 
-func (r *Runner) Run(sessionID, name string, initialWaitSecs int) (*RunResult, error) {
+func (r *Runner) Run(
+	sessionID, name string,
+	initialWaitSecs int,
+) (*RunResult, error) {
 	file, err := r.db.GetScriptFile(sessionID, name)
 	if err != nil || file == nil {
 		return nil, fmt.Errorf("script file %q not found", name)
@@ -52,7 +55,12 @@ func (r *Runner) Run(sessionID, name string, initialWaitSecs int) (*RunResult, e
 		Timestamp:    now,
 	})
 
-	resp, err := r.manager.RunScript(sessionID, file.Content, name, initialWaitSecs)
+	resp, err := r.manager.RunScript(
+		sessionID,
+		file.Content,
+		name,
+		initialWaitSecs,
+	)
 	if err != nil {
 		_ = r.db.UpdateScriptRun(runID, "", "error")
 		return &RunResult{
@@ -92,17 +100,23 @@ func (r *Runner) Run(sessionID, name string, initialWaitSecs int) (*RunResult, e
 	}, nil
 }
 
-func (r *Runner) GetOutput(sessionID, name string, since, limit int) (*bridge.GetScriptOutputResponse, error) {
+func (r *Runner) GetOutput(
+	sessionID, name string,
+	since, limit int,
+) (*bridge.GetScriptOutputResponse, error) {
 	return r.manager.GetScriptOutput(sessionID, name, since, limit)
 }
 
-func (r *Runner) Stop(sessionID, name string) (*bridge.StopScriptResponse, error) {
+func (r *Runner) Stop(
+	sessionID, name string,
+) (*bridge.StopScriptResponse, error) {
 	resp, err := r.manager.StopScript(sessionID, name)
 	if err != nil {
 		return nil, err
 	}
 
-	if file, err := r.db.GetScriptFile(sessionID, name); err == nil && file != nil {
+	if file, err := r.db.GetScriptFile(sessionID, name); err == nil &&
+		file != nil {
 		outputJSON, _ := json.Marshal(resp.Messages)
 		_ = r.db.CompleteScriptRunByFile(sessionID, file.ID, string(outputJSON))
 	}

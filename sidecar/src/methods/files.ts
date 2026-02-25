@@ -1,10 +1,12 @@
 import type { FileEntry, JsonRpcRequest, JsonRpcResponse } from "../types.ts";
-import { ok, fail } from "../state.ts";
+import { fail, ok } from "../state.ts";
 import { exec } from "../utils.ts";
 
 function parseLsOutput(output: string, basePath: string): FileEntry[] {
   const entries: FileEntry[] = [];
-  const normalizedBase = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
+  const normalizedBase = basePath.endsWith("/")
+    ? basePath.slice(0, -1)
+    : basePath;
 
   for (const line of output.split("\n")) {
     const trimmed = line.trim();
@@ -75,7 +77,9 @@ function detectMimeType(path: string): string {
   return map[ext] ?? "application/octet-stream";
 }
 
-export async function handleListFiles(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleListFiles(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const deviceId = req.params?.deviceId as string;
   const bundleId = req.params?.bundleId as string;
   const path = (req.params?.path as string) || `/data/data/${bundleId}`;
@@ -83,7 +87,10 @@ export async function handleListFiles(req: JsonRpcRequest): Promise<JsonRpcRespo
   if (!bundleId) return fail(req.id, -32602, "missing param: bundleId");
 
   const { stdout, stderr } = await exec([
-    "adb", "-s", deviceId, "shell",
+    "adb",
+    "-s",
+    deviceId,
+    "shell",
     `run-as ${bundleId} ls -la "${path}" 2>/dev/null || ls -la "${path}" 2>&1`,
   ]);
 
@@ -94,7 +101,9 @@ export async function handleListFiles(req: JsonRpcRequest): Promise<JsonRpcRespo
   return ok(req.id, parseLsOutput(stdout, path));
 }
 
-export async function handleReadFile(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleReadFile(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const deviceId = req.params?.deviceId as string;
   const bundleId = req.params?.bundleId as string;
   const path = req.params?.path as string;
@@ -103,17 +112,27 @@ export async function handleReadFile(req: JsonRpcRequest): Promise<JsonRpcRespon
   if (!path) return fail(req.id, -32602, "missing param: path");
 
   const sizeResult = await exec([
-    "adb", "-s", deviceId, "shell",
+    "adb",
+    "-s",
+    deviceId,
+    "shell",
     `run-as ${bundleId} stat -c %s "${path}" 2>/dev/null || stat -c %s "${path}" 2>/dev/null || echo 0`,
   ]);
   const fileSize = parseInt(sizeResult.stdout.trim(), 10) || 0;
   const MAX_SIZE = 5 * 1024 * 1024;
   if (fileSize > MAX_SIZE) {
-    return fail(req.id, -32000, `file too large: ${fileSize} bytes (max ${MAX_SIZE})`);
+    return fail(
+      req.id,
+      -32000,
+      `file too large: ${fileSize} bytes (max ${MAX_SIZE})`,
+    );
   }
 
   const { stdout, stderr } = await exec([
-    "adb", "-s", deviceId, "shell",
+    "adb",
+    "-s",
+    deviceId,
+    "shell",
     `run-as ${bundleId} base64 "${path}" 2>/dev/null || base64 "${path}" 2>&1`,
   ]);
 
@@ -127,7 +146,10 @@ export async function handleReadFile(req: JsonRpcRequest): Promise<JsonRpcRespon
   let binary = false;
   const checkLen = Math.min(raw.length, 8192);
   for (let i = 0; i < checkLen; i++) {
-    if (raw[i] === 0) { binary = true; break; }
+    if (raw[i] === 0) {
+      binary = true;
+      break;
+    }
   }
 
   if (binary) {
@@ -150,7 +172,9 @@ export async function handleReadFile(req: JsonRpcRequest): Promise<JsonRpcRespon
   });
 }
 
-export async function handleFindFiles(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleFindFiles(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const deviceId = req.params?.deviceId as string;
   const bundleId = req.params?.bundleId as string;
   const pattern = req.params?.pattern as string;
@@ -160,15 +184,22 @@ export async function handleFindFiles(req: JsonRpcRequest): Promise<JsonRpcRespo
   if (!pattern) return fail(req.id, -32602, "missing param: pattern");
 
   const { stdout } = await exec([
-    "adb", "-s", deviceId, "shell",
+    "adb",
+    "-s",
+    deviceId,
+    "shell",
     `run-as ${bundleId} find "${basePath}" -name "${pattern}" 2>/dev/null || find "${basePath}" -name "${pattern}" 2>/dev/null`,
   ]);
 
-  const paths = stdout.split("\n").map((p) => p.trim()).filter((p) => p.length > 0);
+  const paths = stdout.split("\n").map((p) => p.trim()).filter((p) =>
+    p.length > 0
+  );
   return ok(req.id, paths);
 }
 
-export async function handlePullDatabase(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handlePullDatabase(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const deviceId = req.params?.deviceId as string;
   const bundleId = req.params?.bundleId as string;
   const dbPath = req.params?.dbPath as string;
@@ -179,16 +210,31 @@ export async function handlePullDatabase(req: JsonRpcRequest): Promise<JsonRpcRe
   const hash = Array.from(new TextEncoder().encode(dbPath))
     .map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
   const remoteTmp = `/data/local/tmp/jb_${hash}.db`;
-  const localTmp = `${Deno.env.get("TMPDIR") ?? "/tmp"}/jb_${hash}_${Date.now()}.db`;
+  const localTmp = `${
+    Deno.env.get("TMPDIR") ?? "/tmp"
+  }/jb_${hash}_${Date.now()}.db`;
 
   await exec([
-    "adb", "-s", deviceId, "shell",
+    "adb",
+    "-s",
+    deviceId,
+    "shell",
     `run-as ${bundleId} cat "${dbPath}" > "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}" || cat "${dbPath}" > "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}" || cp "${dbPath}" "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}"`,
   ]);
 
-  const checkTmp = await exec(["adb", "-s", deviceId, "shell", `ls "${remoteTmp}" 2>/dev/null && echo EXISTS || echo MISSING`]);
+  const checkTmp = await exec([
+    "adb",
+    "-s",
+    deviceId,
+    "shell",
+    `ls "${remoteTmp}" 2>/dev/null && echo EXISTS || echo MISSING`,
+  ]);
   if (!checkTmp.stdout.includes("EXISTS")) {
-    return fail(req.id, -32000, `copy failed: could not copy ${dbPath} to ${remoteTmp} (tried run-as and root)`);
+    return fail(
+      req.id,
+      -32000,
+      `copy failed: could not copy ${dbPath} to ${remoteTmp} (tried run-as and root)`,
+    );
   }
 
   const pull = await exec(["adb", "-s", deviceId, "pull", remoteTmp, localTmp]);
@@ -203,7 +249,10 @@ export async function handlePullDatabase(req: JsonRpcRequest): Promise<JsonRpcRe
     const rTmp = remoteTmp + suffix;
     const lTmp = localTmp + suffix;
     const scCp = await exec([
-      "adb", "-s", deviceId, "shell",
+      "adb",
+      "-s",
+      deviceId,
+      "shell",
       `run-as ${bundleId} cat "${srcPath}" > "${rTmp}" 2>/dev/null && chmod 644 "${rTmp}" && echo OK || cat "${srcPath}" > "${rTmp}" 2>/dev/null && chmod 644 "${rTmp}" && echo OK || echo SKIP`,
     ]);
     if (scCp.stdout.trim().includes("OK")) {

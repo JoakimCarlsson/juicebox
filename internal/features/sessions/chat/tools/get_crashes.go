@@ -33,10 +33,15 @@ func (t *GetCrashesTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *GetCrashesTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *GetCrashesTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[GetCrashesParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	var sinceTs int64
@@ -49,7 +54,9 @@ func (t *GetCrashesTool) Run(ctx context.Context, params tool.ToolCall) (tool.To
 
 	rows, err := t.db.SearchCrashes(t.sessionID, sinceTs, input.Limit)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("search failed: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("search failed: %v", err),
+		), nil
 	}
 
 	if len(rows) == 0 {

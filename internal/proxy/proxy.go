@@ -200,7 +200,9 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 		var drop bool
 		req, reqFullBody, drop = p.intercept.MaybeIntercept(req, reqFullBody)
 		if drop {
-			clientConn.Write([]byte("HTTP/1.1 502 Blocked\r\nContent-Length: 0\r\n\r\n"))
+			clientConn.Write(
+				[]byte("HTTP/1.1 502 Blocked\r\nContent-Length: 0\r\n\r\n"),
+			)
 			return
 		}
 		req.Body = io.NopCloser(bytes.NewReader(reqFullBody))
@@ -209,7 +211,9 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 
 	resp, err := p.transport.RoundTrip(req)
 	if err != nil {
-		clientConn.Write([]byte("HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n"))
+		clientConn.Write(
+			[]byte("HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n"),
+		)
 		return
 	}
 	defer resp.Body.Close()
@@ -218,9 +222,15 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 
 	if p.intercept != nil && p.intercept.IsEnabled() {
 		var drop bool
-		respFullBody, resp.StatusCode, resp.Header, drop = p.intercept.MaybeInterceptResponse(req, resp, respFullBody)
+		respFullBody, resp.StatusCode, resp.Header, drop = p.intercept.MaybeInterceptResponse(
+			req,
+			resp,
+			respFullBody,
+		)
 		if drop {
-			clientConn.Write([]byte("HTTP/1.1 502 Blocked\r\nContent-Length: 0\r\n\r\n"))
+			clientConn.Write(
+				[]byte("HTTP/1.1 502 Blocked\r\nContent-Length: 0\r\n\r\n"),
+			)
 			return
 		}
 	}
@@ -235,7 +245,13 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 	resp.Write(clientConn)
 }
 
-func (p *Proxy) emitMessage(req *http.Request, reqBody []byte, resp *http.Response, respBody []byte, duration int64) {
+func (p *Proxy) emitMessage(
+	req *http.Request,
+	reqBody []byte,
+	resp *http.Response,
+	respBody []byte,
+	duration int64,
+) {
 	reqHeaders := make(map[string]string)
 	for k, v := range req.Header {
 		reqHeaders[strings.ToLower(k)] = strings.Join(v, ", ")
@@ -250,7 +266,10 @@ func (p *Proxy) emitMessage(req *http.Request, reqBody []byte, resp *http.Respon
 	}
 
 	reqCapture := reqBody
-	respCapture := p.decompressBody(respBody, resp.Header.Get("Content-Encoding"))
+	respCapture := p.decompressBody(
+		respBody,
+		resp.Header.Get("Content-Encoding"),
+	)
 
 	if len(reqCapture) > maxBodyBytes {
 		reqCapture = reqCapture[:maxBodyBytes]

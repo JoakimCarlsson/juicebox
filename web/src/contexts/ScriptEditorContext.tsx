@@ -1,11 +1,11 @@
-import { createContext, useCallback, useContext, useRef } from "react"
+import { createContext, useCallback, useContext, useRef } from 'react'
 
 export type ScriptEditorEvent =
-  | { type: "file_write_start"; name: string }
-  | { type: "file_write_delta"; name: string; delta: string }
-  | { type: "file_write_end"; name: string }
-  | { type: "file_edit_start"; name: string }
-  | { type: "file_edit_end"; name: string }
+  | { type: 'file_write_start'; name: string }
+  | { type: 'file_write_delta'; name: string; delta: string }
+  | { type: 'file_write_end'; name: string }
+  | { type: 'file_edit_start'; name: string }
+  | { type: 'file_edit_end'; name: string }
 
 type Listener = (event: ScriptEditorEvent) => void
 
@@ -41,6 +41,6 @@ export function ScriptEditorProvider({ children }: { children: React.ReactNode }
 
 export function useScriptEditor() {
   const ctx = useContext(ScriptEditorContext)
-  if (!ctx) throw new Error("useScriptEditor must be used within ScriptEditorProvider")
+  if (!ctx) throw new Error('useScriptEditor must be used within ScriptEditorProvider')
   return ctx
 }

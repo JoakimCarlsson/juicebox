@@ -17,7 +17,7 @@ type QueryResult struct {
 
 type SqliteQueryParams struct {
 	DbPath string `json:"db_path" description:"Absolute path to the SQLite database file on the device."`
-	SQL    string `json:"sql" description:"SQL query to execute (SELECT only)."`
+	SQL    string `json:"sql"     description:"SQL query to execute (SELECT only)."`
 }
 
 type SqliteQueryTool struct {
@@ -26,8 +26,16 @@ type SqliteQueryTool struct {
 	sessionID string
 }
 
-func NewSqliteQuery(execFn func(sess *session.Session, sessionID, dbPath, sql string) (*QueryResult, error), manager *session.Manager, sessionID string) *SqliteQueryTool {
-	return &SqliteQueryTool{execFn: execFn, manager: manager, sessionID: sessionID}
+func NewSqliteQuery(
+	execFn func(sess *session.Session, sessionID, dbPath, sql string) (*QueryResult, error),
+	manager *session.Manager,
+	sessionID string,
+) *SqliteQueryTool {
+	return &SqliteQueryTool{
+		execFn:    execFn,
+		manager:   manager,
+		sessionID: sessionID,
+	}
 }
 
 func (t *SqliteQueryTool) Info() tool.ToolInfo {
@@ -38,10 +46,15 @@ func (t *SqliteQueryTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *SqliteQueryTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *SqliteQueryTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[SqliteQueryParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	if input.DbPath == "" || input.SQL == "" {
@@ -55,7 +68,9 @@ func (t *SqliteQueryTool) Run(ctx context.Context, params tool.ToolCall) (tool.T
 
 	result, err := t.execFn(sess, t.sessionID, input.DbPath, input.SQL)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("sqlite_query failed: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("sqlite_query failed: %v", err),
+		), nil
 	}
 
 	return tool.NewJSONResponse(result), nil

@@ -141,8 +141,14 @@ func (c *Client) GetDeviceInfo(deviceID string) (*DeviceInfo, error) {
 	return &info, nil
 }
 
-func (c *Client) GetAppIcon(deviceID string, identifier string) ([]byte, string, error) {
-	raw, err := c.call("getAppIcon", map[string]string{"deviceId": deviceID, "identifier": identifier})
+func (c *Client) GetAppIcon(
+	deviceID string,
+	identifier string,
+) ([]byte, string, error) {
+	raw, err := c.call(
+		"getAppIcon",
+		map[string]string{"deviceId": deviceID, "identifier": identifier},
+	)
 	if err != nil {
 		return nil, "", err
 	}
@@ -160,7 +166,11 @@ func (c *Client) GetAppIcon(deviceID string, identifier string) ([]byte, string,
 	return data, icon.Format, nil
 }
 
-func (c *Client) Attach(deviceID string, identifier string, evasion *EvasionConfig) (*AttachResponse, error) {
+func (c *Client) Attach(
+	deviceID string,
+	identifier string,
+	evasion *EvasionConfig,
+) (*AttachResponse, error) {
 	params := map[string]any{"deviceId": deviceID, "identifier": identifier}
 	if evasion != nil {
 		params["evasion"] = evasion
@@ -183,8 +193,17 @@ func (c *Client) Detach(sessionID string) error {
 	return err
 }
 
-func (c *Client) ListFiles(deviceID, bundleID, path string) ([]FileEntry, error) {
-	raw, err := c.call("listFiles", map[string]string{"deviceId": deviceID, "bundleId": bundleID, "path": path})
+func (c *Client) ListFiles(
+	deviceID, bundleID, path string,
+) ([]FileEntry, error) {
+	raw, err := c.call(
+		"listFiles",
+		map[string]string{
+			"deviceId": deviceID,
+			"bundleId": bundleID,
+			"path":     path,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -197,8 +216,17 @@ func (c *Client) ListFiles(deviceID, bundleID, path string) ([]FileEntry, error)
 	return entries, nil
 }
 
-func (c *Client) ReadFile(deviceID, bundleID, path string) (*FileContent, error) {
-	raw, err := c.call("readFile", map[string]string{"deviceId": deviceID, "bundleId": bundleID, "path": path})
+func (c *Client) ReadFile(
+	deviceID, bundleID, path string,
+) (*FileContent, error) {
+	raw, err := c.call(
+		"readFile",
+		map[string]string{
+			"deviceId": deviceID,
+			"bundleId": bundleID,
+			"path":     path,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -211,8 +239,18 @@ func (c *Client) ReadFile(deviceID, bundleID, path string) (*FileContent, error)
 	return &content, nil
 }
 
-func (c *Client) FindFiles(deviceID, bundleID, pattern, basePath string) ([]string, error) {
-	raw, err := c.call("findFiles", map[string]any{"deviceId": deviceID, "bundleId": bundleID, "pattern": pattern, "basePath": basePath})
+func (c *Client) FindFiles(
+	deviceID, bundleID, pattern, basePath string,
+) ([]string, error) {
+	raw, err := c.call(
+		"findFiles",
+		map[string]any{
+			"deviceId": deviceID,
+			"bundleId": bundleID,
+			"pattern":  pattern,
+			"basePath": basePath,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -225,8 +263,17 @@ func (c *Client) FindFiles(deviceID, bundleID, pattern, basePath string) ([]stri
 	return paths, nil
 }
 
-func (c *Client) PullDatabase(deviceID, bundleID, dbPath string) (string, error) {
-	raw, err := c.call("pullDatabase", map[string]string{"deviceId": deviceID, "bundleId": bundleID, "dbPath": dbPath})
+func (c *Client) PullDatabase(
+	deviceID, bundleID, dbPath string,
+) (string, error) {
+	raw, err := c.call(
+		"pullDatabase",
+		map[string]string{
+			"deviceId": deviceID,
+			"bundleId": bundleID,
+			"dbPath":   dbPath,
+		},
+	)
 	if err != nil {
 		return "", err
 	}
@@ -239,7 +286,10 @@ func (c *Client) PullDatabase(deviceID, bundleID, dbPath string) (string, error)
 	return resp.LocalPath, nil
 }
 
-func (c *Client) RunScript(sessionID, code, name string, initialWaitSecs int) (*RunScriptResponse, error) {
+func (c *Client) RunScript(
+	sessionID, code, name string,
+	initialWaitSecs int,
+) (*RunScriptResponse, error) {
 	raw, err := c.call("runScript", map[string]any{
 		"sessionId":   sessionID,
 		"code":        code,
@@ -258,7 +308,10 @@ func (c *Client) RunScript(sessionID, code, name string, initialWaitSecs int) (*
 	return &resp, nil
 }
 
-func (c *Client) GetScriptOutput(sessionID, name string, since, limit int) (*GetScriptOutputResponse, error) {
+func (c *Client) GetScriptOutput(
+	sessionID, name string,
+	since, limit int,
+) (*GetScriptOutputResponse, error) {
 	raw, err := c.call("getScriptOutput", map[string]any{
 		"sessionId": sessionID,
 		"name":      name,
@@ -277,7 +330,9 @@ func (c *Client) GetScriptOutput(sessionID, name string, since, limit int) (*Get
 	return &resp, nil
 }
 
-func (c *Client) StopScript(sessionID, name string) (*StopScriptResponse, error) {
+func (c *Client) StopScript(
+	sessionID, name string,
+) (*StopScriptResponse, error) {
 	raw, err := c.call("stopScript", map[string]any{
 		"sessionId": sessionID,
 		"name":      name,
@@ -294,7 +349,10 @@ func (c *Client) StopScript(sessionID, name string) (*StopScriptResponse, error)
 	return &resp, nil
 }
 
-func (c *Client) AgentInvoke(sessionID, namespace, method string, args []any) (json.RawMessage, error) {
+func (c *Client) AgentInvoke(
+	sessionID, namespace, method string,
+	args []any,
+) (json.RawMessage, error) {
 	return c.call("agentInvoke", map[string]any{
 		"sessionId": sessionID,
 		"namespace": namespace,
@@ -303,8 +361,13 @@ func (c *Client) AgentInvoke(sessionID, namespace, method string, args []any) (j
 	})
 }
 
-func (c *Client) AgentInterfaces(sessionID string) (map[string][]string, error) {
-	raw, err := c.call("agentInterfaces", map[string]string{"sessionId": sessionID})
+func (c *Client) AgentInterfaces(
+	sessionID string,
+) (map[string][]string, error) {
+	raw, err := c.call(
+		"agentInterfaces",
+		map[string]string{"sessionId": sessionID},
+	)
 	if err != nil {
 		return nil, err
 	}
