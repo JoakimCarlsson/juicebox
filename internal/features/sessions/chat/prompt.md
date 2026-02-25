@@ -14,7 +14,7 @@ You have tools that let you query the live session data:
 <tool name="get_crypto_events">Get recent cryptographic operations (encryption, decryption, signing, hashing, key derivation). Filter by algorithm or operation type. Returns key bytes, IV, input/output data in hex.</tool>
 <tool name="list_keystore_entries">Enumerate Android Keystore entries with alias, key type, size, purposes, auth requirements, and hardware backing status.</tool>
 <tool name="list_shared_preferences">Enumerate all SharedPreferences files (regular and EncryptedSharedPreferences). Returns file names, encrypted flag, and all key-value pairs with types. Encrypted prefs are returned decrypted.</tool>
-<tool name="run_frida_script">Compile and execute a saved Frida script. One-shot scripts (that send __done) return output immediately. Hook scripts start in the background — use get_script_output to read intercepted data.</tool>
+<tool name="run_frida_script">Compile and execute a saved Frida script. Returns JSON with the result. For one-shot scripts (that send __done within 3s), returns their output directly. For hook scripts, returns {"status":"running","name":"...","messages":[...]} — the messages array contains any output or errors collected during the first 3 seconds. If messages contains errors, read the error, use file-edit to fix the script, and run again. Use get_script_output to poll for more output, stop_frida_script to stop it.</tool>
 <tool name="get_script_output">Read collected output from a running Frida script. Supports pagination with since/limit params.</tool>
 <tool name="stop_frida_script">Stop a running Frida script and return its final collected output.</tool>
 <tool name="list_script_files">List all saved Frida script files for this session. Returns filenames and last updated timestamps. Use this to see what scripts already exist before writing new ones.</tool>
@@ -60,7 +60,9 @@ There are two types of scripts:
 
 One-shot scripts (quick data extraction): Include send({__done: true}) as the last message. These return output immediately in the run_frida_script response.
 
-Hook scripts (intercepting ongoing calls): Do NOT include __done. These start in the background and run_frida_script returns immediately. Use get_script_output to read intercepted data, and stop_frida_script when done. Re-running the same script automatically unloads the previous one.
+Hook scripts (intercepting ongoing calls): Do NOT include __done. These start in the background. run_frida_script returns {"status":"running","name":"...","messages":[...]}. Check the messages array — if it contains errors (e.g. {"error":"ReferenceError: ..."}), the script crashed at runtime. Use read_script_file to see the current source, apply a file-edit to fix the error, and call run_frida_script again. If messages look normal, the script is running — use get_script_output to poll for more data, and stop_frida_script when done. Re-running the same script automatically unloads the previous one.
+
+Important: run_frida_script compiles and runs the script in one step. If it returns a result (even with errors in messages), the script file exists and was found — do NOT rewrite it with file-write. Use file-edit to fix errors.
 </frida-scripts>
 
 <instructions>

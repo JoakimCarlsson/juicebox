@@ -83,11 +83,30 @@ func (t *RunFridaScriptTool) Run(ctx context.Context, params tool.ToolCall) (too
 	}
 
 	_ = t.db.UpdateScriptRun(runID, "", "running")
-	return tool.NewTextResponse(fmt.Sprintf(
-		"Script '%s' is now running in the background and intercepting calls. "+
-			"Output is streaming to the console panel. "+
-			"Use get_script_output to read collected messages, or stop_frida_script to stop it. "+
-			"(%d messages collected so far during startup.)",
-		input.Name, resp.MessagesCollected,
-	)), nil
+
+	var hasErrors bool
+	for _, msg := range resp.Messages {
+		var obj map[string]any
+		if json.Unmarshal(msg, &obj) == nil {
+			if _, ok := obj["error"]; ok {
+				hasErrors = true
+				break
+			}
+		}
+	}
+
+	result := map[string]any{
+		"status":        "running",
+		"name":          input.Name,
+		"totalMessages": resp.MessagesCollected,
+		"messages":      resp.Messages,
+	}
+
+	if hasErrors {
+		resp := tool.NewJSONResponse(result)
+		resp.IsError = true
+		return resp, nil
+	}
+
+	return tool.NewJSONResponse(result), nil
 }
