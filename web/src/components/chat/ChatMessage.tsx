@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Loader2, Check, ChevronRight, FileCode, FileDiff, FilePlus } from 'lucide-react'
+import { Loader2, Check, ChevronRight, FileDiff, FilePlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { MessagePart } from '@/contexts/ChatPanelContext'
 

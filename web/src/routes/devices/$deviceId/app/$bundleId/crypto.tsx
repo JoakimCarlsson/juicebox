@@ -12,7 +12,6 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronRight,
-  FileKey,
   Copy,
   Check,
   FileText,
@@ -121,10 +120,14 @@ function CryptoPage() {
 
   useEffect(() => {
     if (sessionId) {
-      loadKeystore()
-      loadPrefs()
+      fetchKeystoreEntries(sessionId)
+        .then((resp) => setKeystoreEntries(resp.entries))
+        .catch(() => {})
+      fetchSharedPreferences(sessionId)
+        .then((resp) => setPrefsFiles(resp.files))
+        .catch(() => {})
     }
-  }, [sessionId, loadKeystore, loadPrefs])
+  }, [sessionId])
 
   const cryptoEvents = useMemo(() => {
     return messages

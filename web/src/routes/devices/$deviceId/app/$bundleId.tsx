@@ -156,7 +156,9 @@ function AppLayoutWithChat({
     isOpen: bottomPanelOpen,
   } = useBottomPanel()
   const sessionRef = useRef(sessionId)
-  sessionRef.current = sessionId
+  useEffect(() => {
+    sessionRef.current = sessionId
+  }, [sessionId])
 
   const { defaultLayout: outerLayout, onLayoutChanged: onOuterLayoutChanged } = useDefaultLayout({
     id: 'app-main',

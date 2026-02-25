@@ -30,6 +30,11 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
   const [queryResult, setQueryResult] = useState<QueryResponse | null>(null)
   const [queryError, setQueryError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const didInitialQuery = useRef(false)
+
+  const firstTableName = data?.tables?.[0]?.name ?? null
+  const effectiveTable = selectedTable ?? firstTableName
+  const displaySql = sql || (effectiveTable ? `SELECT * FROM "${effectiveTable}" LIMIT 100` : '')
 
   const mutation = useMutation({
     mutationFn: (sqlStr: string) => executeQuery(sessionId, dbPath, sqlStr),
@@ -54,10 +59,10 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
   )
 
   const handleExecute = useCallback(() => {
-    if (sql.trim()) {
-      mutation.mutate(sql.trim())
+    if (displaySql.trim()) {
+      mutation.mutate(displaySql.trim())
     }
-  }, [sql, mutation])
+  }, [displaySql, mutation])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -70,20 +75,17 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
   )
 
   const handleExport = useCallback(() => {
-    if (sql.trim()) {
-      exportCsv(sessionId, dbPath, sql.trim())
+    if (displaySql.trim()) {
+      exportCsv(sessionId, dbPath, displaySql.trim())
     }
-  }, [sessionId, dbPath, sql])
+  }, [sessionId, dbPath, displaySql])
 
   useEffect(() => {
-    if (data?.tables.length && !selectedTable) {
-      const first = data.tables[0].name
-      setSelectedTable(first)
-      const q = `SELECT * FROM "${first}" LIMIT 100`
-      setSql(q)
-      mutation.mutate(q)
+    if (effectiveTable && !didInitialQuery.current) {
+      didInitialQuery.current = true
+      mutation.mutate(`SELECT * FROM "${effectiveTable}" LIMIT 100`)
     }
-  }, [data])
+  }, [effectiveTable, mutation])
 
   if (isLoading) {
     return (
@@ -130,7 +132,7 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
             onClick={() => handleTableClick(table.name)}
             className={cn(
               'flex items-center gap-1 px-2 py-1 rounded text-xs font-mono whitespace-nowrap transition-colors',
-              selectedTable === table.name
+              effectiveTable === table.name
                 ? 'bg-foreground/10 text-foreground'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             )}
@@ -141,13 +143,13 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
         ))}
       </div>
 
-      {selectedTable && <SchemaBar table={data.tables.find((t) => t.name === selectedTable)} />}
+      {effectiveTable && <SchemaBar table={data.tables.find((t) => t.name === effectiveTable)} />}
 
       <div className="flex flex-col border-b border-border shrink-0">
         <div className="relative">
           <textarea
             ref={textareaRef}
-            value={sql}
+            value={displaySql}
             onChange={(e) => setSql(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="SELECT * FROM ..."
@@ -166,7 +168,7 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
             size="sm"
             className="h-6 text-xs px-2.5"
             onClick={handleExecute}
-            disabled={!sql.trim() || mutation.isPending}
+            disabled={!displaySql.trim() || mutation.isPending}
           >
             {mutation.isPending ? (
               <Loader2 className="mr-1 h-3 w-3 animate-spin" />

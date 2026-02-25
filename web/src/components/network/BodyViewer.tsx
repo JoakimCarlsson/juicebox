@@ -211,8 +211,11 @@ export function BodyViewer({
       decoded.trimStart().startsWith('{') ||
       decoded.trimStart().startsWith('[')
     ) {
+      let parsed: unknown = undefined
       try {
-        const parsed = JSON.parse(decoded)
+        parsed = JSON.parse(decoded)
+      } catch {}
+      if (parsed !== undefined) {
         return (
           <div>
             <div className="flex items-center gap-2 mb-1.5">
@@ -228,7 +231,7 @@ export function BodyViewer({
             </pre>
           </div>
         )
-      } catch {}
+      }
     }
 
     return (

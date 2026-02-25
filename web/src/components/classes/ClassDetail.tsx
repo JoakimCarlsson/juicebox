@@ -296,7 +296,6 @@ function FieldRow({
   })
 
   const mods = modifierTags(field.modifiers)
-  const isStatic = (field.modifiers & 0x0008) !== 0
 
   return (
     <div className="px-4 py-2 hover:bg-muted/50 transition-colors">
