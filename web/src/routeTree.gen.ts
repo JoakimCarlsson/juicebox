@@ -17,6 +17,7 @@ import { Route as DevicesDeviceIdAppsRouteImport } from './routes/devices/$devic
 import { Route as DevicesDeviceIdAppBundleIdRouteImport } from './routes/devices/$deviceId/app/$bundleId'
 import { Route as DevicesDeviceIdAppBundleIdIndexRouteImport } from './routes/devices/$deviceId/app/$bundleId/index'
 import { Route as DevicesDeviceIdAppBundleIdNetworkRouteImport } from './routes/devices/$deviceId/app/$bundleId/network'
+import { Route as DevicesDeviceIdAppBundleIdMemoryRouteImport } from './routes/devices/$deviceId/app/$bundleId/memory'
 import { Route as DevicesDeviceIdAppBundleIdLogsRouteImport } from './routes/devices/$deviceId/app/$bundleId/logs'
 import { Route as DevicesDeviceIdAppBundleIdHooksRouteImport } from './routes/devices/$deviceId/app/$bundleId/hooks'
 import { Route as DevicesDeviceIdAppBundleIdHomeRouteImport } from './routes/devices/$deviceId/app/$bundleId/home'
@@ -63,6 +64,11 @@ const DevicesDeviceIdAppBundleIdIndexRoute = DevicesDeviceIdAppBundleIdIndexRout
 const DevicesDeviceIdAppBundleIdNetworkRoute = DevicesDeviceIdAppBundleIdNetworkRouteImport.update({
   id: '/network',
   path: '/network',
+  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+} as any)
+const DevicesDeviceIdAppBundleIdMemoryRoute = DevicesDeviceIdAppBundleIdMemoryRouteImport.update({
+  id: '/memory',
+  path: '/memory',
   getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
 } as any)
 const DevicesDeviceIdAppBundleIdLogsRoute = DevicesDeviceIdAppBundleIdLogsRouteImport.update({
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
   '/devices/$deviceId/app/$bundleId/hooks': typeof DevicesDeviceIdAppBundleIdHooksRoute
   '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
+  '/devices/$deviceId/app/$bundleId/memory': typeof DevicesDeviceIdAppBundleIdMemoryRoute
   '/devices/$deviceId/app/$bundleId/network': typeof DevicesDeviceIdAppBundleIdNetworkRoute
   '/devices/$deviceId/app/$bundleId/': typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
   '/devices/$deviceId/app/$bundleId/hooks': typeof DevicesDeviceIdAppBundleIdHooksRoute
   '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
+  '/devices/$deviceId/app/$bundleId/memory': typeof DevicesDeviceIdAppBundleIdMemoryRoute
   '/devices/$deviceId/app/$bundleId/network': typeof DevicesDeviceIdAppBundleIdNetworkRoute
   '/devices/$deviceId/app/$bundleId': typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
   '/devices/$deviceId/app/$bundleId/hooks': typeof DevicesDeviceIdAppBundleIdHooksRoute
   '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
+  '/devices/$deviceId/app/$bundleId/memory': typeof DevicesDeviceIdAppBundleIdMemoryRoute
   '/devices/$deviceId/app/$bundleId/network': typeof DevicesDeviceIdAppBundleIdNetworkRoute
   '/devices/$deviceId/app/$bundleId/': typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/app/$bundleId/home'
     | '/devices/$deviceId/app/$bundleId/hooks'
     | '/devices/$deviceId/app/$bundleId/logs'
+    | '/devices/$deviceId/app/$bundleId/memory'
     | '/devices/$deviceId/app/$bundleId/network'
     | '/devices/$deviceId/app/$bundleId/'
   fileRoutesByTo: FileRoutesByTo
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/app/$bundleId/home'
     | '/devices/$deviceId/app/$bundleId/hooks'
     | '/devices/$deviceId/app/$bundleId/logs'
+    | '/devices/$deviceId/app/$bundleId/memory'
     | '/devices/$deviceId/app/$bundleId/network'
     | '/devices/$deviceId/app/$bundleId'
   id:
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/app/$bundleId/home'
     | '/devices/$deviceId/app/$bundleId/hooks'
     | '/devices/$deviceId/app/$bundleId/logs'
+    | '/devices/$deviceId/app/$bundleId/memory'
     | '/devices/$deviceId/app/$bundleId/network'
     | '/devices/$deviceId/app/$bundleId/'
   fileRoutesById: FileRoutesById
@@ -266,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevicesDeviceIdAppBundleIdNetworkRouteImport
       parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
     }
+    '/devices/$deviceId/app/$bundleId/memory': {
+      id: '/devices/$deviceId/app/$bundleId/memory'
+      path: '/memory'
+      fullPath: '/devices/$deviceId/app/$bundleId/memory'
+      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdMemoryRouteImport
+      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
+    }
     '/devices/$deviceId/app/$bundleId/logs': {
       id: '/devices/$deviceId/app/$bundleId/logs'
       path: '/logs'
@@ -326,6 +345,7 @@ interface DevicesDeviceIdAppBundleIdRouteChildren {
   DevicesDeviceIdAppBundleIdHomeRoute: typeof DevicesDeviceIdAppBundleIdHomeRoute
   DevicesDeviceIdAppBundleIdHooksRoute: typeof DevicesDeviceIdAppBundleIdHooksRoute
   DevicesDeviceIdAppBundleIdLogsRoute: typeof DevicesDeviceIdAppBundleIdLogsRoute
+  DevicesDeviceIdAppBundleIdMemoryRoute: typeof DevicesDeviceIdAppBundleIdMemoryRoute
   DevicesDeviceIdAppBundleIdNetworkRoute: typeof DevicesDeviceIdAppBundleIdNetworkRoute
   DevicesDeviceIdAppBundleIdIndexRoute: typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
@@ -338,6 +358,7 @@ const DevicesDeviceIdAppBundleIdRouteChildren: DevicesDeviceIdAppBundleIdRouteCh
   DevicesDeviceIdAppBundleIdHomeRoute: DevicesDeviceIdAppBundleIdHomeRoute,
   DevicesDeviceIdAppBundleIdHooksRoute: DevicesDeviceIdAppBundleIdHooksRoute,
   DevicesDeviceIdAppBundleIdLogsRoute: DevicesDeviceIdAppBundleIdLogsRoute,
+  DevicesDeviceIdAppBundleIdMemoryRoute: DevicesDeviceIdAppBundleIdMemoryRoute,
   DevicesDeviceIdAppBundleIdNetworkRoute: DevicesDeviceIdAppBundleIdNetworkRoute,
   DevicesDeviceIdAppBundleIdIndexRoute: DevicesDeviceIdAppBundleIdIndexRoute,
 }

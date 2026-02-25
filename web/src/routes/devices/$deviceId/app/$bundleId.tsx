@@ -31,6 +31,7 @@ import {
   Blocks,
   AlertTriangle,
   Lock,
+  Search,
 } from 'lucide-react'
 import { useEffect, useRef, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -95,6 +96,13 @@ function getTabs(capabilities: string[] | null) {
       icon: Lock,
       enabled: has('frida'),
       to: '/devices/$deviceId/app/$bundleId/crypto' as const,
+    },
+    {
+      value: 'memory',
+      label: 'Memory',
+      icon: Search,
+      enabled: has('frida'),
+      to: '/devices/$deviceId/app/$bundleId/memory' as const,
     },
     {
       value: 'hooks',

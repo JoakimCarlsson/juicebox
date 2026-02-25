@@ -209,6 +209,28 @@ export interface InterceptState {
   pendingCount: number
 }
 
+export interface MemoryScanProgress {
+  event: 'progress'
+  current: number
+  total: number
+}
+
+export interface MemoryScanMatch {
+  event: 'match'
+  id: string
+  address: string
+  size: number
+  hexDump: string
+  utf8Preview: string
+}
+
+export interface MemoryScanDone {
+  event: 'done'
+  count: number
+}
+
+export type MemoryScanEvent = MemoryScanProgress | MemoryScanMatch | MemoryScanDone
+
 export interface InterceptDecision {
   requestId: string
   action: 'forward' | 'modify' | 'drop'
