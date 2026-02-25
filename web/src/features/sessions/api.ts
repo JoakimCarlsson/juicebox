@@ -1,4 +1,4 @@
-import type { AttachResponse, EvasionConfig, SessionsResponse, MessagesResponse, LogsResponse, CrashesResponse, CryptoEventsResponse, KeystoreEntry, SharedPrefsResponse, InterceptState, InterceptDecision, InterceptRule, PendingRequest } from "@/types/session"
+import type { AttachResponse, EvasionConfig, SessionsResponse, MessagesResponse, LogsResponse, CrashesResponse, CryptoEventsResponse, KeystoreEntry, SharedPrefsResponse, InterceptState, InterceptDecision, InterceptRule, PendingRequest, ManifestData, IntentParams, IntentResult, JNIEventsResponse } from "@/types/session"
 
 export async function attachApp(
   deviceId: string,
@@ -197,6 +197,50 @@ export async function resolveAllInterceptRequests(
     },
   )
   if (!res.ok) throw new Error("Failed to resolve all intercept requests")
+}
+
+export async function fetchManifest(sessionId: string): Promise<ManifestData> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/manifest`)
+  if (!res.ok) throw new Error("Failed to fetch manifest")
+  return res.json()
+}
+
+export async function launchIntent(
+  sessionId: string,
+  params: IntentParams,
+): Promise<IntentResult> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/manifest/intent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) throw new Error("Failed to launch intent")
+  return res.json()
+}
+
+export async function fetchSessionJNI(
+  sessionId: string,
+  limit = 500,
+  offset = 0,
+): Promise<JNIEventsResponse> {
+  const res = await fetch(
+    `/api/v1/sessions/${sessionId}/jni?limit=${limit}&offset=${offset}`,
+  )
+  if (!res.ok) throw new Error("Failed to fetch JNI events")
+  return res.json()
+}
+
+export async function enableJNITracer(
+  sessionId: string,
+  filter?: { library?: string; method?: string },
+): Promise<{ enabled: boolean; registrations: number }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/jni/enable`, {
+    method: "POST",
+    headers: filter ? { "Content-Type": "application/json" } : undefined,
+    body: filter ? JSON.stringify(filter) : undefined,
+  })
+  if (!res.ok) throw new Error("Failed to enable JNI tracer")
+  return res.json()
 }
 
 export interface ScriptFile {

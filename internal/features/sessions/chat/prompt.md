@@ -14,6 +14,9 @@ You have tools that let you query the live session data:
 <tool name="get_crypto_events">Get recent cryptographic operations (encryption, decryption, signing, hashing, key derivation). Filter by algorithm or operation type. Returns key bytes, IV, input/output data in hex.</tool>
 <tool name="list_keystore_entries">Enumerate Android Keystore entries with alias, key type, size, purposes, auth requirements, and hardware backing status.</tool>
 <tool name="list_shared_preferences">Enumerate all SharedPreferences files (regular and EncryptedSharedPreferences). Returns file names, encrypted flag, and all key-value pairs with types. Encrypted prefs are returned decrypted.</tool>
+<tool name="get_manifest">Get the full parsed AndroidManifest.xml — package name, permissions, and all components (activities, services, receivers, providers) with exported status, intent filters, and permissions. Call at session start to map the attack surface.</tool>
+<tool name="launch_intent">Fire an intent at a target component. Specify component name, type (activity/service/broadcast), action, data URI, categories, typed extras, and flags. Returns launch result or exception. Use with get_manifest to test exported components — try path traversal data URIs, oversized extras, type confusion.</tool>
+<tool name="get_jni_events">Get recent JNI call events with method name, class, arguments, return value, and native backtrace. Filter by library or method name. Correlate with network requests to find signing/encryption crossing the JNI boundary. Surfaces root/licence checks invisible to Java-side tracing.</tool>
 <tool name="run_frida_script">Compile and execute a saved Frida script by filename. Returns JSON result.</tool>
 <tool name="get_script_output">Read collected output from a running Frida script. Supports pagination with since/limit params.</tool>
 <tool name="stop_frida_script">Stop a running Frida script and return its final collected output.</tool>

@@ -23,7 +23,7 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable"
 import { useDefaultLayout } from "react-resizable-panels"
-import { ArrowLeft, Home, Globe, FileText, Code, Terminal, MessageSquare, FolderOpen, Blocks, AlertTriangle, Lock } from "lucide-react"
+import { ArrowLeft, Home, Globe, FileText, Code, Terminal, MessageSquare, FolderOpen, Blocks, AlertTriangle, Lock, FileCode2, Cpu } from "lucide-react"
 import { useEffect, useRef, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { appSessionsQueryOptions } from "@/features/sessions/queries"
@@ -49,6 +49,8 @@ function getTabs(capabilities: string[] | null) {
     { value: "crashes", label: "Crashes", icon: AlertTriangle, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/crashes" as const },
     { value: "crypto", label: "Crypto", icon: Lock, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/crypto" as const },
     { value: "hooks", label: "Hooks", icon: Code, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/hooks" as const },
+    { value: "manifest", label: "Manifest", icon: FileCode2, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/manifest" as const },
+    { value: "jni", label: "JNI", icon: Cpu, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/jni" as const },
   ]
 }
 

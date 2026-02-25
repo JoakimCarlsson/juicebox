@@ -168,6 +168,9 @@ func (h *Handler) Handle(c *router.Context) {
 				chattools.NewStopFridaScript(h.runner, sessionID),
 				chattools.NewListScriptFiles(fileManager, sessionID),
 				chattools.NewReadScriptFile(fileManager, sessionID),
+				chattools.NewGetManifest(h.manager, sessionID),
+				chattools.NewLaunchIntent(h.manager, sessionID),
+				chattools.NewGetJNIEvents(h.db, sessionID),
 			)
 		}
 	}

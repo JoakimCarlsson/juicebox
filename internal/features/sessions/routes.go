@@ -10,6 +10,8 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/classes"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/crashes"
 	cryptopkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/crypto"
+	jnipkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/jni"
+	manifestpkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/manifest"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/detach"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/filesystem"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/intercept"
@@ -42,6 +44,8 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	classesHandler := classes.NewHandler(manager)
 	crashesHandler := crashes.NewHandler(database)
 	cryptoHandler := cryptopkg.NewHandler(database, manager)
+	jniHandler := jnipkg.NewHandler(database, manager)
+	manifestHandler := manifestpkg.NewHandler(manager)
 
 	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
@@ -76,6 +80,12 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	r.GET("/sessions/{sessionId}/classes/detail", classesHandler.Detail)
 	r.POST("/sessions/{sessionId}/classes/invoke", classesHandler.Invoke)
 	r.POST("/sessions/{sessionId}/classes/read-field", classesHandler.ReadField)
+
+	r.GET("/sessions/{sessionId}/manifest", manifestHandler.Get)
+	r.POST("/sessions/{sessionId}/manifest/intent", manifestHandler.LaunchIntent)
+
+	r.GET("/sessions/{sessionId}/jni", jniHandler.List)
+	r.POST("/sessions/{sessionId}/jni/enable", jniHandler.Enable)
 
 	r.POST("/sessions/{sessionId}/scripts", scriptsHandler.Upsert)
 	r.GET("/sessions/{sessionId}/scripts", scriptsHandler.List)

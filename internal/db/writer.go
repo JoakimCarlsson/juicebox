@@ -7,6 +7,7 @@ type writeOp struct {
 	logcatEntry  *LogcatEntryRow
 	crashRow     *CrashRow
 	cryptoEvent  *CryptoEventRow
+	jniEvent     *JNIEventRow
 }
 
 type AsyncWriter struct {
@@ -57,6 +58,14 @@ func (w *AsyncWriter) WriteCryptoEvent(c *CryptoEventRow) {
 	}
 }
 
+func (w *AsyncWriter) WriteJNIEvent(e *JNIEventRow) {
+	select {
+	case w.ch <- writeOp{jniEvent: e}:
+	default:
+		slog.Warn("db write buffer full, dropping jni event", "id", e.ID)
+	}
+}
+
 func (w *AsyncWriter) loop() {
 	defer close(w.done)
 	for op := range w.ch {
@@ -78,6 +87,11 @@ func (w *AsyncWriter) loop() {
 		if op.cryptoEvent != nil {
 			if err := w.db.InsertCryptoEvent(op.cryptoEvent); err != nil {
 				slog.Error("async write crypto event", "error", err)
+			}
+		}
+		if op.jniEvent != nil {
+			if err := w.db.InsertJNIEvent(op.jniEvent); err != nil {
+				slog.Error("async write jni event", "error", err)
 			}
 		}
 	}

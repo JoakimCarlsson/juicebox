@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react"
 import { useDeviceSocket } from "@/contexts/DeviceSocketContext"
 import type { AgentMessage, DeviceEnvelope } from "@/types/session"
-import { fetchSessionMessages, fetchSessionLogs, fetchSessionCrashes, fetchSessionCrypto } from "@/features/sessions/api"
+import { fetchSessionMessages, fetchSessionLogs, fetchSessionCrashes, fetchSessionCrypto, fetchSessionJNI } from "@/features/sessions/api"
 
 interface SessionMessageContextValue {
   messages: AgentMessage[]
@@ -54,7 +54,8 @@ export function SessionMessageProvider({
       fetchSessionLogs(sessionId).catch(() => null),
       fetchSessionCrashes(sessionId).catch(() => null),
       fetchSessionCrypto(sessionId).catch(() => null),
-    ]).then(([msgResp, logResp, crashResp, cryptoResp]) => {
+      fetchSessionJNI(sessionId).catch(() => null),
+    ]).then(([msgResp, logResp, crashResp, cryptoResp, jniResp]) => {
       const historical: AgentMessage[] = []
 
       if (msgResp?.messages) {
@@ -89,6 +90,15 @@ export function SessionMessageProvider({
           if (!seenIds.current.has(e.id)) {
             seenIds.current.add(e.id)
             historical.push({ type: "crypto", payload: e })
+          }
+        }
+      }
+
+      if (jniResp?.events) {
+        for (const e of jniResp.events) {
+          if (!seenIds.current.has(e.id)) {
+            seenIds.current.add(e.id)
+            historical.push({ type: "jni", payload: e })
           }
         }
       }

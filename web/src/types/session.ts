@@ -165,6 +165,75 @@ export interface SharedPrefsResponse {
   total: number
 }
 
+export interface IntentFilterData {
+  actions: string[]
+  categories: string[]
+  data: { scheme?: string; host?: string; path?: string; type?: string }[]
+}
+
+export interface ManifestComponent {
+  name: string
+  exported: boolean
+  permission: string | null
+  intentFilters: IntentFilterData[]
+}
+
+export interface ActivityInfo extends ManifestComponent {
+  launchMode: string
+}
+
+export interface ProviderInfo extends ManifestComponent {
+  authorities: string
+  readPermission: string | null
+  writePermission: string | null
+  grantUriPermissions: boolean
+}
+
+export interface ManifestData {
+  platform: string
+  packageName: string
+  versionName: string | null
+  versionCode: number
+  permissions: string[]
+  activities: ActivityInfo[]
+  services: ManifestComponent[]
+  receivers: ManifestComponent[]
+  providers: ProviderInfo[]
+}
+
+export interface IntentParams {
+  component: string
+  type: "activity" | "service" | "broadcast"
+  action?: string
+  data?: string
+  categories?: string[]
+  extras?: Record<string, { type: string; value: unknown }>
+  flags?: number
+}
+
+export interface IntentResult {
+  success: boolean
+  result?: string
+  error?: string
+}
+
+export interface JNIEvent {
+  id: string
+  className: string
+  methodName: string
+  signature: string
+  arguments: string[]
+  returnValue: string | null
+  backtrace: string[]
+  library: string | null
+  timestamp: number
+}
+
+export interface JNIEventsResponse {
+  events: JNIEvent[]
+  total: number
+}
+
 export interface InterceptRule {
   id: string
   enabled: boolean

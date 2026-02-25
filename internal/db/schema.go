@@ -84,6 +84,20 @@ CREATE TABLE IF NOT EXISTS crypto_events (
 );
 CREATE INDEX IF NOT EXISTS idx_crypto_session ON crypto_events(session_id, timestamp);
 
+CREATE TABLE IF NOT EXISTS jni_events (
+    id           TEXT PRIMARY KEY,
+    session_id   TEXT NOT NULL REFERENCES sessions(id),
+    class_name   TEXT NOT NULL,
+    method_name  TEXT NOT NULL,
+    signature    TEXT NOT NULL DEFAULT '',
+    arguments    TEXT,
+    return_value TEXT,
+    backtrace    TEXT,
+    library      TEXT,
+    timestamp    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_jni_session ON jni_events(session_id, timestamp);
+
 CREATE TABLE IF NOT EXISTS script_files (
     id         TEXT PRIMARY KEY,
     session_id TEXT NOT NULL REFERENCES sessions(id),

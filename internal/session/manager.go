@@ -361,6 +361,49 @@ func (m *Manager) bridgeSubscribeForward(sess *Session) {
 			}
 		}
 
+		if msg.Type == "jni" {
+			var jniEvt struct {
+				ID          string   `json:"id"`
+				ClassName   string   `json:"className"`
+				MethodName  string   `json:"methodName"`
+				Signature   string   `json:"signature"`
+				Arguments   []string `json:"arguments"`
+				ReturnValue *string  `json:"returnValue"`
+				Backtrace   []string `json:"backtrace"`
+				Library     *string  `json:"library"`
+				Timestamp   int64    `json:"timestamp"`
+			}
+			if err := json.Unmarshal(msg.Payload, &jniEvt); err == nil && jniEvt.ID != "" {
+				var argsJSON *string
+				if jniEvt.Arguments != nil {
+					b, _ := json.Marshal(jniEvt.Arguments)
+					s := string(b)
+					argsJSON = &s
+				}
+				var btJSON *string
+				if jniEvt.Backtrace != nil {
+					b, _ := json.Marshal(jniEvt.Backtrace)
+					s := string(b)
+					btJSON = &s
+				}
+				if jniEvt.Timestamp == 0 {
+					jniEvt.Timestamp = time.Now().UnixMilli()
+				}
+				m.writer.WriteJNIEvent(&db.JNIEventRow{
+					ID:          jniEvt.ID,
+					SessionID:   sess.ID,
+					ClassName:   jniEvt.ClassName,
+					MethodName:  jniEvt.MethodName,
+					Signature:   jniEvt.Signature,
+					Arguments:   argsJSON,
+					ReturnValue: jniEvt.ReturnValue,
+					Backtrace:   btJSON,
+					Library:     jniEvt.Library,
+					Timestamp:   jniEvt.Timestamp,
+				})
+			}
+		}
+
 		if msg.Type == "crash" {
 			var crash struct {
 				ID               string            `json:"id"`
