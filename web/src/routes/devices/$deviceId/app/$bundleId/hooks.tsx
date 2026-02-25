@@ -802,21 +802,30 @@ function HooksPage() {
     Parameters<NonNullable<Parameters<typeof Editor>[0]['onMount']>>[0] | null
   >(null)
   const activeFileRef = useRef(activeFile)
-  activeFileRef.current = activeFile
   const codeRef = useRef(code)
-  codeRef.current = code
+
+  useEffect(() => {
+    activeFileRef.current = activeFile
+  }, [activeFile])
+
+  useEffect(() => {
+    codeRef.current = code
+  }, [code])
 
   const loadFiles = useCallback(async () => {
     if (!sessionId) return
     try {
       const res = await fetchScriptFiles(sessionId)
       setFiles(res.files ?? [])
-    } catch {}
+    } catch { /* ignored */ }
   }, [sessionId])
 
   useEffect(() => {
-    loadFiles()
-  }, [loadFiles])
+    if (!sessionId) return
+    fetchScriptFiles(sessionId)
+      .then((res) => setFiles(res.files ?? []))
+      .catch(() => {})
+  }, [sessionId])
 
   // WebSocket: live file writes & script output
   useEffect(() => {
