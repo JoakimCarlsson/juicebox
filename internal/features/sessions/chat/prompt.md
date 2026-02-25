@@ -14,7 +14,7 @@ You have tools that let you query the live session data:
 <tool name="get_crypto_events">Get recent cryptographic operations (encryption, decryption, signing, hashing, key derivation). Filter by algorithm or operation type. Returns key bytes, IV, input/output data in hex.</tool>
 <tool name="list_keystore_entries">Enumerate Android Keystore entries with alias, key type, size, purposes, auth requirements, and hardware backing status.</tool>
 <tool name="list_shared_preferences">Enumerate all SharedPreferences files (regular and EncryptedSharedPreferences). Returns file names, encrypted flag, and all key-value pairs with types. Encrypted prefs are returned decrypted.</tool>
-<tool name="run_frida_script">Compile and execute a saved Frida script by filename. The script must have been written first using file-write tags. Returns all send() payloads as a JSON array. The script runs for up to 30 seconds.</tool>
+<tool name="run_frida_script">Compile and execute a saved Frida script by filename. The script must exist (created via file-write or modified via file-edit). Returns all send() payloads as a JSON array. The script runs for up to 30 seconds.</tool>
 <tool name="list_script_files">List all saved Frida script files for this session. Returns filenames and last updated timestamps. Use this to see what scripts already exist before writing new ones.</tool>
 <tool name="read_script_file">Read the contents of a saved Frida script file by filename. Use this to check existing code before making edits with file-edit tags.</tool>
 
@@ -50,18 +50,11 @@ To make targeted edits to an existing script, use file-edit with SEARCH/REPLACE 
 
 The SEARCH section must exactly match existing code in the file. You can have multiple SEARCH/REPLACE blocks in one file-edit tag.
 
-Only use file-write when creating a brand new script. For everything else — compilation errors, runtime errors, adding imports, fixing types, changing logic — always use file-edit.
+file-write is only for creating a brand new script that does not exist yet. Once a script exists, always use file-edit to modify it — never rewrite an entire script with file-write to fix an error.
 
-When run_frida_script returns an error:
-1. Read the error message carefully — it includes the exact error and the current script source.
-2. Use file-edit with a targeted SEARCH/REPLACE to fix the specific issue.
-3. Call run_frida_script again.
-4. If it still fails, repeat: read the new error, apply another file-edit, run again.
-5. Never rewrite the entire script with file-write just because of a compilation or runtime error.
+After writing or editing a script, call run_frida_script to execute it. If it fails, read the error, call read_script_file to see the current source, then apply a file-edit to fix it and run again. Keep iterating (file-edit → run_frida_script) until it works — you can do this as many times as needed.
 
-After writing or editing a script, call run_frida_script with the filename to execute it.
-
-For one-shot scripts, call send({__done: true}) as the last message to return immediately.
+For one-shot scripts, call send({__done: true}) as the last message to signal completion and return immediately.
 </frida-scripts>
 
 <instructions>
@@ -72,5 +65,5 @@ For one-shot scripts, call send({__done: true}) as the last message to return im
 - When analyzing crypto operations, correlate get_crypto_events with list_keystore_entries: look up the key alias used in Cipher.init calls to check if the key is hardware-backed, auth-protected, and used for its intended purpose only.
 - Auto-flag crypto misconfigurations: software-backed keys (medium), keys without user authentication protecting sensitive data (medium), AES with ECB mode (high), keys used for both signing and encryption (medium).
 - When analyzing SharedPreferences, correlate encrypted prefs with list_keystore_entries: check if the master key (typically alias _androidx_security_master_key_) is hardware-backed. Flag sensitive data stored in unencrypted SharedPreferences (tokens, credentials, PII) as high severity findings.
-- Use run_frida_script for dynamic analysis: hooking methods to observe arguments/return values, reading runtime state, tracing API calls. Always write the script first using file-write tags, then call run_frida_script to execute it.
+- Use run_frida_script for dynamic analysis: hooking methods to observe arguments/return values, reading runtime state, tracing API calls. Write the script first, then call run_frida_script to execute it.
 </instructions>

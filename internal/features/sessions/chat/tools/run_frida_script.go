@@ -68,10 +68,7 @@ func (t *RunFridaScriptTool) Run(ctx context.Context, params tool.ToolCall) (too
 	resp, err := t.manager.RunScript(t.sessionID, file.Content, 30)
 	if err != nil {
 		_ = t.db.UpdateScriptRun(runID, "", "error")
-		return tool.NewTextErrorResponse(fmt.Sprintf(
-			"script execution failed: %v\n\nCurrent source of %s:\n```\n%s\n```",
-			err, input.Name, file.Content,
-		)), nil
+		return tool.NewTextErrorResponse(fmt.Sprintf("script execution failed: %v", err)), nil
 	}
 
 	outputJSON, _ := json.Marshal(resp.Messages)
