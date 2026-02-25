@@ -1,4 +1,4 @@
-.PHONY: install dev build build-agent sidecar clean kill-ports
+.PHONY: install dev build build-agent sidecar clean kill-ports lint fmt check
 
 PORTS := 8080 5173
 
@@ -31,6 +31,21 @@ build-agent:
 
 sidecar:
 	cd sidecar && deno task dev
+
+lint:
+	go vet ./...
+	golangci-lint run ./...
+	cd web && bun eslint src
+	cd agent && deno lint
+	cd sidecar && deno lint
+
+fmt:
+	goimports -w .
+	cd web && bun prettier --write "src/**/*.{ts,tsx}"
+	cd agent && deno fmt
+	cd sidecar && deno fmt
+
+check: lint
 
 clean:
 	rm -f juicebox
