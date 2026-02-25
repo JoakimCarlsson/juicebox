@@ -12,8 +12,10 @@ import (
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	chattools "github.com/joakimcarlsson/juicebox/internal/features/sessions/chat/tools"
 	sqlitepkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
+	"github.com/joakimcarlsson/juicebox/internal/scripting"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
@@ -23,15 +25,19 @@ type Handler struct {
 	llmConfig     *config.LLMConfig
 	chatStore     *ChatSessionStore
 	sqliteHandler *sqlitepkg.Handler
+	hubManager    *devicehub.Manager
+	runner        *scripting.Runner
 }
 
-func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteHandler *sqlitepkg.Handler) *Handler {
+func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteHandler *sqlitepkg.Handler, hubManager *devicehub.Manager, runner *scripting.Runner) *Handler {
 	return &Handler{
 		db:            database,
 		manager:       manager,
 		llmConfig:     llmConfig,
 		chatStore:     chatStore,
 		sqliteHandler: sqliteHandler,
+		hubManager:    hubManager,
+		runner:        runner,
 	}
 }
 
@@ -77,6 +83,53 @@ type sseErrorEvent struct {
 	Message string `json:"message"`
 }
 
+type sseEditResultEvent struct {
+	Success bool   `json:"success,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+type editApplier struct {
+	sessionID string
+	files     *scripting.FileManager
+	buf       string
+	applied   int
+}
+
+func (ea *editApplier) accumulate(delta string) {
+	ea.buf += delta
+}
+
+func (ea *editApplier) flush() string {
+	blocks := scripting.ParseEditBlocks(ea.buf)
+	if len(blocks) <= ea.applied {
+		return ""
+	}
+
+	newBlocks := blocks[ea.applied:]
+
+	getContent := func(filename string) (string, bool) {
+		f, err := ea.files.Get(ea.sessionID, filename)
+		if err != nil || f == nil {
+			return "", false
+		}
+		return f.Content, true
+	}
+
+	result := scripting.ApplyEdits(newBlocks, getContent)
+
+	for _, applied := range result.Applied {
+		_, _ = ea.files.Upsert(ea.sessionID, applied.Block.Filename, applied.NewContent)
+	}
+
+	ea.applied = len(blocks)
+
+	if len(result.Failed) > 0 {
+		return scripting.BuildEditError(result, getContent)
+	}
+
+	return ""
+}
+
 func (h *Handler) Handle(c *router.Context) {
 	sessionID := c.Param("sessionId")
 	if sessionID == "" {
@@ -119,6 +172,9 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
+	hub := h.hubManager.GetOrCreate(dbSess.DeviceID)
+	fileManager := scripting.NewFileManager(h.db, hub)
+
 	setup := liveSess.Setup
 	sessionTools := []tool.BaseTool{
 		chattools.NewSearchTraffic(h.db, sessionID),
@@ -141,6 +197,11 @@ func (h *Handler) Handle(c *router.Context) {
 				chattools.NewGetCryptoEvents(h.db, sessionID),
 				chattools.NewListKeystoreEntries(h.manager, sessionID),
 				chattools.NewListSharedPreferences(h.manager, sessionID),
+				chattools.NewRunFridaScript(h.runner, sessionID),
+				chattools.NewGetScriptOutput(h.runner, sessionID),
+				chattools.NewStopFridaScript(h.runner, sessionID),
+				chattools.NewListScriptFiles(fileManager, sessionID),
+				chattools.NewReadScriptFile(fileManager, sessionID),
 			)
 		}
 	}
@@ -164,20 +225,31 @@ func (h *Handler) Handle(c *router.Context) {
 		agent.WithState(state),
 		agent.WithTools(sessionTools...),
 		agent.WithSession(sessionID, h.chatStore.GetOrCreate(sessionID)),
-		agent.WithMaxIterations(5),
+		agent.WithMaxIterations(50),
 	)
 
 	c.SSEHandler(router.DefaultSSEConfig(), func(ctx context.Context, send router.SSESendFunc) error {
 		eventCh := a.ChatStream(ctx, req.Message)
 
+		applier := &editApplier{
+			sessionID: sessionID,
+			files:     fileManager,
+		}
+
 		for event := range eventCh {
 			switch event.Type {
 			case types.EventContentDelta:
+				applier.accumulate(event.Content)
 				if err := send("content", sseContentEvent{Delta: event.Content}); err != nil {
 					return err
 				}
 
 			case types.EventToolUseStart:
+				if editErr := applier.flush(); editErr != "" {
+					_ = send("edit_failed", sseEditResultEvent{Error: editErr})
+				} else if applier.applied > 0 {
+					_ = send("edit_applied", sseEditResultEvent{Success: true})
+				}
 				if event.ToolCall != nil {
 					if err := send("tool_start", sseToolStartEvent{
 						Name: event.ToolCall.Name,
@@ -199,6 +271,12 @@ func (h *Handler) Handle(c *router.Context) {
 				}
 
 			case types.EventComplete:
+				if editErr := applier.flush(); editErr != "" {
+					_ = send("edit_failed", sseEditResultEvent{Error: editErr})
+				} else if applier.applied > 0 {
+					_ = send("edit_applied", sseEditResultEvent{Success: true})
+				}
+
 				evt := sseDoneEvent{}
 				if event.Response != nil {
 					evt.InputTokens = event.Response.Usage.InputTokens

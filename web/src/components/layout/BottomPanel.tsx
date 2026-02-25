@@ -3,6 +3,7 @@ import {
   type PanelTab,
 } from "@/contexts/BottomPanelContext"
 import { useEventLog, type EventLogEntry } from "@/contexts/EventLogContext"
+import { useScriptOutput } from "@/contexts/ScriptOutputContext"
 import type { LogEntry } from "@/types/session"
 import { Button } from "@/components/ui/button"
 import {
@@ -10,6 +11,7 @@ import {
   AlertTriangle,
   Trash2,
   CheckCircle2,
+  ScrollText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEffect, useMemo, useRef } from "react"
@@ -24,6 +26,11 @@ const tabs: { value: PanelTab; label: string; icon: React.ReactNode }[] = [
     value: "problems",
     label: "Problems",
     icon: <AlertTriangle className="mr-1.5 h-3 w-3" />,
+  },
+  {
+    value: "output",
+    label: "Output",
+    icon: <ScrollText className="mr-1.5 h-3 w-3" />,
   },
 ]
 
@@ -55,7 +62,16 @@ function formatTime(timestamp: number): string {
 export function BottomPanel() {
   const { activeTab, setActiveTab } = useBottomPanel()
   const { entries, clear } = useEventLog()
+  const scriptOutput = useScriptOutput()
   const problemsCount = getProblemsCount(entries)
+
+  const handleClear = () => {
+    if (activeTab === "output") {
+      scriptOutput.clear()
+    } else {
+      clear()
+    }
+  }
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -80,6 +96,11 @@ export function BottomPanel() {
                   {problemsCount}
                 </span>
               )}
+              {tab.value === "output" && scriptOutput.entries.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium leading-none text-primary-foreground">
+                  {scriptOutput.entries.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -87,7 +108,7 @@ export function BottomPanel() {
           variant="ghost"
           size="icon"
           className="h-6 w-6"
-          onClick={clear}
+          onClick={handleClear}
           title="Clear"
         >
           <Trash2 className="h-3 w-3" />
@@ -97,6 +118,7 @@ export function BottomPanel() {
       <div className="flex-1 overflow-auto">
         {activeTab === "console" && <ConsoleTab />}
         {activeTab === "problems" && <ProblemsTab />}
+        {activeTab === "output" && <OutputTab />}
       </div>
     </div>
   )
@@ -222,6 +244,67 @@ function ProblemsTab() {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function OutputTab() {
+  const { entries } = useScriptOutput()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const autoScrollRef = useRef(true)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    function handleScroll() {
+      if (!el) return
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 32
+      autoScrollRef.current = atBottom
+    }
+
+    el.addEventListener("scroll", handleScroll)
+    return () => el.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  useEffect(() => {
+    if (autoScrollRef.current && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [entries])
+
+  if (entries.length === 0) {
+    return (
+      <div className="p-3 font-mono text-xs text-muted-foreground">
+        Script output will appear here when you run a Frida script.
+      </div>
+    )
+  }
+
+  return (
+    <div ref={scrollRef} className="h-full overflow-auto">
+      <div className="font-mono text-xs">
+        {entries.map((entry) => (
+          <div
+            key={entry.id}
+            className={cn(
+              "flex items-start gap-2 px-3 py-0.5 border-l-2",
+              entry.isError
+                ? "bg-red-500/10 border-l-red-500 text-red-700 dark:text-red-300"
+                : "border-l-transparent text-foreground",
+            )}
+          >
+            <span className="shrink-0 text-muted-foreground">
+              {formatTime(entry.timestamp)}
+            </span>
+            <pre className="whitespace-pre-wrap break-all flex-1">
+              {typeof entry.payload === "string"
+                ? entry.payload
+                : JSON.stringify(entry.payload, null, 2)}
+            </pre>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

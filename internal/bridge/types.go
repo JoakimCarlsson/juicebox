@@ -1,5 +1,7 @@
 package bridge
 
+import "encoding/json"
+
 type Device struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
@@ -75,4 +77,25 @@ type DatabaseColumn struct {
 	Type    string `json:"type"`
 	NotNull bool   `json:"notNull"`
 	PK      bool   `json:"pk"`
+}
+
+type RunScriptResponse struct {
+	Mode              string            `json:"mode"`
+	Name              string            `json:"name,omitempty"`
+	Messages          []json.RawMessage `json:"messages"`
+	MessagesCollected int               `json:"messagesCollected,omitempty"`
+}
+
+type GetScriptOutputResponse struct {
+	Name          string            `json:"name"`
+	Running       bool              `json:"running"`
+	TotalMessages int               `json:"totalMessages"`
+	Since         int               `json:"since"`
+	Messages      []json.RawMessage `json:"messages"`
+}
+
+type StopScriptResponse struct {
+	Name          string            `json:"name"`
+	TotalMessages int               `json:"totalMessages"`
+	Messages      []json.RawMessage `json:"messages"`
 }

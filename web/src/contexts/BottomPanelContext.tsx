@@ -7,7 +7,7 @@ import {
 } from "react"
 import type { PanelImperativeHandle } from "react-resizable-panels"
 
-export type PanelTab = "console" | "problems"
+export type PanelTab = "console" | "problems" | "output"
 
 interface BottomPanelContextValue {
   isOpen: boolean

@@ -195,6 +195,10 @@ export function ChatPanelProvider({
             break
           }
 
+          case "edit_applied":
+          case "edit_failed":
+            break
+
           case "done":
             setMessages((prev) =>
               prev.map((m) =>

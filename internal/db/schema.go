@@ -83,6 +83,26 @@ CREATE TABLE IF NOT EXISTS crypto_events (
     timestamp  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_crypto_session ON crypto_events(session_id, timestamp);
+
+CREATE TABLE IF NOT EXISTS script_files (
+    id         TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    name       TEXT NOT NULL,
+    content    TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_script_files_name ON script_files(session_id, name);
+
+CREATE TABLE IF NOT EXISTS script_runs (
+    id             TEXT PRIMARY KEY,
+    session_id     TEXT NOT NULL REFERENCES sessions(id),
+    script_file_id TEXT REFERENCES script_files(id),
+    output         TEXT,
+    status         TEXT NOT NULL DEFAULT 'running',
+    timestamp      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_script_runs_session ON script_runs(session_id, timestamp DESC);
 `
 
 func (d *DB) Migrate() error {
@@ -90,5 +110,6 @@ func (d *DB) Migrate() error {
 		return fmt.Errorf("db.Migrate: %w", err)
 	}
 	_, _ = d.Conn.Exec(`ALTER TABLE sessions ADD COLUMN platform TEXT NOT NULL DEFAULT 'android'`)
+	_, _ = d.Conn.Exec(`DROP TABLE IF EXISTS scripts`)
 	return nil
 }
