@@ -103,7 +103,11 @@ func (h *Handler) Dump(c *router.Context) {
 	}
 
 	if req.Address == "" || req.Size <= 0 {
-		response.Error(c, http.StatusBadRequest, "address and positive size are required")
+		response.Error(
+			c,
+			http.StatusBadRequest,
+			"address and positive size are required",
+		)
 		return
 	}
 

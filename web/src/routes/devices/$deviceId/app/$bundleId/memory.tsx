@@ -1,14 +1,6 @@
 import { createFileRoute, useSearch } from '@tanstack/react-router'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import {
-  Search,
-  Square,
-  Trash2,
-  ChevronDown,
-  Copy,
-  Check,
-  Cpu,
-} from 'lucide-react'
+import { Search, Square, Trash2, ChevronDown, Copy, Check, Cpu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -72,9 +64,7 @@ function MemoryPage() {
   }, [messages, clearIndex])
 
   const matches = useMemo(() => {
-    return scanEvents.filter(
-      (e): e is MemoryScanMatch => e.event === 'match'
-    )
+    return scanEvents.filter((e): e is MemoryScanMatch => e.event === 'match')
   }, [scanEvents])
 
   const progress = useMemo(() => {
@@ -204,7 +194,12 @@ function MemoryPage() {
         </div>
 
         {isActive ? (
-          <Button variant="destructive" size="sm" className="h-8 text-xs gap-1.5" onClick={handleStop}>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-8 text-xs gap-1.5"
+            onClick={handleStop}
+          >
             <Square className="h-3 w-3" />
             Stop
           </Button>
@@ -262,9 +257,7 @@ function MemoryPage() {
             <p className="text-sm">
               {isActive ? 'Scanning process memory...' : 'No memory scan results yet'}
             </p>
-            <p className="text-xs opacity-60">
-              Search for byte patterns in the live process heap
-            </p>
+            <p className="text-xs opacity-60">Search for byte patterns in the live process heap</p>
           </div>
         ) : (
           <div className="divide-y divide-border">
@@ -290,10 +283,7 @@ function MatchRow({ match }: { match: MemoryScanMatch }) {
   return (
     <div className="px-4 py-2.5 hover:bg-muted/30 transition-colors">
       <div className="flex items-center gap-2 mb-1.5">
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1 group"
-        >
+        <button onClick={handleCopy} className="flex items-center gap-1 group">
           <code className="text-xs font-mono text-blue-600 dark:text-blue-400">
             {match.address}
           </code>

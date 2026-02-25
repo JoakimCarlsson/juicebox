@@ -11,7 +11,7 @@ import (
 )
 
 type ScanMemoryParams struct {
-	Pattern    string `json:"pattern" description:"Byte pattern to search for in process memory. Can be a hex pattern with wildcards (e.g. '65 79 4A ?? ??') or a plain string (e.g. 'eyJ', 'Bearer ', 'sk_live_')."`
+	Pattern    string `json:"pattern"              description:"Byte pattern to search for in process memory. Can be a hex pattern with wildcards (e.g. '65 79 4A ?? ??') or a plain string (e.g. 'eyJ', 'Bearer ', 'sk_live_')."`
 	MaxResults int    `json:"maxResults,omitempty" description:"Maximum number of matches to return. Defaults to 100."`
 }
 
@@ -74,7 +74,10 @@ func (t *ScanMemoryTool) Run(
 
 	if len(matches) == 0 {
 		return tool.NewTextResponse(
-			fmt.Sprintf("No matches for pattern %q found in process memory.", input.Pattern),
+			fmt.Sprintf(
+				"No matches for pattern %q found in process memory.",
+				input.Pattern,
+			),
 		), nil
 	}
 
