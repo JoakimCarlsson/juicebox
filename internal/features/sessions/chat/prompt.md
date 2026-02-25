@@ -50,7 +50,14 @@ To make targeted edits to an existing script, use file-edit with SEARCH/REPLACE 
 
 The SEARCH section must exactly match existing code in the file. You can have multiple SEARCH/REPLACE blocks in one file-edit tag.
 
-Use file-write for new scripts or major rewrites. Use file-edit for small fixes (compilation errors, missing semicolons, etc.).
+Only use file-write when creating a brand new script. For everything else — compilation errors, runtime errors, adding imports, fixing types, changing logic — always use file-edit.
+
+When run_frida_script returns an error:
+1. Read the error message carefully — it includes the exact error and the current script source.
+2. Use file-edit with a targeted SEARCH/REPLACE to fix the specific issue.
+3. Call run_frida_script again.
+4. If it still fails, repeat: read the new error, apply another file-edit, run again.
+5. Never rewrite the entire script with file-write just because of a compilation or runtime error.
 
 After writing or editing a script, call run_frida_script with the filename to execute it.
 

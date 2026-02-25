@@ -440,7 +440,9 @@ async function handleRunScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
     const compileOut = await compile.output();
     if (compileOut.code !== 0) {
       const stderr = new TextDecoder().decode(compileOut.stderr).trim();
-      return fail(req.id, -32000, `compilation failed: ${stderr}`);
+      const stdout = new TextDecoder().decode(compileOut.stdout).trim();
+      const detail = [stderr, stdout].filter(Boolean).join("\n") || "unknown error";
+      return fail(req.id, -32000, `compilation failed:\n${detail}`);
     }
 
     const compiledJS = await Deno.readTextFile(outFile);
