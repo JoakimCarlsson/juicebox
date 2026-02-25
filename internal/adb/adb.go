@@ -67,8 +67,8 @@ func InstallCACert(deviceID string, pemPath string) error {
 	certFilename := fmt.Sprintf("%s.0", hash)
 	certPath := fmt.Sprintf("/data/local/tmp/%s", certFilename)
 
-	run("-s", deviceID, "root")
-	run("-s", deviceID, "wait-for-device")
+	_ = run("-s", deviceID, "root")
+	_ = run("-s", deviceID, "wait-for-device")
 
 	if err := run("-s", deviceID, "push", pemPath, certPath); err != nil {
 		return fmt.Errorf("push cert: %w", err)
@@ -159,7 +159,7 @@ echo 'System cert successfully injected'
 		return fmt.Errorf("cert injection did not complete: %s", output)
 	}
 
-	shell(deviceID, fmt.Sprintf("rm -f %s", scriptPath))
+	_ = shell(deviceID, fmt.Sprintf("rm -f %s", scriptPath))
 
 	return nil
 }

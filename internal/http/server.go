@@ -89,6 +89,6 @@ func (s *Server) serveSPA(r *router.Router) {
 		}
 
 		c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-		c.Writer.Write(index)
+		_, _ = c.Writer.Write(index)
 	})
 }

@@ -30,15 +30,15 @@ func (a *AndroidSetup) PrepareInterception(
 		return err
 	}
 	if err := adb.SetProxy(deviceID, "127.0.0.1", deviceProxyPort); err != nil {
-		adb.RemoveReverse(deviceID, deviceProxyPort)
+		_ = adb.RemoveReverse(deviceID, deviceProxyPort)
 		return err
 	}
 	return nil
 }
 
 func (a *AndroidSetup) CleanupInterception(deviceID string) error {
-	adb.ClearProxy(deviceID)
-	adb.RemoveReverse(deviceID, deviceProxyPort)
+	_ = adb.ClearProxy(deviceID)
+	_ = adb.RemoveReverse(deviceID, deviceProxyPort)
 	return nil
 }
 

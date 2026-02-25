@@ -147,7 +147,7 @@ func (m *Manager) Attach(
 	bridgeResp, err := m.bridge.Attach(deviceID, bundleID, evasion)
 	if err != nil {
 		logger.Error("bridge attach failed", "error", err)
-		setup.CleanupInterception(deviceID)
+		_ = setup.CleanupInterception(deviceID)
 		p.Stop()
 		return nil, fmt.Errorf("manager: bridge attach: %w", err)
 	}
@@ -287,9 +287,9 @@ func (m *Manager) Detach(sessionID string) error {
 	}
 
 	if setup, ok := m.deviceSetups[sess.Platform]; ok {
-		setup.CleanupInterception(sess.DeviceID)
+		_ = setup.CleanupInterception(sess.DeviceID)
 	} else if fallback, ok := m.deviceSetups["android"]; ok {
-		fallback.CleanupInterception(sess.DeviceID)
+		_ = fallback.CleanupInterception(sess.DeviceID)
 	}
 
 	sess.Proxy.Stop()

@@ -136,7 +136,7 @@ func (p *Proxy) handleConnect(clientConn net.Conn, connectReq *http.Request) {
 	}
 	hostname, _, _ := net.SplitHostPort(host)
 
-	clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
+	_, _ = clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
 
 	cert, err := p.certManager.GetCert(hostname)
 	if err != nil {
@@ -200,7 +200,7 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 		var drop bool
 		req, reqFullBody, drop = p.intercept.MaybeIntercept(req, reqFullBody)
 		if drop {
-			clientConn.Write(
+			_, _ = clientConn.Write(
 				[]byte("HTTP/1.1 502 Blocked\r\nContent-Length: 0\r\n\r\n"),
 			)
 			return
@@ -211,7 +211,7 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 
 	resp, err := p.transport.RoundTrip(req)
 	if err != nil {
-		clientConn.Write(
+		_, _ = clientConn.Write(
 			[]byte("HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n"),
 		)
 		return
@@ -228,7 +228,7 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 			respFullBody,
 		)
 		if drop {
-			clientConn.Write(
+			_, _ = clientConn.Write(
 				[]byte("HTTP/1.1 502 Blocked\r\nContent-Length: 0\r\n\r\n"),
 			)
 			return
@@ -242,7 +242,7 @@ func (p *Proxy) roundTripAndEmit(clientConn net.Conn, req *http.Request) {
 	resp.Body = io.NopCloser(bytes.NewReader(respFullBody))
 	resp.ContentLength = int64(len(respFullBody))
 	resp.Header.Del("Transfer-Encoding")
-	resp.Write(clientConn)
+	_ = resp.Write(clientConn)
 }
 
 func (p *Proxy) emitMessage(

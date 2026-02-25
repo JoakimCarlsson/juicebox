@@ -34,5 +34,5 @@ func (h *Handler) Handle(c *router.Context) {
 	c.Writer.Header().Set("Content-Type", contentType)
 	c.Writer.Header().Set("Cache-Control", "public, max-age=3600")
 	c.Writer.WriteHeader(http.StatusOK)
-	c.Writer.Write(data)
+	_, _ = c.Writer.Write(data)
 }

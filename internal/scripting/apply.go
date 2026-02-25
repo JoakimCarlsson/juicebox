@@ -121,10 +121,6 @@ func whitespaceFlexibleReplace(content, search, replace string) string {
 			minLeading = len(l)
 		}
 	}
-	if minLeading < 0 {
-		minLeading = 0
-	}
-
 	numSearch := len(searchLines)
 
 	for i := 0; i <= len(contentLines)-numSearch; i++ {

@@ -92,6 +92,6 @@ func (h *Handler) handleIncoming(msg []byte) {
 		if sess == nil || sess.Intercept == nil {
 			return
 		}
-		sess.Intercept.Resolve(decision)
+		_ = sess.Intercept.Resolve(decision)
 	}
 }

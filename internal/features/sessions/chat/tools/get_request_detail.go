@@ -54,10 +54,10 @@ func (t *GetRequestDetailTool) Run(
 	}
 
 	var reqHeaders map[string]string
-	json.Unmarshal([]byte(row.RequestHeaders), &reqHeaders)
+	_ = json.Unmarshal([]byte(row.RequestHeaders), &reqHeaders)
 
 	var respHeaders map[string]string
-	json.Unmarshal([]byte(row.ResponseHeaders), &respHeaders)
+	_ = json.Unmarshal([]byte(row.ResponseHeaders), &respHeaders)
 
 	detail := map[string]any{
 		"id":              row.ID,
