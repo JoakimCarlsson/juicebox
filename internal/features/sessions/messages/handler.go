@@ -6,6 +6,7 @@ import (
 
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 )
 
 type Handler struct {
@@ -17,24 +18,24 @@ func NewHandler(database *db.DB) *Handler {
 }
 
 func (h *Handler) Handle(c *router.Context) {
-	sessionId := c.Param("sessionId")
-	if sessionId == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "missing sessionId"})
+	sessionID := c.Param("sessionId")
+	if sessionID == "" {
+		response.Error(c, http.StatusBadRequest, "missing sessionId")
 		return
 	}
 
 	limit := c.QueryIntDefault("limit", 500)
 	offset := c.QueryIntDefault("offset", 0)
 
-	rows, err := h.db.ListHttpMessages(sessionId, limit, offset)
+	rows, err := h.db.ListHttpMessages(sessionID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	total, err := h.db.CountHttpMessages(sessionId)
+	total, err := h.db.CountHttpMessages(sessionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 

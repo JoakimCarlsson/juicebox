@@ -2,18 +2,31 @@ package stream
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
+	"net/url"
 
 	"github.com/gorilla/websocket"
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/proxy"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		u, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		host := u.Hostname()
+		return host == "localhost" || host == "127.0.0.1" || host == "::1"
+	},
 }
 
 type Handler struct {
@@ -26,20 +39,20 @@ func NewHandler(hubManager *devicehub.Manager, sessionManager *session.Manager) 
 }
 
 func (h *Handler) Handle(c *router.Context) {
-	deviceId := c.Param("deviceId")
-	if deviceId == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "missing deviceId"})
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
 		return
 	}
 
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("[device-stream] WebSocket upgrade failed: %v", err)
+		slog.Warn("WebSocket upgrade failed", "error", err)
 		return
 	}
 	defer ws.Close()
 
-	hub := h.hubManager.GetOrCreate(deviceId)
+	hub := h.hubManager.GetOrCreate(deviceID)
 	buffered := hub.AddSubscriber(ws)
 
 	for _, data := range buffered {
@@ -58,12 +71,6 @@ func (h *Handler) Handle(c *router.Context) {
 	}
 
 	hub.RemoveSubscriber(ws)
-}
-
-type incomingEnvelope struct {
-	Type      string          `json:"type"`
-	SessionID string          `json:"sessionId"`
-	Payload   json.RawMessage `json:"payload"`
 }
 
 func (h *Handler) handleIncoming(msg []byte) {

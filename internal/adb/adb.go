@@ -18,27 +18,27 @@ func run(args ...string) error {
 	return nil
 }
 
-func shell(deviceId string, command string) error {
-	return run("-s", deviceId, "shell", command)
+func shell(deviceID string, command string) error {
+	return run("-s", deviceID, "shell", command)
 }
 
-func SetProxy(deviceId string, host string, port int) error {
-	return shell(deviceId, fmt.Sprintf("settings put global http_proxy %s:%d", host, port))
+func SetProxy(deviceID string, host string, port int) error {
+	return shell(deviceID, fmt.Sprintf("settings put global http_proxy %s:%d", host, port))
 }
 
-func ClearProxy(deviceId string) error {
-	return shell(deviceId, "settings put global http_proxy :0")
+func ClearProxy(deviceID string) error {
+	return shell(deviceID, "settings put global http_proxy :0")
 }
 
-func ReversePort(deviceId string, remotePort, localPort int) error {
-	return run("-s", deviceId, "reverse", fmt.Sprintf("tcp:%d", remotePort), fmt.Sprintf("tcp:%d", localPort))
+func ReversePort(deviceID string, remotePort, localPort int) error {
+	return run("-s", deviceID, "reverse", fmt.Sprintf("tcp:%d", remotePort), fmt.Sprintf("tcp:%d", localPort))
 }
 
-func RemoveReverse(deviceId string, remotePort int) error {
-	return run("-s", deviceId, "reverse", "--remove", fmt.Sprintf("tcp:%d", remotePort))
+func RemoveReverse(deviceID string, remotePort int) error {
+	return run("-s", deviceID, "reverse", "--remove", fmt.Sprintf("tcp:%d", remotePort))
 }
 
-func InstallCACert(deviceId string, pemPath string) error {
+func InstallCACert(deviceID string, pemPath string) error {
 	hash, err := certSubjectHash(pemPath)
 	if err != nil {
 		return fmt.Errorf("certSubjectHash: %w", err)
@@ -47,10 +47,10 @@ func InstallCACert(deviceId string, pemPath string) error {
 	certFilename := fmt.Sprintf("%s.0", hash)
 	certPath := fmt.Sprintf("/data/local/tmp/%s", certFilename)
 
-	run("-s", deviceId, "root")
-	run("-s", deviceId, "wait-for-device")
+	run("-s", deviceID, "root")
+	run("-s", deviceID, "wait-for-device")
 
-	if err := run("-s", deviceId, "push", pemPath, certPath); err != nil {
+	if err := run("-s", deviceID, "push", pemPath, certPath); err != nil {
 		return fmt.Errorf("push cert: %w", err)
 	}
 
@@ -123,11 +123,11 @@ echo 'System cert successfully injected'
 	}
 	scriptLocal.Close()
 
-	if err := run("-s", deviceId, "push", scriptLocal.Name(), scriptPath); err != nil {
+	if err := run("-s", deviceID, "push", scriptLocal.Name(), scriptPath); err != nil {
 		return fmt.Errorf("push script: %w", err)
 	}
 
-	cmd := exec.Command("adb", "-s", deviceId, "shell", "sh", scriptPath)
+	cmd := exec.Command("adb", "-s", deviceID, "shell", "sh", scriptPath)
 	out, err := cmd.CombinedOutput()
 	output := string(out)
 
@@ -139,19 +139,19 @@ echo 'System cert successfully injected'
 		return fmt.Errorf("cert injection did not complete: %s", output)
 	}
 
-	shell(deviceId, fmt.Sprintf("rm -f %s", scriptPath))
+	shell(deviceID, fmt.Sprintf("rm -f %s", scriptPath))
 
 	return nil
 }
 
-func RemoveCACert(deviceId string, pemPath string) error {
+func RemoveCACert(deviceID string, pemPath string) error {
 	hash, err := certSubjectHash(pemPath)
 	if err != nil {
 		return err
 	}
 
 	remotePath := fmt.Sprintf("/system/etc/security/cacerts/%s.0", hash)
-	shell(deviceId, fmt.Sprintf("rm -f %s", remotePath))
+	shell(deviceID, fmt.Sprintf("rm -f %s", remotePath))
 	return nil
 }
 

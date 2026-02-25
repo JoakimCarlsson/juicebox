@@ -5,6 +5,7 @@ import (
 
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 )
 
 type Handler struct {
@@ -16,15 +17,15 @@ func NewHandler(client *bridge.Client) *Handler {
 }
 
 func (h *Handler) Handle(c *router.Context) {
-	deviceId := c.Param("deviceId")
-	if deviceId == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "missing deviceId"})
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
 		return
 	}
 
-	deviceInfo, err := h.client.GetDeviceInfo(deviceId)
+	deviceInfo, err := h.client.GetDeviceInfo(deviceID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 

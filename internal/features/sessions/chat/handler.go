@@ -14,7 +14,8 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	chattools "github.com/joakimcarlsson/juicebox/internal/features/sessions/chat/tools"
-	sqlitepkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
+	"github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/scripting"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
@@ -24,18 +25,18 @@ type Handler struct {
 	manager       *session.Manager
 	llmConfig     *config.LLMConfig
 	chatStore     *ChatSessionStore
-	sqliteHandler *sqlitepkg.Handler
+	sqliteService *sqlite.Service
 	hubManager    *devicehub.Manager
 	runner        *scripting.Runner
 }
 
-func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteHandler *sqlitepkg.Handler, hubManager *devicehub.Manager, runner *scripting.Runner) *Handler {
+func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteService *sqlite.Service, hubManager *devicehub.Manager, runner *scripting.Runner) *Handler {
 	return &Handler{
 		db:            database,
 		manager:       manager,
 		llmConfig:     llmConfig,
 		chatStore:     chatStore,
-		sqliteHandler: sqliteHandler,
+		sqliteService: sqliteService,
 		hubManager:    hubManager,
 		runner:        runner,
 	}
@@ -43,7 +44,7 @@ func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLM
 
 func (h *Handler) sqliteQueryFn() func(sess *session.Session, sessionID, dbPath, sqlStr string) (*chattools.QueryResult, error) {
 	return func(sess *session.Session, sessionID, dbPath, sqlStr string) (*chattools.QueryResult, error) {
-		resp, err := h.sqliteHandler.ExecQuery(sess, sessionID, dbPath, sqlStr)
+		resp, err := h.sqliteService.ExecQuery(sess, sessionID, dbPath, sqlStr)
 		if err != nil {
 			return nil, err
 		}
@@ -53,39 +54,6 @@ func (h *Handler) sqliteQueryFn() func(sess *session.Session, sessionID, dbPath,
 			RowCount: resp.RowCount,
 		}, nil
 	}
-}
-
-type chatRequest struct {
-	Message string `json:"message"`
-}
-
-type sseContentEvent struct {
-	Delta string `json:"delta"`
-}
-
-type sseToolStartEvent struct {
-	Name string `json:"name"`
-	ID   string `json:"id"`
-}
-
-type sseToolEndEvent struct {
-	Name   string `json:"name"`
-	ID     string `json:"id"`
-	Result string `json:"result"`
-}
-
-type sseDoneEvent struct {
-	InputTokens  int64 `json:"input_tokens"`
-	OutputTokens int64 `json:"output_tokens"`
-}
-
-type sseErrorEvent struct {
-	Message string `json:"message"`
-}
-
-type sseEditResultEvent struct {
-	Success bool   `json:"success,omitempty"`
-	Error   string `json:"error,omitempty"`
 }
 
 type editApplier struct {
@@ -133,42 +101,40 @@ func (ea *editApplier) flush() string {
 func (h *Handler) Handle(c *router.Context) {
 	sessionID := c.Param("sessionId")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "missing sessionId"})
+		response.Error(c, http.StatusBadRequest, "missing sessionId")
 		return
 	}
 
 	if !h.llmConfig.Configured() {
-		c.JSON(http.StatusServiceUnavailable, map[string]string{
-			"error": "LLM provider not configured. Set JUICEBOX_LLM_PROVIDER and JUICEBOX_LLM_API_KEY environment variables.",
-		})
+		response.Error(c, http.StatusServiceUnavailable, "LLM provider not configured. Set JUICEBOX_LLM_PROVIDER and JUICEBOX_LLM_API_KEY environment variables.")
 		return
 	}
 
 	var req chatRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if req.Message == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "message is required"})
+		response.Error(c, http.StatusBadRequest, "message is required")
 		return
 	}
 
 	dbSess, err := h.db.GetSession(sessionID)
 	if err != nil || dbSess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
 	liveSess := h.manager.GetSession(sessionID)
 	if liveSess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "active session not found"})
+		response.Error(c, http.StatusNotFound, "active session not found")
 		return
 	}
 
 	llmClient, err := h.llmConfig.NewClient()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create LLM client: " + err.Error()})
+		response.Error(c, http.StatusInternalServerError, "failed to create LLM client: "+err.Error())
 		return
 	}
 
@@ -210,7 +176,7 @@ func (h *Handler) Handle(c *router.Context) {
 		chattools.NewReadFile(setup, dbSess.DeviceID, dbSess.BundleID),
 		chattools.NewFindFiles(setup, dbSess.DeviceID, dbSess.BundleID),
 		chattools.NewListDatabases(setup, dbSess.DeviceID, dbSess.BundleID),
-		chattools.NewGetSchema(h.sqliteHandler, h.manager, sessionID),
+		chattools.NewGetSchema(h.sqliteService, h.manager, sessionID),
 		chattools.NewSqliteQuery(h.sqliteQueryFn(), h.manager, sessionID),
 	)
 
@@ -306,7 +272,7 @@ func (h *Handler) Status(c *router.Context) {
 func (h *Handler) History(c *router.Context) {
 	sessionID := c.Param("sessionId")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "missing sessionId"})
+		response.Error(c, http.StatusBadRequest, "missing sessionId")
 		return
 	}
 
@@ -327,7 +293,7 @@ func (h *Handler) History(c *router.Context) {
 
 	msgs, err := sess.GetMessages(ctx, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -338,21 +304,6 @@ func (h *Handler) History(c *router.Context) {
 				toolResults[tr.ToolCallID] = tr
 			}
 		}
-	}
-
-	type historyPart struct {
-		Type    string `json:"type"`
-		Content string `json:"content,omitempty"`
-		ID      string `json:"id,omitempty"`
-		Name    string `json:"name,omitempty"`
-		Status  string `json:"status,omitempty"`
-		Result  string `json:"result,omitempty"`
-	}
-
-	type historyMsg struct {
-		Role    string        `json:"role"`
-		Content string        `json:"content"`
-		Parts   []historyPart `json:"parts,omitempty"`
 	}
 
 	result := make([]historyMsg, 0)

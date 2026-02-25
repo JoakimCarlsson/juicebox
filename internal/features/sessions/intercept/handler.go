@@ -6,6 +6,7 @@ import (
 
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/proxy"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
@@ -17,25 +18,10 @@ func NewHandler(manager *session.Manager) *Handler {
 	return &Handler{manager: manager}
 }
 
-type stateResponse struct {
-	Enabled      bool                 `json:"enabled"`
-	Rules        []proxy.InterceptRule `json:"rules"`
-	PendingCount int                  `json:"pendingCount"`
-}
-
-type updateRequest struct {
-	Enabled *bool                 `json:"enabled,omitempty"`
-	Rules   *[]proxy.InterceptRule `json:"rules,omitempty"`
-}
-
-type resolveAllRequest struct {
-	Action proxy.InterceptAction `json:"action"`
-}
-
 func (h *Handler) GetState(c *router.Context) {
 	sess := h.manager.GetSession(c.Param("sessionId"))
 	if sess == nil || sess.Intercept == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found or not active"})
+		response.Error(c, http.StatusNotFound, "session not found or not active")
 		return
 	}
 
@@ -50,13 +36,13 @@ func (h *Handler) GetState(c *router.Context) {
 func (h *Handler) UpdateState(c *router.Context) {
 	sess := h.manager.GetSession(c.Param("sessionId"))
 	if sess == nil || sess.Intercept == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found or not active"})
+		response.Error(c, http.StatusNotFound, "session not found or not active")
 		return
 	}
 
 	var req updateRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -78,7 +64,7 @@ func (h *Handler) UpdateState(c *router.Context) {
 func (h *Handler) ListPending(c *router.Context) {
 	sess := h.manager.GetSession(c.Param("sessionId"))
 	if sess == nil || sess.Intercept == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found or not active"})
+		response.Error(c, http.StatusNotFound, "session not found or not active")
 		return
 	}
 
@@ -89,18 +75,18 @@ func (h *Handler) ListPending(c *router.Context) {
 func (h *Handler) Resolve(c *router.Context) {
 	sess := h.manager.GetSession(c.Param("sessionId"))
 	if sess == nil || sess.Intercept == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found or not active"})
+		response.Error(c, http.StatusNotFound, "session not found or not active")
 		return
 	}
 
 	var decision proxy.InterceptDecision
 	if err := json.NewDecoder(c.Request.Body).Decode(&decision); err != nil {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := sess.Intercept.Resolve(decision); err != nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -110,13 +96,13 @@ func (h *Handler) Resolve(c *router.Context) {
 func (h *Handler) ResolveAll(c *router.Context) {
 	sess := h.manager.GetSession(c.Param("sessionId"))
 	if sess == nil || sess.Intercept == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found or not active"})
+		response.Error(c, http.StatusNotFound, "session not found or not active")
 		return
 	}
 
 	var req resolveAllRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 

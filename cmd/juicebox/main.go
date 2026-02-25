@@ -70,7 +70,7 @@ func main() {
 	}
 	manager := session.NewManager(certManager, bridgeClient, hubManager, database, writer, deviceSetups)
 
-	chatSessionStore, err := sqlitestore.SessionStore(context.Background(), database.Conn,
+	chatSessionStore, err := sqlitestore.SessionStore(context.Background(), database.RawConn(),
 		sqlitestore.WithTablePrefix("chat_"),
 	)
 	if err != nil {

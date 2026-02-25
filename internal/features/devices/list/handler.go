@@ -5,6 +5,7 @@ import (
 
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 )
 
 type Handler struct {
@@ -18,7 +19,7 @@ func NewHandler(client *bridge.Client) *Handler {
 func (h *Handler) Handle(c *router.Context) {
 	devices, err := h.client.ListDevices()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 

@@ -1,17 +1,14 @@
 package list
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
-
-var platformCapabilities = map[string][]string{
-	"android": {"filesystem", "database", "logstream", "frida"},
-	"ios":     {},
-}
 
 type Handler struct {
 	db      *db.DB
@@ -23,37 +20,37 @@ func NewHandler(database *db.DB, manager *session.Manager) *Handler {
 }
 
 func (h *Handler) Handle(c *router.Context) {
-	deviceId := c.Param("deviceId")
-	if deviceId == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "missing deviceId"})
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
 		return
 	}
 
 	limit := c.QueryIntDefault("limit", 50)
 	offset := c.QueryIntDefault("offset", 0)
-	bundleId := c.QueryDefault("bundleId", "")
+	bundleID := c.QueryDefault("bundleId", "")
 
 	var sessions []db.SessionRow
 	var total int
 	var err error
 
-	if bundleId != "" {
-		sessions, err = h.db.ListSessionsByBundle(deviceId, bundleId, limit, offset)
+	if bundleID != "" {
+		sessions, err = h.db.ListSessionsByBundle(deviceID, bundleID, limit, offset)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			response.Error(c, http.StatusInternalServerError, err.Error())
 			return
 		}
-		total, err = h.db.CountSessionsByBundle(deviceId, bundleId)
+		total, err = h.db.CountSessionsByBundle(deviceID, bundleID)
 	} else {
-		sessions, err = h.db.ListSessions(deviceId, limit, offset)
+		sessions, err = h.db.ListSessions(deviceID, limit, offset)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			response.Error(c, http.StatusInternalServerError, err.Error())
 			return
 		}
-		total, err = h.db.CountSessions(deviceId)
+		total, err = h.db.CountSessions(deviceID)
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -62,7 +59,7 @@ func (h *Handler) Handle(c *router.Context) {
 		httpCount, _ := h.db.CountHttpMessages(s.ID)
 		logcatCount, _ := h.db.CountLogcatEntries(s.ID)
 
-		caps := capabilitiesFor(h.manager, s.ID, s.Platform)
+		caps := capabilitiesFor(h.manager, s)
 
 		items = append(items, SessionItem{
 			ID:           s.ID,
@@ -85,11 +82,12 @@ func (h *Handler) Handle(c *router.Context) {
 	})
 }
 
-func capabilitiesFor(mgr *session.Manager, sessionID, platform string) []string {
-	if sess := mgr.GetSession(sessionID); sess != nil && sess.Setup != nil {
+func capabilitiesFor(mgr *session.Manager, row db.SessionRow) []string {
+	if sess := mgr.GetSession(row.ID); sess != nil && sess.Setup != nil {
 		return sess.Setup.Capabilities()
 	}
-	if caps, ok := platformCapabilities[platform]; ok {
+	var caps []string
+	if err := json.Unmarshal([]byte(row.Capabilities), &caps); err == nil && len(caps) > 0 {
 		return caps
 	}
 	return []string{}

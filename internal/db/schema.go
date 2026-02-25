@@ -106,10 +106,11 @@ CREATE INDEX IF NOT EXISTS idx_script_runs_session ON script_runs(session_id, ti
 `
 
 func (d *DB) Migrate() error {
-	if _, err := d.Conn.Exec(schema); err != nil {
+	if _, err := d.conn.Exec(schema); err != nil {
 		return fmt.Errorf("db.Migrate: %w", err)
 	}
-	_, _ = d.Conn.Exec(`ALTER TABLE sessions ADD COLUMN platform TEXT NOT NULL DEFAULT 'android'`)
-	_, _ = d.Conn.Exec(`DROP TABLE IF EXISTS scripts`)
+	_, _ = d.conn.Exec(`ALTER TABLE sessions ADD COLUMN platform TEXT NOT NULL DEFAULT 'android'`)
+	_, _ = d.conn.Exec(`ALTER TABLE sessions ADD COLUMN capabilities TEXT NOT NULL DEFAULT '[]'`)
+	_, _ = d.conn.Exec(`DROP TABLE IF EXISTS scripts`)
 	return nil
 }

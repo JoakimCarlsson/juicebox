@@ -60,12 +60,12 @@ type AttachResult struct {
 	Capabilities []string `json:"capabilities"`
 }
 
-func (m *Manager) Attach(deviceId, bundleId, existingSessionId string, evasion *bridge.EvasionConfig) (*AttachResult, error) {
-	logger := slog.With("device_id", deviceId, "source", "manager")
+func (m *Manager) Attach(deviceID, bundleID, existingSessionID string, evasion *bridge.EvasionConfig) (*AttachResult, error) {
+	logger := slog.With("device_id", deviceID, "source", "manager")
 
-	isRestore := existingSessionId != ""
+	isRestore := existingSessionID != ""
 
-	deviceInfo, err := m.bridge.GetDeviceInfo(deviceId)
+	deviceInfo, err := m.bridge.GetDeviceInfo(deviceID)
 	if err != nil {
 		return nil, fmt.Errorf("manager: get device info: %w", err)
 	}
@@ -80,15 +80,15 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string, evasion *
 	}
 
 	sess := &Session{
-		DeviceID: deviceId,
-		BundleID: bundleId,
+		DeviceID: deviceID,
+		BundleID: bundleID,
 		Platform: platform,
 		Setup:    setup,
 	}
 
-	hub := m.hubManager.GetOrCreate(deviceId)
+	hub := m.hubManager.GetOrCreate(deviceID)
 
-	proxyLogger := slog.With("device_id", deviceId, "source", "proxy")
+	proxyLogger := slog.With("device_id", deviceID, "source", "proxy")
 	p := proxy.NewProxy(m.certManager, func(msg proxy.AgentMessage) {
 		data, err := devicehub.Marshal(msg.Type, sess.ID, msg.Payload)
 		if err != nil {
@@ -122,19 +122,19 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string, evasion *
 	sess.ProxyPort = port
 	sess.Intercept = interceptEngine
 
-	logger.Info("proxy started", "port", port, "bundle", bundleId)
+	logger.Info("proxy started", "port", port, "bundle", bundleID)
 
 	logger.Info("preparing device interception", "platform", platform)
-	if err := setup.PrepareInterception(deviceId, m.certManager.CAPEMPath(), port); err != nil {
+	if err := setup.PrepareInterception(deviceID, m.certManager.CAPEMPath(), port); err != nil {
 		logger.Error("device interception setup failed", "error", err)
 		p.Stop()
 		return nil, fmt.Errorf("manager: prepare interception: %w", err)
 	}
 
-	bridgeResp, err := m.bridge.Attach(deviceId, bundleId, evasion)
+	bridgeResp, err := m.bridge.Attach(deviceID, bundleID, evasion)
 	if err != nil {
 		logger.Error("bridge attach failed", "error", err)
-		setup.CleanupInterception(deviceId)
+		setup.CleanupInterception(deviceID)
 		p.Stop()
 		return nil, fmt.Errorf("manager: bridge attach: %w", err)
 	}
@@ -144,20 +144,22 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string, evasion *
 	sess.StartedAt = time.Now().UnixMilli()
 
 	if isRestore {
-		sess.ID = existingSessionId
-		if err := m.database.ReopenSession(existingSessionId, sess.PID); err != nil {
+		sess.ID = existingSessionID
+		if err := m.database.ReopenSession(existingSessionID, sess.PID); err != nil {
 			logger.Error("failed to reopen session", "error", err)
 		}
-		logger.Info("restored session", "session_id", existingSessionId)
+		logger.Info("restored session", "session_id", existingSessionID)
 	} else {
 		sess.ID = bridgeResp.SessionID
+		capsJSON, _ := json.Marshal(setup.Capabilities())
 		if err := m.database.InsertSession(&db.SessionRow{
-			ID:        sess.ID,
-			DeviceID:  sess.DeviceID,
-			BundleID:  sess.BundleID,
-			PID:       sess.PID,
-			Platform:  platform,
-			StartedAt: sess.StartedAt,
+			ID:           sess.ID,
+			DeviceID:     sess.DeviceID,
+			BundleID:     sess.BundleID,
+			PID:          sess.PID,
+			Platform:     platform,
+			Capabilities: string(capsJSON),
+			StartedAt:    sess.StartedAt,
 		}); err != nil {
 			logger.Error("failed to persist session", "error", err)
 		}
@@ -169,8 +171,8 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string, evasion *
 
 	go m.bridgeSubscribeForward(sess)
 
-	logStreamLogger := slog.With("device_id", deviceId, "source", "logstream", "session_id", sess.ID)
-	closer, err := setup.StartLogStream(deviceId, sess.PID, func(entry *logcat.Entry) {
+	logStreamLogger := slog.With("device_id", deviceID, "source", "logstream", "session_id", sess.ID)
+	closer, err := setup.StartLogStream(deviceID, sess.PID, func(entry *logcat.Entry) {
 		data, err := devicehub.Marshal("logcat", sess.ID, entry)
 		if err != nil {
 			logStreamLogger.Error("marshal log entry", "error", err)
@@ -196,7 +198,7 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string, evasion *
 	}
 
 	logger = logger.With("session_id", sess.ID)
-	logger.Info("attached", "bundle", bundleId, "pid", sess.PID, "platform", platform)
+	logger.Info("attached", "bundle", bundleID, "pid", sess.PID, "platform", platform)
 
 	return &AttachResult{
 		SessionID:    sess.ID,
@@ -205,24 +207,24 @@ func (m *Manager) Attach(deviceId, bundleId, existingSessionId string, evasion *
 	}, nil
 }
 
-func (m *Manager) Detach(sessionId string) error {
+func (m *Manager) Detach(sessionID string) error {
 	m.mu.Lock()
-	sess, ok := m.sessions[sessionId]
+	sess, ok := m.sessions[sessionID]
 	if ok {
-		delete(m.sessions, sessionId)
+		delete(m.sessions, sessionID)
 	}
 	m.mu.Unlock()
 
 	if !ok {
-		if err := m.database.EndSession(sessionId, time.Now().UnixMilli()); err != nil {
-			slog.Error("failed to end session in db", "error", err, "session_id", sessionId)
+		if err := m.database.EndSession(sessionID, time.Now().UnixMilli()); err != nil {
+			slog.Error("failed to end session in db", "error", err, "session_id", sessionID)
 		}
-		return m.bridge.Detach(sessionId)
+		return m.bridge.Detach(sessionID)
 	}
 
-	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sessionId)
+	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sessionID)
 
-	if err := m.database.EndSession(sessionId, time.Now().UnixMilli()); err != nil {
+	if err := m.database.EndSession(sessionID, time.Now().UnixMilli()); err != nil {
 		logger.Error("failed to end session in db", "error", err)
 	}
 
@@ -250,10 +252,10 @@ func (m *Manager) Detach(sessionId string) error {
 	return nil
 }
 
-func (m *Manager) GetSession(sessionId string) *Session {
+func (m *Manager) GetSession(sessionID string) *Session {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.sessions[sessionId]
+	return m.sessions[sessionID]
 }
 
 func (m *Manager) RunScript(sessionID, code, name string, initialWaitSecs int) (*bridge.RunScriptResponse, error) {

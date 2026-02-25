@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
@@ -17,12 +18,12 @@ func NewHandler(manager *session.Manager) *Handler {
 }
 
 func (h *Handler) Handle(c *router.Context) {
-	deviceId := c.Param("deviceId")
-	bundleId := c.Param("bundleId")
-	sessionId := c.QueryDefault("sessionId", "")
+	deviceID := c.Param("deviceId")
+	bundleID := c.Param("bundleId")
+	sessionID := c.QueryDefault("sessionId", "")
 
-	if deviceId == "" || bundleId == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "missing deviceId or bundleId"})
+	if deviceID == "" || bundleID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId or bundleId")
 		return
 	}
 
@@ -31,9 +32,9 @@ func (h *Handler) Handle(c *router.Context) {
 		_ = json.NewDecoder(c.Request.Body).Decode(&body)
 	}
 
-	resp, err := h.manager.Attach(deviceId, bundleId, sessionId, body.Evasion)
+	resp, err := h.manager.Attach(deviceID, bundleID, sessionID, body.Evasion)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 

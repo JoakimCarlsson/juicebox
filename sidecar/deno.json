@@ -7,8 +7,8 @@
     "@types/frida-gum": "npm:@types/frida-gum@^18"
   },
   "tasks": {
-    "dev": "deno run --watch --allow-all bridge.ts",
-    "start": "deno run --allow-all bridge.ts",
+    "dev": "deno run --watch --allow-all src/index.ts",
+    "start": "deno run --allow-all src/index.ts",
     "install": "deno install"
   },
   "compilerOptions": {

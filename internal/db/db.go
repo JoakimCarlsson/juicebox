@@ -8,7 +8,7 @@ import (
 )
 
 type DB struct {
-	Conn *sql.DB
+	conn *sql.DB
 }
 
 func New(path string) (*DB, error) {
@@ -25,9 +25,13 @@ func New(path string) (*DB, error) {
 		return nil, fmt.Errorf("db.New: pragmas: %w", err)
 	}
 
-	return &DB{Conn: conn}, nil
+	return &DB{conn: conn}, nil
+}
+
+func (d *DB) RawConn() *sql.DB {
+	return d.conn
 }
 
 func (d *DB) Close() error {
-	return d.Conn.Close()
+	return d.conn.Close()
 }
