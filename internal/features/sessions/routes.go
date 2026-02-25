@@ -16,6 +16,7 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/intercept"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/list"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/logs"
+	memorypkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/memory"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/messages"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/rename"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/scripts"
@@ -59,6 +60,7 @@ func RegisterRoutes(
 	crashesHandler := crashes.NewHandler(database)
 	cryptoHandler := cryptopkg.NewHandler(database, manager)
 	clipboardHandler := clipboardpkg.NewHandler(database, manager)
+	memoryHandler := memorypkg.NewHandler(manager)
 
 	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
@@ -103,6 +105,10 @@ func RegisterRoutes(
 	r.GET("/sessions/{sessionId}/classes/detail", classesHandler.Detail)
 	r.POST("/sessions/{sessionId}/classes/invoke", classesHandler.Invoke)
 	r.POST("/sessions/{sessionId}/classes/read-field", classesHandler.ReadField)
+
+	r.POST("/sessions/{sessionId}/memory/scan", memoryHandler.Scan)
+	r.DELETE("/sessions/{sessionId}/memory/scan", memoryHandler.StopScan)
+	r.POST("/sessions/{sessionId}/memory/dump", memoryHandler.Dump)
 
 	r.POST("/sessions/{sessionId}/scripts", scriptsHandler.Upsert)
 	r.GET("/sessions/{sessionId}/scripts", scriptsHandler.List)

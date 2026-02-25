@@ -294,3 +294,30 @@ export async function fetchScriptRuns(sessionId: string): Promise<{ runs: Script
   if (!res.ok) throw new Error('Failed to fetch script runs')
   return res.json()
 }
+
+export async function startMemoryScan(
+  sessionId: string,
+  pattern: string
+): Promise<{ started: boolean }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/memory/scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pattern }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || 'Failed to start memory scan')
+  }
+  return res.json()
+}
+
+export async function stopMemoryScan(sessionId: string): Promise<{ stopped: boolean }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/memory/scan`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || 'Failed to stop memory scan')
+  }
+  return res.json()
+}

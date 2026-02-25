@@ -7,6 +7,7 @@ import crypto from "./modules/crypto";
 import keystore from "./modules/keystore";
 import sharedprefs from "./modules/sharedprefs";
 import clipboard from "./modules/clipboard";
+import memory from "./modules/memory";
 
 const registry: Record<string, AgentModule> = {
   evasion,
@@ -17,6 +18,7 @@ const registry: Record<string, AgentModule> = {
   keystore,
   sharedprefs,
   clipboard,
+  memory,
 };
 
 export function getModule(namespace: string): AgentModule | undefined {
