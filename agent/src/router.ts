@@ -7,7 +7,15 @@ import crypto from "./modules/crypto";
 import keystore from "./modules/keystore";
 import sharedprefs from "./modules/sharedprefs";
 
-const registry: Record<string, AgentModule> = { evasion, ssl, classes, crash, crypto, keystore, sharedprefs };
+const registry: Record<string, AgentModule> = {
+  evasion,
+  ssl,
+  classes,
+  crash,
+  crypto,
+  keystore,
+  sharedprefs,
+};
 
 export function getModule(namespace: string): AgentModule | undefined {
   return registry[namespace];

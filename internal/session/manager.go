@@ -42,7 +42,14 @@ type Manager struct {
 	sessions     map[string]*Session
 }
 
-func NewManager(cm *proxy.CertManager, bridgeClient *bridge.Client, hubManager *devicehub.Manager, database *db.DB, writer *db.AsyncWriter, deviceSetups map[string]DeviceSetup) *Manager {
+func NewManager(
+	cm *proxy.CertManager,
+	bridgeClient *bridge.Client,
+	hubManager *devicehub.Manager,
+	database *db.DB,
+	writer *db.AsyncWriter,
+	deviceSetups map[string]DeviceSetup,
+) *Manager {
 	return &Manager{
 		certManager:  cm,
 		bridge:       bridgeClient,
@@ -60,7 +67,10 @@ type AttachResult struct {
 	Capabilities []string `json:"capabilities"`
 }
 
-func (m *Manager) Attach(deviceID, bundleID, existingSessionID string, evasion *bridge.EvasionConfig) (*AttachResult, error) {
+func (m *Manager) Attach(
+	deviceID, bundleID, existingSessionID string,
+	evasion *bridge.EvasionConfig,
+) (*AttachResult, error) {
 	logger := slog.With("device_id", deviceID, "source", "manager")
 
 	isRestore := existingSessionID != ""
@@ -104,14 +114,17 @@ func (m *Manager) Attach(deviceID, bundleID, existingSessionID string, evasion *
 		}
 	}, proxyLogger)
 
-	interceptEngine := proxy.NewInterceptEngine(func(msgType string, payload any) {
-		data, err := devicehub.Marshal(msgType, sess.ID, payload)
-		if err != nil {
-			logger.Error("marshal intercept", "error", err)
-			return
-		}
-		hub.Broadcast(data)
-	}, proxyLogger)
+	interceptEngine := proxy.NewInterceptEngine(
+		func(msgType string, payload any) {
+			data, err := devicehub.Marshal(msgType, sess.ID, payload)
+			if err != nil {
+				logger.Error("marshal intercept", "error", err)
+				return
+			}
+			hub.Broadcast(data)
+		},
+		proxyLogger,
+	)
 	p.SetInterceptEngine(interceptEngine)
 
 	port, err := p.Start()
@@ -134,7 +147,7 @@ func (m *Manager) Attach(deviceID, bundleID, existingSessionID string, evasion *
 	bridgeResp, err := m.bridge.Attach(deviceID, bundleID, evasion)
 	if err != nil {
 		logger.Error("bridge attach failed", "error", err)
-		setup.CleanupInterception(deviceID)
+		_ = setup.CleanupInterception(deviceID)
 		p.Stop()
 		return nil, fmt.Errorf("manager: bridge attach: %w", err)
 	}
@@ -171,26 +184,38 @@ func (m *Manager) Attach(deviceID, bundleID, existingSessionID string, evasion *
 
 	go m.bridgeSubscribeForward(sess)
 
-	logStreamLogger := slog.With("device_id", deviceID, "source", "logstream", "session_id", sess.ID)
-	closer, err := setup.StartLogStream(deviceID, sess.PID, func(entry *logcat.Entry) {
-		data, err := devicehub.Marshal("logcat", sess.ID, entry)
-		if err != nil {
-			logStreamLogger.Error("marshal log entry", "error", err)
-			return
-		}
-		hub.Broadcast(data)
+	logStreamLogger := slog.With(
+		"device_id",
+		deviceID,
+		"source",
+		"logstream",
+		"session_id",
+		sess.ID,
+	)
+	closer, err := setup.StartLogStream(
+		deviceID,
+		sess.PID,
+		func(entry *logcat.Entry) {
+			data, err := devicehub.Marshal("logcat", sess.ID, entry)
+			if err != nil {
+				logStreamLogger.Error("marshal log entry", "error", err)
+				return
+			}
+			hub.Broadcast(data)
 
-		m.writer.WriteLogcatEntry(&db.LogcatEntryRow{
-			ID:        entry.ID,
-			SessionID: sess.ID,
-			Timestamp: entry.Timestamp,
-			PID:       entry.PID,
-			TID:       entry.TID,
-			Level:     string(entry.Level),
-			Tag:       entry.Tag,
-			Message:   entry.Message,
-		})
-	}, logStreamLogger)
+			m.writer.WriteLogcatEntry(&db.LogcatEntryRow{
+				ID:        entry.ID,
+				SessionID: sess.ID,
+				Timestamp: entry.Timestamp,
+				PID:       entry.PID,
+				TID:       entry.TID,
+				Level:     string(entry.Level),
+				Tag:       entry.Tag,
+				Message:   entry.Message,
+			})
+		},
+		logStreamLogger,
+	)
 	if err != nil {
 		logger.Warn("log stream start failed (non-fatal)", "error", err)
 	} else if closer != nil {
@@ -198,7 +223,15 @@ func (m *Manager) Attach(deviceID, bundleID, existingSessionID string, evasion *
 	}
 
 	logger = logger.With("session_id", sess.ID)
-	logger.Info("attached", "bundle", bundleID, "pid", sess.PID, "platform", platform)
+	logger.Info(
+		"attached",
+		"bundle",
+		bundleID,
+		"pid",
+		sess.PID,
+		"platform",
+		platform,
+	)
 
 	return &AttachResult{
 		SessionID:    sess.ID,
@@ -217,12 +250,25 @@ func (m *Manager) Detach(sessionID string) error {
 
 	if !ok {
 		if err := m.database.EndSession(sessionID, time.Now().UnixMilli()); err != nil {
-			slog.Error("failed to end session in db", "error", err, "session_id", sessionID)
+			slog.Error(
+				"failed to end session in db",
+				"error",
+				err,
+				"session_id",
+				sessionID,
+			)
 		}
 		return m.bridge.Detach(sessionID)
 	}
 
-	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sessionID)
+	logger := slog.With(
+		"device_id",
+		sess.DeviceID,
+		"source",
+		"manager",
+		"session_id",
+		sessionID,
+	)
 
 	if err := m.database.EndSession(sessionID, time.Now().UnixMilli()); err != nil {
 		logger.Error("failed to end session in db", "error", err)
@@ -241,9 +287,9 @@ func (m *Manager) Detach(sessionID string) error {
 	}
 
 	if setup, ok := m.deviceSetups[sess.Platform]; ok {
-		setup.CleanupInterception(sess.DeviceID)
+		_ = setup.CleanupInterception(sess.DeviceID)
 	} else if fallback, ok := m.deviceSetups["android"]; ok {
-		fallback.CleanupInterception(sess.DeviceID)
+		_ = fallback.CleanupInterception(sess.DeviceID)
 	}
 
 	sess.Proxy.Stop()
@@ -258,7 +304,10 @@ func (m *Manager) GetSession(sessionID string) *Session {
 	return m.sessions[sessionID]
 }
 
-func (m *Manager) RunScript(sessionID, code, name string, initialWaitSecs int) (*bridge.RunScriptResponse, error) {
+func (m *Manager) RunScript(
+	sessionID, code, name string,
+	initialWaitSecs int,
+) (*bridge.RunScriptResponse, error) {
 	m.mu.RLock()
 	sess, ok := m.sessions[sessionID]
 	m.mu.RUnlock()
@@ -268,7 +317,10 @@ func (m *Manager) RunScript(sessionID, code, name string, initialWaitSecs int) (
 	return m.bridge.RunScript(sess.BridgeSession, code, name, initialWaitSecs)
 }
 
-func (m *Manager) GetScriptOutput(sessionID, name string, since, limit int) (*bridge.GetScriptOutputResponse, error) {
+func (m *Manager) GetScriptOutput(
+	sessionID, name string,
+	since, limit int,
+) (*bridge.GetScriptOutputResponse, error) {
 	m.mu.RLock()
 	sess, ok := m.sessions[sessionID]
 	m.mu.RUnlock()
@@ -278,7 +330,9 @@ func (m *Manager) GetScriptOutput(sessionID, name string, since, limit int) (*br
 	return m.bridge.GetScriptOutput(sess.BridgeSession, name, since, limit)
 }
 
-func (m *Manager) StopScript(sessionID, name string) (*bridge.StopScriptResponse, error) {
+func (m *Manager) StopScript(
+	sessionID, name string,
+) (*bridge.StopScriptResponse, error) {
 	m.mu.RLock()
 	sess, ok := m.sessions[sessionID]
 	m.mu.RUnlock()
@@ -288,7 +342,10 @@ func (m *Manager) StopScript(sessionID, name string) (*bridge.StopScriptResponse
 	return m.bridge.StopScript(sess.BridgeSession, name)
 }
 
-func (m *Manager) AgentInvoke(sessionID, namespace, method string, args []any) (json.RawMessage, error) {
+func (m *Manager) AgentInvoke(
+	sessionID, namespace, method string,
+	args []any,
+) (json.RawMessage, error) {
 	m.mu.RLock()
 	sess, ok := m.sessions[sessionID]
 	m.mu.RUnlock()
@@ -299,7 +356,14 @@ func (m *Manager) AgentInvoke(sessionID, namespace, method string, args []any) (
 }
 
 func (m *Manager) bridgeSubscribeForward(sess *Session) {
-	logger := slog.With("device_id", sess.DeviceID, "source", "manager", "session_id", sess.ID)
+	logger := slog.With(
+		"device_id",
+		sess.DeviceID,
+		"source",
+		"manager",
+		"session_id",
+		sess.ID,
+	)
 
 	sub, err := m.bridge.Subscribe(sess.BridgeSession)
 	if err != nil {
@@ -343,7 +407,8 @@ func (m *Manager) bridgeSubscribeForward(sess *Session) {
 				IV        *string `json:"iv"`
 				Timestamp int64   `json:"timestamp"`
 			}
-			if err := json.Unmarshal(msg.Payload, &cryptoEvt); err == nil && cryptoEvt.ID != "" {
+			if err := json.Unmarshal(msg.Payload, &cryptoEvt); err == nil &&
+				cryptoEvt.ID != "" {
 				if cryptoEvt.Timestamp == 0 {
 					cryptoEvt.Timestamp = time.Now().UnixMilli()
 				}
@@ -374,7 +439,8 @@ func (m *Manager) bridgeSubscribeForward(sess *Session) {
 				ExceptionMessage *string           `json:"exceptionMessage"`
 				Timestamp        int64             `json:"timestamp"`
 			}
-			if err := json.Unmarshal(msg.Payload, &crash); err == nil && crash.ID != "" {
+			if err := json.Unmarshal(msg.Payload, &crash); err == nil &&
+				crash.ID != "" {
 				var regsJSON *string
 				if crash.Registers != nil {
 					b, _ := json.Marshal(crash.Registers)
@@ -412,7 +478,10 @@ func (m *Manager) bridgeSubscribeForward(sess *Session) {
 	}
 }
 
-func httpMessageToRow(sessionID string, msg *proxy.HttpMessage) *db.HttpMessageRow {
+func httpMessageToRow(
+	sessionID string,
+	msg *proxy.HttpMessage,
+) *db.HttpMessageRow {
 	reqHeaders, _ := json.Marshal(msg.RequestHeaders)
 	respHeaders, _ := json.Marshal(msg.ResponseHeaders)
 

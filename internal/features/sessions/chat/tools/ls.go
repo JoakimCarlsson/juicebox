@@ -31,10 +31,15 @@ func (t *LsTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *LsTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *LsTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[LsParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	path := input.Path
@@ -48,7 +53,9 @@ func (t *LsTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolRespon
 	}
 
 	if len(entries) == 0 {
-		return tool.NewTextResponse(fmt.Sprintf("Directory %q is empty or not accessible.", path)), nil
+		return tool.NewTextResponse(
+			fmt.Sprintf("Directory %q is empty or not accessible.", path),
+		), nil
 	}
 
 	type entry struct {

@@ -14,7 +14,10 @@ type Handler struct {
 	runner *scripting.Runner
 }
 
-func NewHandler(files *scripting.FileManager, runner *scripting.Runner) *Handler {
+func NewHandler(
+	files *scripting.FileManager,
+	runner *scripting.Runner,
+) *Handler {
 	return &Handler{files: files, runner: runner}
 }
 

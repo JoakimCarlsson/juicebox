@@ -1,13 +1,6 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
-import { useDeviceSocket } from "@/contexts/DeviceSocketContext"
-import type { DeviceEnvelope } from "@/types/session"
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
+import type { DeviceEnvelope } from '@/types/session'
 
 const MAX_ENTRIES = 1000
 
@@ -31,7 +24,7 @@ export function EventLogProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     return subscribe(null, (envelope) => {
-      if (envelope.type === "logcat") return
+      if (envelope.type === 'logcat') return
 
       const entry: EventLogEntry = {
         id: nextId.current++,
@@ -50,16 +43,11 @@ export function EventLogProvider({ children }: { children: React.ReactNode }) {
 
   const clear = useCallback(() => setEntries([]), [])
 
-  return (
-    <EventLogContext.Provider value={{ entries, clear }}>
-      {children}
-    </EventLogContext.Provider>
-  )
+  return <EventLogContext.Provider value={{ entries, clear }}>{children}</EventLogContext.Provider>
 }
 
 export function useEventLog() {
   const ctx = useContext(EventLogContext)
-  if (!ctx)
-    throw new Error("useEventLog must be used within EventLogProvider")
+  if (!ctx) throw new Error('useEventLog must be used within EventLogProvider')
   return ctx
 }

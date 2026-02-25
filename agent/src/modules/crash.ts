@@ -70,7 +70,9 @@ function enableJava(): void {
   setTimeout(() => {
     Java.perform(() => {
       const Thread = Java.use("java.lang.Thread");
-      const UncaughtHandler = Java.use("java.lang.Thread$UncaughtExceptionHandler");
+      const UncaughtHandler = Java.use(
+        "java.lang.Thread$UncaughtExceptionHandler",
+      );
 
       const previousHandler = Thread.getDefaultUncaughtExceptionHandler();
 

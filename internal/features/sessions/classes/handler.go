@@ -29,7 +29,12 @@ func (h *Handler) List(c *router.Context) {
 		return
 	}
 
-	raw, err := h.manager.AgentInvoke(sessionID, "classes", "list", []any{query})
+	raw, err := h.manager.AgentInvoke(
+		sessionID,
+		"classes",
+		"list",
+		[]any{query},
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -37,7 +42,11 @@ func (h *Handler) List(c *router.Context) {
 
 	var all []string
 	if err := json.Unmarshal(raw, &all); err != nil {
-		response.Error(c, http.StatusInternalServerError, "failed to parse class list")
+		response.Error(
+			c,
+			http.StatusInternalServerError,
+			"failed to parse class list",
+		)
 		return
 	}
 
@@ -71,7 +80,12 @@ func (h *Handler) Detail(c *router.Context) {
 		return
 	}
 
-	raw, err := h.manager.AgentInvoke(sessionID, "classes", "detail", []any{className})
+	raw, err := h.manager.AgentInvoke(
+		sessionID,
+		"classes",
+		"detail",
+		[]any{className},
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -99,7 +113,11 @@ func (h *Handler) Invoke(c *router.Context) {
 	}
 
 	if req.ClassName == "" || req.MethodName == "" {
-		response.Error(c, http.StatusBadRequest, "className and methodName are required")
+		response.Error(
+			c,
+			http.StatusBadRequest,
+			"className and methodName are required",
+		)
 		return
 	}
 
@@ -108,7 +126,12 @@ func (h *Handler) Invoke(c *router.Context) {
 		args = []string{}
 	}
 
-	raw, err := h.manager.AgentInvoke(sessionID, "classes", "invokeMethod", []any{req.ClassName, req.MethodName, args})
+	raw, err := h.manager.AgentInvoke(
+		sessionID,
+		"classes",
+		"invokeMethod",
+		[]any{req.ClassName, req.MethodName, args},
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -135,11 +158,20 @@ func (h *Handler) ReadField(c *router.Context) {
 	}
 
 	if req.ClassName == "" || req.FieldName == "" {
-		response.Error(c, http.StatusBadRequest, "className and fieldName are required")
+		response.Error(
+			c,
+			http.StatusBadRequest,
+			"className and fieldName are required",
+		)
 		return
 	}
 
-	raw, err := h.manager.AgentInvoke(sessionID, "classes", "readField", []any{req.ClassName, req.FieldName})
+	raw, err := h.manager.AgentInvoke(
+		sessionID,
+		"classes",
+		"readField",
+		[]any{req.ClassName, req.FieldName},
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

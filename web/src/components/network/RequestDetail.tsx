@@ -1,10 +1,10 @@
-import { useState } from "react"
-import { ChevronDown, ChevronRight } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-import type { HttpMessage } from "@/types/session"
-import { BodyViewer } from "./BodyViewer"
-import { formatBytes, formatDuration, statusColor, methodColor } from "./helpers"
+import { useState } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import type { HttpMessage } from '@/types/session'
+import { BodyViewer } from './BodyViewer'
+import { formatBytes, formatDuration, statusColor, methodColor } from './helpers'
 
 function HeadersTable({ headers }: { headers: Record<string, string> }) {
   const entries = Object.entries(headers)
@@ -13,16 +13,11 @@ function HeadersTable({ headers }: { headers: Record<string, string> }) {
   return (
     <div className="rounded border border-border overflow-hidden">
       {entries.map(([key, value]) => (
-        <div
-          key={key}
-          className="flex border-b border-border last:border-0"
-        >
+        <div key={key} className="flex border-b border-border last:border-0">
           <span className="w-48 shrink-0 bg-muted/30 px-3 py-1.5 text-xs font-mono font-medium text-muted-foreground truncate">
             {key}
           </span>
-          <span className="flex-1 px-3 py-1.5 text-xs font-mono break-all">
-            {value}
-          </span>
+          <span className="flex-1 px-3 py-1.5 text-xs font-mono break-all">{value}</span>
         </div>
       ))}
     </div>
@@ -75,29 +70,31 @@ export function RequestDetail({ message }: { message: HttpMessage | null }) {
 
   return (
     <div className="h-full overflow-auto">
-      <CollapsibleSection title="REQUEST" badge={
-        <Badge variant="secondary" className={cn("font-mono text-xs ml-1", methodColor(message.method))}>
-          {message.method}
-        </Badge>
-      }>
+      <CollapsibleSection
+        title="REQUEST"
+        badge={
+          <Badge
+            variant="secondary"
+            className={cn('font-mono text-xs ml-1', methodColor(message.method))}
+          >
+            {message.method}
+          </Badge>
+        }
+      >
         <div className="rounded bg-muted/50 px-3 py-2 font-mono text-xs break-all text-foreground">
           {message.url}
         </div>
 
         {hasReqHeaders && (
           <div>
-            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">
-              Headers
-            </h4>
+            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">Headers</h4>
             <HeadersTable headers={message.requestHeaders} />
           </div>
         )}
 
         {message.requestBody && (
           <div>
-            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">
-              Body
-            </h4>
+            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">Body</h4>
             <BodyViewer
               body={message.requestBody}
               headers={message.requestHeaders}
@@ -112,15 +109,18 @@ export function RequestDetail({ message }: { message: HttpMessage | null }) {
         title="RESPONSE"
         badge={
           message.statusCode ? (
-            <Badge variant="secondary" className={cn("font-mono text-xs ml-1", statusColor(message.statusCode))}>
+            <Badge
+              variant="secondary"
+              className={cn('font-mono text-xs ml-1', statusColor(message.statusCode))}
+            >
               {message.statusCode}
             </Badge>
           ) : undefined
         }
       >
         <div className="flex items-center gap-3">
-          <span className={cn("text-sm font-mono font-semibold", statusColor(message.statusCode))}>
-            {message.statusCode || "\u2014"}
+          <span className={cn('text-sm font-mono font-semibold', statusColor(message.statusCode))}>
+            {message.statusCode || '\u2014'}
           </span>
           {message.duration !== undefined && message.duration > 0 && (
             <span className="text-xs text-muted-foreground font-mono">
@@ -136,18 +136,14 @@ export function RequestDetail({ message }: { message: HttpMessage | null }) {
 
         {hasResHeaders && (
           <div>
-            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">
-              Headers
-            </h4>
+            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">Headers</h4>
             <HeadersTable headers={message.responseHeaders} />
           </div>
         )}
 
         {message.responseBody && (
           <div>
-            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">
-              Body
-            </h4>
+            <h4 className="text-xs font-medium text-muted-foreground mb-1.5">Body</h4>
             <BodyViewer
               body={message.responseBody}
               headers={message.responseHeaders}

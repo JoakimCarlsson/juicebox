@@ -1,39 +1,41 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react"
-import { useDeviceSocket } from "@/contexts/DeviceSocketContext"
-import type { AgentMessage, DeviceEnvelope } from "@/types/session"
-import { fetchSessionMessages, fetchSessionLogs, fetchSessionCrashes, fetchSessionCrypto } from "@/features/sessions/api"
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
+import type { AgentMessage, DeviceEnvelope } from '@/types/session'
+import {
+  fetchSessionMessages,
+  fetchSessionLogs,
+  fetchSessionCrashes,
+  fetchSessionCrypto,
+} from '@/features/sessions/api'
 
 interface SessionMessageContextValue {
   messages: AgentMessage[]
   connected: boolean
 }
 
-const SessionMessageContext = createContext<SessionMessageContextValue | null>(
-  null,
-)
+const SessionMessageContext = createContext<SessionMessageContextValue | null>(null)
 
 interface SessionMessageProviderProps {
   sessionId: string
   children: React.ReactNode
 }
 
-export function SessionMessageProvider({
-  sessionId,
-  children,
-}: SessionMessageProviderProps) {
+export function SessionMessageProvider({ sessionId, children }: SessionMessageProviderProps) {
   const { subscribe, connected } = useDeviceSocket()
   const [messages, setMessages] = useState<AgentMessage[]>([])
   const prevConnected = useRef(false)
   const seenIds = useRef(new Set<string>())
+  const [prevSessionId, setPrevSessionId] = useState(sessionId)
 
-  useEffect(() => {
+  if (sessionId !== prevSessionId) {
+    setPrevSessionId(sessionId)
     if (!sessionId) {
       setMessages([])
       seenIds.current = new Set()
     }
-  }, [sessionId])
+  }
 
-  const prevSourceId = useRef("")
+  const prevSourceId = useRef('')
 
   useEffect(() => {
     if (!connected || !sessionId) {
@@ -61,7 +63,7 @@ export function SessionMessageProvider({
         for (const m of msgResp.messages) {
           if (!seenIds.current.has(m.id)) {
             seenIds.current.add(m.id)
-            historical.push({ type: "http", payload: m })
+            historical.push({ type: 'http', payload: m })
           }
         }
       }
@@ -70,7 +72,7 @@ export function SessionMessageProvider({
         for (const e of logResp.entries) {
           if (!seenIds.current.has(e.id)) {
             seenIds.current.add(e.id)
-            historical.push({ type: "logcat", payload: e })
+            historical.push({ type: 'logcat', payload: e })
           }
         }
       }
@@ -79,7 +81,7 @@ export function SessionMessageProvider({
         for (const c of crashResp.crashes) {
           if (!seenIds.current.has(c.id)) {
             seenIds.current.add(c.id)
-            historical.push({ type: "crash", payload: c })
+            historical.push({ type: 'crash', payload: c })
           }
         }
       }
@@ -88,7 +90,7 @@ export function SessionMessageProvider({
         for (const e of cryptoResp.events) {
           if (!seenIds.current.has(e.id)) {
             seenIds.current.add(e.id)
-            historical.push({ type: "crypto", payload: e })
+            historical.push({ type: 'crypto', payload: e })
           }
         }
       }
@@ -101,7 +103,7 @@ export function SessionMessageProvider({
                 const p = m.payload as { id?: string } | undefined
                 return p?.id
               })
-              .filter(Boolean),
+              .filter(Boolean)
           )
           const newMsgs = historical.filter((h) => {
             const p = h.payload as { id?: string } | undefined
@@ -125,10 +127,7 @@ export function SessionMessageProvider({
         seenIds.current.add(payload.id)
       }
 
-      setMessages((prev) => [
-        ...prev,
-        { type: envelope.type, payload: envelope.payload },
-      ])
+      setMessages((prev) => [...prev, { type: envelope.type, payload: envelope.payload }])
     })
 
     return unsub
@@ -143,9 +142,6 @@ export function SessionMessageProvider({
 
 export function useSessionMessages(): SessionMessageContextValue {
   const ctx = useContext(SessionMessageContext)
-  if (!ctx)
-    throw new Error(
-      "useSessionMessages must be used within SessionMessageProvider",
-    )
+  if (!ctx) throw new Error('useSessionMessages must be used within SessionMessageProvider')
   return ctx
 }

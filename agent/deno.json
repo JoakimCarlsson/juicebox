@@ -6,9 +6,17 @@
   },
   "tasks": {
     "build": "node_modules/.bin/frida-compile src/index.ts -o dist/agent.js",
-    "watch": "node_modules/.bin/frida-compile src/index.ts -o dist/agent.js --watch"
+    "watch": "node_modules/.bin/frida-compile src/index.ts -o dist/agent.js --watch",
+    "lint": "deno lint",
+    "fmt": "deno fmt",
+    "fmt:check": "deno fmt --check"
   },
   "compilerOptions": {
     "strict": true
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-explicit-any", "no-empty"]
+    }
   }
 }

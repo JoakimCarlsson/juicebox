@@ -22,7 +22,12 @@ type Streamer struct {
 	wg     sync.WaitGroup
 }
 
-func NewStreamer(deviceID string, pid int, sink Sink, logger *slog.Logger) *Streamer {
+func NewStreamer(
+	deviceID string,
+	pid int,
+	sink Sink,
+	logger *slog.Logger,
+) *Streamer {
 	return &Streamer{
 		deviceID: deviceID,
 		pid:      pid,

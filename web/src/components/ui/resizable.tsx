@@ -1,4 +1,4 @@
-import { GripVertical } from "lucide-react"
+import { GripVertical } from 'lucide-react'
 import {
   Group,
   Panel,
@@ -6,14 +6,12 @@ import {
   type GroupProps,
   type PanelProps,
   type SeparatorProps,
-} from "react-resizable-panels"
+} from 'react-resizable-panels'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
 function ResizablePanelGroup({ className, ...props }: GroupProps) {
-  return (
-    <Group className={cn("flex h-full w-full", className)} {...props} />
-  )
+  return <Group className={cn('flex h-full w-full', className)} {...props} />
 }
 
 function ResizablePanel({ ...props }: PanelProps) {
@@ -28,8 +26,8 @@ function ResizableHandle({
   return (
     <Separator
       className={cn(
-        "bg-border relative flex w-px items-center justify-center after:absolute after:inset-y-0 after:-left-1 after:-right-1",
-        className,
+        'bg-border relative flex w-px items-center justify-center after:absolute after:inset-y-0 after:-left-1 after:-right-1',
+        className
       )}
       {...props}
     >

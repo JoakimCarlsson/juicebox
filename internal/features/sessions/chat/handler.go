@@ -30,7 +30,15 @@ type Handler struct {
 	runner        *scripting.Runner
 }
 
-func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteService *sqlite.Service, hubManager *devicehub.Manager, runner *scripting.Runner) *Handler {
+func NewHandler(
+	database *db.DB,
+	manager *session.Manager,
+	llmConfig *config.LLMConfig,
+	chatStore *ChatSessionStore,
+	sqliteService *sqlite.Service,
+	hubManager *devicehub.Manager,
+	runner *scripting.Runner,
+) *Handler {
 	return &Handler{
 		db:            database,
 		manager:       manager,
@@ -86,7 +94,11 @@ func (ea *editApplier) flush() string {
 	result := scripting.ApplyEdits(newBlocks, getContent)
 
 	for _, applied := range result.Applied {
-		_, _ = ea.files.Upsert(ea.sessionID, applied.Block.Filename, applied.NewContent)
+		_, _ = ea.files.Upsert(
+			ea.sessionID,
+			applied.Block.Filename,
+			applied.NewContent,
+		)
 	}
 
 	ea.applied = len(blocks)
@@ -106,7 +118,11 @@ func (h *Handler) Handle(c *router.Context) {
 	}
 
 	if !h.llmConfig.Configured() {
-		response.Error(c, http.StatusServiceUnavailable, "LLM provider not configured. Set JUICEBOX_LLM_PROVIDER and JUICEBOX_LLM_API_KEY environment variables.")
+		response.Error(
+			c,
+			http.StatusServiceUnavailable,
+			"LLM provider not configured. Set JUICEBOX_LLM_PROVIDER and JUICEBOX_LLM_API_KEY environment variables.",
+		)
 		return
 	}
 
@@ -134,7 +150,11 @@ func (h *Handler) Handle(c *router.Context) {
 
 	llmClient, err := h.llmConfig.NewClient()
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "failed to create LLM client: "+err.Error())
+		response.Error(
+			c,
+			http.StatusInternalServerError,
+			"failed to create LLM client: "+err.Error(),
+		)
 		return
 	}
 
@@ -154,7 +174,10 @@ func (h *Handler) Handle(c *router.Context) {
 	for _, cap := range setup.Capabilities() {
 		switch cap {
 		case "logstream":
-			sessionTools = append(sessionTools, chattools.NewRunLogcatQuery(h.db, sessionID))
+			sessionTools = append(
+				sessionTools,
+				chattools.NewRunLogcatQuery(h.db, sessionID),
+			)
 		case "frida":
 			sessionTools = append(sessionTools,
 				chattools.NewListClasses(h.manager, sessionID),
@@ -194,73 +217,82 @@ func (h *Handler) Handle(c *router.Context) {
 		agent.WithMaxIterations(50),
 	)
 
-	c.SSEHandler(router.DefaultSSEConfig(), func(ctx context.Context, send router.SSESendFunc) error {
-		eventCh := a.ChatStream(ctx, req.Message)
+	c.SSEHandler(
+		router.DefaultSSEConfig(),
+		func(ctx context.Context, send router.SSESendFunc) error {
+			eventCh := a.ChatStream(ctx, req.Message)
 
-		applier := &editApplier{
-			sessionID: sessionID,
-			files:     fileManager,
-		}
-
-		for event := range eventCh {
-			switch event.Type {
-			case types.EventContentDelta:
-				applier.accumulate(event.Content)
-				if err := send("content", sseContentEvent{Delta: event.Content}); err != nil {
-					return err
-				}
-
-			case types.EventToolUseStart:
-				if editErr := applier.flush(); editErr != "" {
-					_ = send("edit_failed", sseEditResultEvent{Error: editErr})
-				} else if applier.applied > 0 {
-					_ = send("edit_applied", sseEditResultEvent{Success: true})
-				}
-				if event.ToolCall != nil {
-					if err := send("tool_start", sseToolStartEvent{
-						Name: event.ToolCall.Name,
-						ID:   event.ToolCall.ID,
-					}); err != nil {
-						return err
-					}
-				}
-
-			case types.EventToolUseStop:
-				if event.ToolResult != nil {
-					if err := send("tool_end", sseToolEndEvent{
-						Name:   event.ToolResult.ToolName,
-						ID:     event.ToolResult.ToolCallID,
-						Result: event.ToolResult.Output,
-					}); err != nil {
-						return err
-					}
-				}
-
-			case types.EventComplete:
-				if editErr := applier.flush(); editErr != "" {
-					_ = send("edit_failed", sseEditResultEvent{Error: editErr})
-				} else if applier.applied > 0 {
-					_ = send("edit_applied", sseEditResultEvent{Success: true})
-				}
-
-				evt := sseDoneEvent{}
-				if event.Response != nil {
-					evt.InputTokens = event.Response.Usage.InputTokens
-					evt.OutputTokens = event.Response.Usage.OutputTokens
-				}
-				return send("done", evt)
-
-			case types.EventError:
-				errMsg := "unknown error"
-				if event.Error != nil {
-					errMsg = event.Error.Error()
-				}
-				return send("error", sseErrorEvent{Message: errMsg})
+			applier := &editApplier{
+				sessionID: sessionID,
+				files:     fileManager,
 			}
-		}
 
-		return nil
-	})
+			for event := range eventCh {
+				switch event.Type {
+				case types.EventContentDelta:
+					applier.accumulate(event.Content)
+					if err := send("content", sseContentEvent{Delta: event.Content}); err != nil {
+						return err
+					}
+
+				case types.EventToolUseStart:
+					if editErr := applier.flush(); editErr != "" {
+						_ = send(
+							"edit_failed",
+							sseEditResultEvent{Error: editErr},
+						)
+					} else if applier.applied > 0 {
+						_ = send("edit_applied", sseEditResultEvent{Success: true})
+					}
+					if event.ToolCall != nil {
+						if err := send("tool_start", sseToolStartEvent{
+							Name: event.ToolCall.Name,
+							ID:   event.ToolCall.ID,
+						}); err != nil {
+							return err
+						}
+					}
+
+				case types.EventToolUseStop:
+					if event.ToolResult != nil {
+						if err := send("tool_end", sseToolEndEvent{
+							Name:   event.ToolResult.ToolName,
+							ID:     event.ToolResult.ToolCallID,
+							Result: event.ToolResult.Output,
+						}); err != nil {
+							return err
+						}
+					}
+
+				case types.EventComplete:
+					if editErr := applier.flush(); editErr != "" {
+						_ = send(
+							"edit_failed",
+							sseEditResultEvent{Error: editErr},
+						)
+					} else if applier.applied > 0 {
+						_ = send("edit_applied", sseEditResultEvent{Success: true})
+					}
+
+					evt := sseDoneEvent{}
+					if event.Response != nil {
+						evt.InputTokens = event.Response.Usage.InputTokens
+						evt.OutputTokens = event.Response.Usage.OutputTokens
+					}
+					return send("done", evt)
+
+				case types.EventError:
+					errMsg := "unknown error"
+					if event.Error != nil {
+						errMsg = event.Error.Error()
+					}
+					return send("error", sseErrorEvent{Message: errMsg})
+				}
+			}
+
+			return nil
+		},
+	)
 }
 
 func (h *Handler) Status(c *router.Context) {
@@ -351,7 +383,10 @@ func (h *Handler) History(c *router.Context) {
 		if text == "" && len(parts) == 0 {
 			continue
 		}
-		result = append(result, historyMsg{Role: "assistant", Content: text, Parts: parts})
+		result = append(
+			result,
+			historyMsg{Role: "assistant", Content: text, Parts: parts},
+		)
 	}
 
 	c.JSON(http.StatusOK, map[string]any{"messages": result})

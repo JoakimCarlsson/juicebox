@@ -21,7 +21,15 @@ func (d *DB) InsertCryptoEvent(c *CryptoEventRow) error {
 	_, err := d.conn.Exec(
 		`INSERT INTO crypto_events (id, session_id, operation, algorithm, input, output, key, iv, timestamp)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.SessionID, c.Operation, c.Algorithm, c.Input, c.Output, c.Key, c.IV, c.Timestamp,
+		c.ID,
+		c.SessionID,
+		c.Operation,
+		c.Algorithm,
+		c.Input,
+		c.Output,
+		c.Key,
+		c.IV,
+		c.Timestamp,
 	)
 	if err != nil {
 		return fmt.Errorf("db.InsertCryptoEvent: %w", err)
@@ -29,11 +37,16 @@ func (d *DB) InsertCryptoEvent(c *CryptoEventRow) error {
 	return nil
 }
 
-func (d *DB) ListCryptoEvents(sessionID string, limit, offset int) ([]CryptoEventRow, error) {
+func (d *DB) ListCryptoEvents(
+	sessionID string,
+	limit, offset int,
+) ([]CryptoEventRow, error) {
 	rows, err := d.conn.Query(
 		`SELECT id, session_id, operation, algorithm, input, output, key, iv, timestamp
 		 FROM crypto_events WHERE session_id = ? ORDER BY timestamp ASC LIMIT ? OFFSET ?`,
-		sessionID, limit, offset,
+		sessionID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListCryptoEvents: %w", err)
@@ -44,14 +57,18 @@ func (d *DB) ListCryptoEvents(sessionID string, limit, offset int) ([]CryptoEven
 
 func (d *DB) CountCryptoEvents(sessionID string) (int, error) {
 	var count int
-	err := d.conn.QueryRow(`SELECT COUNT(*) FROM crypto_events WHERE session_id = ?`, sessionID).Scan(&count)
+	err := d.conn.QueryRow(`SELECT COUNT(*) FROM crypto_events WHERE session_id = ?`, sessionID).
+		Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("db.CountCryptoEvents: %w", err)
 	}
 	return count, nil
 }
 
-func (d *DB) SearchCryptoEvents(sessionID, algorithm, operation string, limit int) ([]CryptoEventRow, error) {
+func (d *DB) SearchCryptoEvents(
+	sessionID, algorithm, operation string,
+	limit int,
+) ([]CryptoEventRow, error) {
 	query := `SELECT id, session_id, operation, algorithm, input, output, key, iv, timestamp
 		 FROM crypto_events WHERE session_id = ?`
 	args := []any{sessionID}

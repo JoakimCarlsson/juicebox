@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/joakimcarlsson/ai/tool"
 	"github.com/joakimcarlsson/juicebox/internal/session"
@@ -15,7 +14,10 @@ type ListPendingRequestsTool struct {
 	sessionID string
 }
 
-func NewListPendingRequests(manager *session.Manager, sessionID string) *ListPendingRequestsTool {
+func NewListPendingRequests(
+	manager *session.Manager,
+	sessionID string,
+) *ListPendingRequestsTool {
 	return &ListPendingRequestsTool{manager: manager, sessionID: sessionID}
 }
 
@@ -27,10 +29,15 @@ func (t *ListPendingRequestsTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *ListPendingRequestsTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *ListPendingRequestsTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	sess := t.manager.GetSession(t.sessionID)
 	if sess == nil || sess.Intercept == nil {
-		return tool.NewTextErrorResponse("session not found or intercept not available"), nil
+		return tool.NewTextErrorResponse(
+			"session not found or intercept not available",
+		), nil
 	}
 
 	pending := sess.Intercept.ListPending()
@@ -60,6 +67,6 @@ func (t *ListPendingRequestsTool) Run(ctx context.Context, params tool.ToolCall)
 	return tool.NewJSONResponse(map[string]any{
 		"count":   len(results),
 		"pending": results,
-		"hint":    fmt.Sprintf("Use modify_and_forward, forward_request, or drop_request with the request ID to act on these requests."),
+		"hint":    "Use modify_and_forward, forward_request, or drop_request with the request ID to act on these requests.",
 	}), nil
 }

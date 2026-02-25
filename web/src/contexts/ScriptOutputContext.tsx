@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useState,
-} from "react"
+import { createContext, useCallback, useContext, useState } from 'react'
 
 export interface ScriptOutputEntry {
   id: string
@@ -63,6 +58,6 @@ export function ScriptOutputProvider({ children }: { children: React.ReactNode }
 
 export function useScriptOutput() {
   const ctx = useContext(ScriptOutputContext)
-  if (!ctx) throw new Error("useScriptOutput must be used within ScriptOutputProvider")
+  if (!ctx) throw new Error('useScriptOutput must be used within ScriptOutputProvider')
   return ctx
 }

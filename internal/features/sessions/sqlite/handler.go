@@ -80,7 +80,11 @@ func (h *Handler) Query(c *router.Context) {
 	if isWrite {
 		readOnly := req.ReadOnly == nil || *req.ReadOnly
 		if readOnly {
-			response.Error(c, http.StatusBadRequest, "write operations require readOnly: false")
+			response.Error(
+				c,
+				http.StatusBadRequest,
+				"write operations require readOnly: false",
+			)
 			return
 		}
 		resp, err := h.execWrite(sess, sessionID, req.DbPath, req.SQL)
@@ -101,7 +105,10 @@ func (h *Handler) Query(c *router.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func (h *Handler) execWrite(sess *session.Session, sessionID, dbPath, sqlStr string) (*QueryResponse, error) {
+func (h *Handler) execWrite(
+	sess *session.Session,
+	sessionID, dbPath, sqlStr string,
+) (*QueryResponse, error) {
 	localPath, err := h.service.EnsurePulled(sess, sessionID, dbPath)
 	if err != nil {
 		return nil, err
@@ -151,7 +158,8 @@ func (h *Handler) Export(c *router.Context) {
 	}
 
 	c.Writer.Header().Set("Content-Type", "text/csv")
-	c.Writer.Header().Set("Content-Disposition", `attachment; filename="export.csv"`)
+	c.Writer.Header().
+		Set("Content-Disposition", `attachment; filename="export.csv"`)
 	c.Writer.WriteHeader(http.StatusOK)
 
 	w := csv.NewWriter(c.Writer)

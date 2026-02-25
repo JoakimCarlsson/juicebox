@@ -1,19 +1,17 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router"
-import { ClassBrowser } from "@/components/classes/ClassBrowser"
-import { NoSessionEmptyState } from "@/components/sessions/NoSessionEmptyState"
+import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { ClassBrowser } from '@/components/classes/ClassBrowser'
+import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
 
-export const Route = createFileRoute(
-  "/devices/$deviceId/app/$bundleId/classes",
-)({
+export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/classes')({
   validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? "",
+    sessionId: (search.sessionId as string) ?? '',
   }),
   component: ClassesPage,
 })
 
 function ClassesPage() {
   const { sessionId } = useSearch({
-    from: "/devices/$deviceId/app/$bundleId/classes",
+    from: '/devices/$deviceId/app/$bundleId/classes',
   })
 
   if (!sessionId) {

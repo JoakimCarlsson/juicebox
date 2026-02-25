@@ -7,7 +7,11 @@ let _fridaApplied = false;
 let _rootApplied = false;
 let _emulatorApplied = false;
 
-function emitEvasion(category: string, technique: string, detail: string): void {
+function emitEvasion(
+  category: string,
+  technique: string,
+  detail: string,
+): void {
   send({
     type: "evasion",
     payload: { category, technique, detail, timestamp: Date.now() },
@@ -17,8 +21,7 @@ function emitEvasion(category: string, technique: string, detail: string): void 
 let _libc: Module | null = null;
 function libc(): Module {
   if (!_libc) {
-    _libc =
-      Process.findModuleByName("libc.so") ??
+    _libc = Process.findModuleByName("libc.so") ??
       Process.findModuleByName("libc.dylib") ??
       Process.enumerateModules()[0];
   }
@@ -29,7 +32,14 @@ function libcExport(name: string): NativePointer | null {
   return libc().findExportByName(name);
 }
 
-const FRIDA_MAP_STRINGS = ["frida", "linjector", "gum-js-loop", "gmain", "gdbus", "frida-agent"];
+const FRIDA_MAP_STRINGS = [
+  "frida",
+  "linjector",
+  "gum-js-loop",
+  "gmain",
+  "gdbus",
+  "frida-agent",
+];
 
 const ROOT_PATHS = new Set([
   "/system/app/Superuser.apk",
@@ -81,7 +91,8 @@ const FAKE_DEVICE = {
   PRODUCT: "sunfish",
   BOARD: "sunfish",
   HARDWARE: "sunfish",
-  FINGERPRINT: "google/sunfish/sunfish:13/TQ3A.230901.001/10750268:user/release-keys",
+  FINGERPRINT:
+    "google/sunfish/sunfish:13/TQ3A.230901.001/10750268:user/release-keys",
 };
 
 const FRIDA_DETECT_PATHS = new Set([
@@ -115,7 +126,12 @@ function createCleanMapsFile(): number {
 
   if (!openatPtr || !readPtr || !writePtr || !closePtr || !lseekPtr) return -1;
 
-  const openat = new NativeFunction(openatPtr, "int", ["int", "pointer", "int", "int"]);
+  const openat = new NativeFunction(openatPtr, "int", [
+    "int",
+    "pointer",
+    "int",
+    "int",
+  ]);
   const read = new NativeFunction(readPtr, "int", ["int", "pointer", "int"]);
   const write = new NativeFunction(writePtr, "int", ["int", "pointer", "int"]);
   const close = new NativeFunction(closePtr, "int", ["int"]);
@@ -124,7 +140,12 @@ function createCleanMapsFile(): number {
   const AT_FDCWD = -100;
   const O_RDONLY = 0;
   const mapsPathBuf = Memory.allocUtf8String("/proc/self/maps");
-  const mapsFd = openat(AT_FDCWD, mapsPathBuf, O_RDONLY, 0) as unknown as number;
+  const mapsFd = openat(
+    AT_FDCWD,
+    mapsPathBuf,
+    O_RDONLY,
+    0,
+  ) as unknown as number;
   if (mapsFd < 0) return -1;
 
   const bufSize = 65536;
@@ -145,7 +166,10 @@ function createCleanMapsFile(): number {
 
   let memFd = -1;
   if (memfdCreatePtr) {
-    const memfdCreate = new NativeFunction(memfdCreatePtr, "int", ["pointer", "int"]);
+    const memfdCreate = new NativeFunction(memfdCreatePtr, "int", [
+      "pointer",
+      "int",
+    ]);
     const nameBuf = Memory.allocUtf8String("maps");
     memFd = memfdCreate(nameBuf, 0) as unknown as number;
   }
@@ -167,7 +191,12 @@ function bypassFrida(): { applied: boolean } {
   const lseekPtr = libcExport("lseek");
 
   if (openatPtr && dupPtr && lseekPtr) {
-    const origOpenat = new NativeFunction(openatPtr, "int", ["int", "pointer", "int", "int"]);
+    const origOpenat = new NativeFunction(openatPtr, "int", [
+      "int",
+      "pointer",
+      "int",
+      "int",
+    ]);
     const dup = new NativeFunction(dupPtr, "int", ["int"]);
     const lseek = new NativeFunction(lseekPtr, "int", ["int", "int", "int"]);
 
@@ -177,7 +206,12 @@ function bypassFrida(): { applied: boolean } {
       Interceptor.replace(
         openatPtr,
         new NativeCallback(
-          (dirfd: number, pathnamePtr: NativePointer, flags: number, mode: number): number => {
+          (
+            dirfd: number,
+            pathnamePtr: NativePointer,
+            flags: number,
+            mode: number,
+          ): number => {
             let path: string | null = null;
             try {
               path = pathnamePtr.readUtf8String();
@@ -193,13 +227,22 @@ function bypassFrida(): { applied: boolean } {
               return -1;
             }
 
-            return origOpenat(dirfd, pathnamePtr, flags, mode) as unknown as number;
+            return origOpenat(
+              dirfd,
+              pathnamePtr,
+              flags,
+              mode,
+            ) as unknown as number;
           },
           "int",
           ["int", "pointer", "int", "int"],
         ),
       );
-      emitEvasion("frida", "openat_replace", "openat replaced: /proc/self/maps → clean memfd");
+      emitEvasion(
+        "frida",
+        "openat_replace",
+        "openat replaced: /proc/self/maps → clean memfd",
+      );
     }
   }
 
@@ -221,8 +264,14 @@ function bypassFrida(): { applied: boolean } {
               name.includes("bangcle") ||
               name.includes("ijiami")
             ) {
-              args[2] = new NativeCallback(() => ptr(0), "pointer", ["pointer"]);
-              emitEvasion("frida", "pthread_block", `blocked security thread from ${mod.name}`);
+              args[2] = new NativeCallback(() => ptr(0), "pointer", [
+                "pointer",
+              ]);
+              emitEvasion(
+                "frida",
+                "pthread_block",
+                `blocked security thread from ${mod.name}`,
+              );
             }
           }
         } catch (_) {}
@@ -233,10 +282,20 @@ function bypassFrida(): { applied: boolean } {
   scheduleJavaPerform(() => {
     try {
       const BufferedReader = Java.use("java.io.BufferedReader");
-      BufferedReader.readLine.overload().implementation = function (): string | null {
+      BufferedReader.readLine.overload().implementation = function ():
+        | string
+        | null {
         const line: string | null = this.readLine();
-        if (line !== null && (line.includes("frida") || line.includes("linjector") || line.includes("gum-js-loop"))) {
-          emitEvasion("frida", "readline_filter", "filtered frida string from readLine()");
+        if (
+          line !== null &&
+          (line.includes("frida") || line.includes("linjector") ||
+            line.includes("gum-js-loop"))
+        ) {
+          emitEvasion(
+            "frida",
+            "readline_filter",
+            "filtered frida string from readLine()",
+          );
           return this.readLine();
         }
         return line;
@@ -246,23 +305,36 @@ function bypassFrida(): { applied: boolean } {
     try {
       const Socket = Java.use("java.net.Socket");
       const InetSocketAddress = Java.use("java.net.InetSocketAddress");
-      Socket.connect.overload("java.net.SocketAddress", "int").implementation = function (addr: any, timeout: number): void {
-        try {
-          const inetAddr = Java.cast(addr, InetSocketAddress);
-          const port = inetAddr.getPort();
-          const host = inetAddr.getHostString();
-          if (port === 27042 && (host === "127.0.0.1" || host === "localhost")) {
-            emitEvasion("frida", "java_connect_block", `blocked Socket.connect to ${host}:${port}`);
-            throw Java.use("java.net.ConnectException").$new("Connection refused");
+      Socket.connect.overload("java.net.SocketAddress", "int").implementation =
+        function (addr: any, timeout: number): void {
+          try {
+            const inetAddr = Java.cast(addr, InetSocketAddress);
+            const port = inetAddr.getPort();
+            const host = inetAddr.getHostString();
+            if (
+              port === 27042 && (host === "127.0.0.1" || host === "localhost")
+            ) {
+              emitEvasion(
+                "frida",
+                "java_connect_block",
+                `blocked Socket.connect to ${host}:${port}`,
+              );
+              throw Java.use("java.net.ConnectException").$new(
+                "Connection refused",
+              );
+            }
+          } catch (e: any) {
+            if (e.$className) throw e;
           }
-        } catch (e: any) {
-          if (e.$className) throw e;
-        }
-        return this.connect(addr, timeout);
-      };
+          return this.connect(addr, timeout);
+        };
     } catch (_) {}
 
-    emitEvasion("frida", "java_hooks_ready", "frida Java-level hooks installed");
+    emitEvasion(
+      "frida",
+      "java_hooks_ready",
+      "frida Java-level hooks installed",
+    );
   });
 
   _fridaApplied = true;
@@ -278,11 +350,19 @@ function bypassRoot(): { applied: boolean } {
       File.exists.implementation = function (): boolean {
         const path: string = this.getAbsolutePath();
         if (ROOT_PATHS.has(path)) {
-          emitEvasion("root", "file_exists_hide", `File.exists("${path}") → false`);
+          emitEvasion(
+            "root",
+            "file_exists_hide",
+            `File.exists("${path}") → false`,
+          );
           return false;
         }
         if (isFridaDetectPath(path)) {
-          emitEvasion("frida", "file_exists_hide", `File.exists("${path}") → false`);
+          emitEvasion(
+            "frida",
+            "file_exists_hide",
+            `File.exists("${path}") → false`,
+          );
           return false;
         }
         return this.exists();
@@ -291,9 +371,15 @@ function bypassRoot(): { applied: boolean } {
 
     try {
       const Runtime = Java.use("java.lang.Runtime");
-      Runtime.exec.overload("java.lang.String").implementation = function (cmd: string): any {
+      Runtime.exec.overload("java.lang.String").implementation = function (
+        cmd: string,
+      ): any {
         if (cmd && (cmd.includes("which su") || cmd === "su")) {
-          emitEvasion("root", "runtime_exec_hide", `Runtime.exec("${cmd}") → empty`);
+          emitEvasion(
+            "root",
+            "runtime_exec_hide",
+            `Runtime.exec("${cmd}") → empty`,
+          );
           return this.exec("echo");
         }
         return this.exec(cmd);
@@ -302,13 +388,21 @@ function bypassRoot(): { applied: boolean } {
 
     try {
       const Runtime = Java.use("java.lang.Runtime");
-      Runtime.exec.overload("[Ljava.lang.String;").implementation = function (cmds: any): any {
+      Runtime.exec.overload("[Ljava.lang.String;").implementation = function (
+        cmds: any,
+      ): any {
         try {
           const arr: string[] = [];
           for (let i = 0; i < cmds.length; i++) arr.push(String(cmds[i]));
           const joined = arr.join(" ");
-          if (joined.includes("which su") || (arr.length === 1 && arr[0] === "su")) {
-            emitEvasion("root", "runtime_exec_arr_hide", `Runtime.exec(${JSON.stringify(arr)}) → empty`);
+          if (
+            joined.includes("which su") || (arr.length === 1 && arr[0] === "su")
+          ) {
+            emitEvasion(
+              "root",
+              "runtime_exec_arr_hide",
+              `Runtime.exec(${JSON.stringify(arr)}) → empty`,
+            );
             return this.exec(["echo"]);
           }
         } catch (_) {}
@@ -318,13 +412,20 @@ function bypassRoot(): { applied: boolean } {
 
     try {
       const PMAbstract = Java.use("android.app.ApplicationPackageManager");
-      PMAbstract.getPackageInfo.overload("java.lang.String", "int").implementation = function (name: string, flags: number): any {
-        if (ROOT_PACKAGES.has(name)) {
-          emitEvasion("root", "pkg_hide", `getPackageInfo("${name}") → NameNotFoundException`);
-          throw Java.use("android.content.pm.PackageManager$NameNotFoundException").$new(name);
-        }
-        return this.getPackageInfo(name, flags);
-      };
+      PMAbstract.getPackageInfo.overload("java.lang.String", "int")
+        .implementation = function (name: string, flags: number): any {
+          if (ROOT_PACKAGES.has(name)) {
+            emitEvasion(
+              "root",
+              "pkg_hide",
+              `getPackageInfo("${name}") → NameNotFoundException`,
+            );
+            throw Java.use(
+              "android.content.pm.PackageManager$NameNotFoundException",
+            ).$new(name);
+          }
+          return this.getPackageInfo(name, flags);
+        };
     } catch (_) {}
 
     try {
@@ -351,7 +452,16 @@ function bypassEmulator(): { applied: boolean } {
   scheduleJavaPerform(() => {
     try {
       const Build = Java.use("android.os.Build");
-      const fields = ["DEVICE", "MODEL", "MANUFACTURER", "BRAND", "PRODUCT", "BOARD", "HARDWARE", "FINGERPRINT"] as const;
+      const fields = [
+        "DEVICE",
+        "MODEL",
+        "MANUFACTURER",
+        "BRAND",
+        "PRODUCT",
+        "BOARD",
+        "HARDWARE",
+        "FINGERPRINT",
+      ] as const;
 
       for (const name of fields) {
         try {
@@ -359,11 +469,18 @@ function bypassEmulator(): { applied: boolean } {
           field.setAccessible(true);
           const current = String(field.get(null) ?? "");
           const lower = current.toLowerCase();
-          if (EMULATOR_INDICATORS.has(lower) || lower.includes("generic") || lower.includes("emulator") || lower.includes("sdk")) {
+          if (
+            EMULATOR_INDICATORS.has(lower) || lower.includes("generic") ||
+            lower.includes("emulator") || lower.includes("sdk")
+          ) {
             const fake = FAKE_DEVICE[name as keyof typeof FAKE_DEVICE];
             if (fake) {
               field.set(null, Java.use("java.lang.String").$new(fake));
-              emitEvasion("emulator", "build_field_spoof", `Build.${name}: "${current}" → "${fake}"`);
+              emitEvasion(
+                "emulator",
+                "build_field_spoof",
+                `Build.${name}: "${current}" → "${fake}"`,
+              );
             }
           }
         } catch (_) {}
@@ -372,26 +489,36 @@ function bypassEmulator(): { applied: boolean } {
 
     try {
       const TelephonyManager = Java.use("android.telephony.TelephonyManager");
-      TelephonyManager.getNetworkOperatorName.implementation = function (): string {
-        const original: string = this.getNetworkOperatorName();
-        if (original === "Android" || original === "" || original === null) {
-          emitEvasion("emulator", "telephony_operator", `getNetworkOperatorName: "${original}" → "T-Mobile"`);
-          return "T-Mobile";
-        }
-        return original;
-      };
+      TelephonyManager.getNetworkOperatorName.implementation =
+        function (): string {
+          const original: string = this.getNetworkOperatorName();
+          if (original === "Android" || original === "" || original === null) {
+            emitEvasion(
+              "emulator",
+              "telephony_operator",
+              `getNetworkOperatorName: "${original}" → "T-Mobile"`,
+            );
+            return "T-Mobile";
+          }
+          return original;
+        };
     } catch (_) {}
 
     try {
       const TelephonyManager = Java.use("android.telephony.TelephonyManager");
-      TelephonyManager.getDeviceId.overload().implementation = function (): string {
-        const original: string = this.getDeviceId();
-        if (!original || /^[0]+$/.test(original) || /^[1]+$/.test(original)) {
-          emitEvasion("emulator", "telephony_imei", `getDeviceId: "${original}" → spoofed`);
-          return "358240051111110";
-        }
-        return original;
-      };
+      TelephonyManager.getDeviceId.overload().implementation =
+        function (): string {
+          const original: string = this.getDeviceId();
+          if (!original || /^[0]+$/.test(original) || /^[1]+$/.test(original)) {
+            emitEvasion(
+              "emulator",
+              "telephony_imei",
+              `getDeviceId: "${original}" → spoofed`,
+            );
+            return "358240051111110";
+          }
+          return original;
+        };
     } catch (_) {}
 
     try {
@@ -399,14 +526,22 @@ function bypassEmulator(): { applied: boolean } {
       TelephonyManager.getLine1Number.implementation = function (): string {
         const original: string = this.getLine1Number();
         if (original === "15555215554" || original === "15555215556") {
-          emitEvasion("emulator", "telephony_phone", `getLine1Number: "${original}" → spoofed`);
+          emitEvasion(
+            "emulator",
+            "telephony_phone",
+            `getLine1Number: "${original}" → spoofed`,
+          );
           return "";
         }
         return original;
       };
     } catch (_) {}
 
-    emitEvasion("emulator", "java_hooks_ready", "emulator Java-level hooks installed");
+    emitEvasion(
+      "emulator",
+      "java_hooks_ready",
+      "emulator Java-level hooks installed",
+    );
   });
 
   _emulatorApplied = true;

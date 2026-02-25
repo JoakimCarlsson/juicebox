@@ -12,7 +12,7 @@ import (
 type GetCryptoEventsParams struct {
 	Algorithm string `json:"algorithm,omitempty" description:"Filter by algorithm substring (e.g. 'AES', 'HMAC', 'SHA-256')"`
 	Operation string `json:"operation,omitempty" description:"Filter by operation type: encrypt, decrypt, mac, digest, key_derivation, key_generation"`
-	Limit     int    `json:"limit,omitempty" description:"Max results to return (default 50)"`
+	Limit     int    `json:"limit,omitempty"     description:"Max results to return (default 50)"`
 }
 
 type GetCryptoEventsTool struct {
@@ -20,7 +20,10 @@ type GetCryptoEventsTool struct {
 	sessionID string
 }
 
-func NewGetCryptoEvents(database *db.DB, sessionID string) *GetCryptoEventsTool {
+func NewGetCryptoEvents(
+	database *db.DB,
+	sessionID string,
+) *GetCryptoEventsTool {
 	return &GetCryptoEventsTool{db: database, sessionID: sessionID}
 }
 
@@ -32,15 +35,27 @@ func (t *GetCryptoEventsTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *GetCryptoEventsTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *GetCryptoEventsTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[GetCryptoEventsParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
-	rows, err := t.db.SearchCryptoEvents(t.sessionID, input.Algorithm, input.Operation, input.Limit)
+	rows, err := t.db.SearchCryptoEvents(
+		t.sessionID,
+		input.Algorithm,
+		input.Operation,
+		input.Limit,
+	)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("search failed: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("search failed: %v", err),
+		), nil
 	}
 
 	if len(rows) == 0 {

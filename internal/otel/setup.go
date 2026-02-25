@@ -24,7 +24,10 @@ type Config struct {
 	OTLPToken      string
 }
 
-func Setup(ctx context.Context, cfg Config) (shutdown func(context.Context) error, err error) {
+func Setup(
+	ctx context.Context,
+	cfg Config,
+) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
 	shutdown = func(ctx context.Context) error {

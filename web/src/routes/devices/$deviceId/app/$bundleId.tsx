@@ -6,34 +6,40 @@ import {
   useNavigate,
   useParams,
   useSearch,
-} from "@tanstack/react-router"
-import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { SessionStatusReporter } from "@/components/layout/SessionStatusReporter"
-import { CrashAlertDialog } from "@/components/sessions/CrashAlertDialog"
-import { SessionMessageProvider } from "@/contexts/SessionMessageContext"
-import { InterceptProvider } from "@/contexts/InterceptContext"
-import { ChatPanelProvider, useChatPanel } from "@/contexts/ChatPanelContext"
-import { useBottomPanel } from "@/contexts/BottomPanelContext"
-import { ChatPanel } from "@/components/chat/ChatPanel"
-import { BottomPanel } from "@/components/layout/BottomPanel"
+} from '@tanstack/react-router'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { SessionStatusReporter } from '@/components/layout/SessionStatusReporter'
+import { CrashAlertDialog } from '@/components/sessions/CrashAlertDialog'
+import { SessionMessageProvider } from '@/contexts/SessionMessageContext'
+import { InterceptProvider } from '@/contexts/InterceptContext'
+import { ChatPanelProvider, useChatPanel } from '@/contexts/ChatPanelContext'
+import { useBottomPanel } from '@/contexts/BottomPanelContext'
+import { ChatPanel } from '@/components/chat/ChatPanel'
+import { BottomPanel } from '@/components/layout/BottomPanel'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
+import { useDefaultLayout } from 'react-resizable-panels'
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable"
-import { useDefaultLayout } from "react-resizable-panels"
-import { ArrowLeft, Home, Globe, FileText, Code, Terminal, MessageSquare, FolderOpen, Blocks, AlertTriangle, Lock } from "lucide-react"
-import { useEffect, useRef, useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { appSessionsQueryOptions } from "@/features/sessions/queries"
-import { cn } from "@/lib/utils"
+  ArrowLeft,
+  Home,
+  Globe,
+  FileText,
+  Code,
+  Terminal,
+  MessageSquare,
+  FolderOpen,
+  Blocks,
+  AlertTriangle,
+  Lock,
+} from 'lucide-react'
+import { useEffect, useRef, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { appSessionsQueryOptions } from '@/features/sessions/queries'
+import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute(
-  "/devices/$deviceId/app/$bundleId",
-)({
+export const Route = createFileRoute('/devices/$deviceId/app/$bundleId')({
   validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? "",
+    sessionId: (search.sessionId as string) ?? '',
   }),
   component: AppLayout,
 })
@@ -41,34 +47,78 @@ export const Route = createFileRoute(
 function getTabs(capabilities: string[] | null) {
   const has = (cap: string) => capabilities === null || capabilities.includes(cap)
   return [
-    { value: "home", label: "Home", icon: Home, enabled: true, to: "/devices/$deviceId/app/$bundleId/home" as const },
-    { value: "network", label: "Network", icon: Globe, enabled: true, to: "/devices/$deviceId/app/$bundleId/network" as const },
-    { value: "logs", label: "Logs", icon: FileText, enabled: has("logstream"), to: "/devices/$deviceId/app/$bundleId/logs" as const },
-    { value: "files", label: "Files", icon: FolderOpen, enabled: has("filesystem"), to: "/devices/$deviceId/app/$bundleId/files" as const },
-    { value: "classes", label: "Classes", icon: Blocks, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/classes" as const },
-    { value: "crashes", label: "Crashes", icon: AlertTriangle, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/crashes" as const },
-    { value: "crypto", label: "Crypto", icon: Lock, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/crypto" as const },
-    { value: "hooks", label: "Hooks", icon: Code, enabled: has("frida"), to: "/devices/$deviceId/app/$bundleId/hooks" as const },
+    {
+      value: 'home',
+      label: 'Home',
+      icon: Home,
+      enabled: true,
+      to: '/devices/$deviceId/app/$bundleId/home' as const,
+    },
+    {
+      value: 'network',
+      label: 'Network',
+      icon: Globe,
+      enabled: true,
+      to: '/devices/$deviceId/app/$bundleId/network' as const,
+    },
+    {
+      value: 'logs',
+      label: 'Logs',
+      icon: FileText,
+      enabled: has('logstream'),
+      to: '/devices/$deviceId/app/$bundleId/logs' as const,
+    },
+    {
+      value: 'files',
+      label: 'Files',
+      icon: FolderOpen,
+      enabled: has('filesystem'),
+      to: '/devices/$deviceId/app/$bundleId/files' as const,
+    },
+    {
+      value: 'classes',
+      label: 'Classes',
+      icon: Blocks,
+      enabled: has('frida'),
+      to: '/devices/$deviceId/app/$bundleId/classes' as const,
+    },
+    {
+      value: 'crashes',
+      label: 'Crashes',
+      icon: AlertTriangle,
+      enabled: has('frida'),
+      to: '/devices/$deviceId/app/$bundleId/crashes' as const,
+    },
+    {
+      value: 'crypto',
+      label: 'Crypto',
+      icon: Lock,
+      enabled: has('frida'),
+      to: '/devices/$deviceId/app/$bundleId/crypto' as const,
+    },
+    {
+      value: 'hooks',
+      label: 'Hooks',
+      icon: Code,
+      enabled: has('frida'),
+      to: '/devices/$deviceId/app/$bundleId/hooks' as const,
+    },
   ]
 }
 
 function AppLayout() {
   const { deviceId, bundleId } = useParams({
-    from: "/devices/$deviceId/app/$bundleId",
+    from: '/devices/$deviceId/app/$bundleId',
   })
   const { sessionId } = useSearch({
-    from: "/devices/$deviceId/app/$bundleId",
+    from: '/devices/$deviceId/app/$bundleId',
   })
 
   return (
     <SessionMessageProvider sessionId={sessionId}>
       <InterceptProvider sessionId={sessionId}>
         <ChatPanelProvider sessionId={sessionId}>
-          <AppLayoutWithChat
-            deviceId={deviceId}
-            bundleId={bundleId}
-            sessionId={sessionId}
-          />
+          <AppLayoutWithChat deviceId={deviceId} bundleId={bundleId} sessionId={sessionId} />
         </ChatPanelProvider>
       </InterceptProvider>
     </SessionMessageProvider>
@@ -86,45 +136,59 @@ function AppLayoutWithChat({
 }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const activeTab = location.pathname.split("/").pop() || "home"
+  const activeTab = location.pathname.split('/').pop() || 'home'
   const { data: sessionsData } = useQuery(appSessionsQueryOptions(deviceId, bundleId))
   const capabilities = useMemo(() => {
     if (!sessionsData) return null
     return sessionsData.sessions.find((s) => s.id === sessionId)?.capabilities ?? null
   }, [sessionsData, sessionId])
   const tabs = getTabs(capabilities)
-  const { panelRef, onPanelResize: onChatResize, toggle: toggleChat, isOpen: chatOpen } = useChatPanel()
-  const { panelRef: bottomPanelRef, onPanelResize: onBottomResize, toggle: toggleBottomPanel, isOpen: bottomPanelOpen } = useBottomPanel()
+  const {
+    panelRef,
+    onPanelResize: onChatResize,
+    toggle: toggleChat,
+    isOpen: chatOpen,
+  } = useChatPanel()
+  const {
+    panelRef: bottomPanelRef,
+    onPanelResize: onBottomResize,
+    toggle: toggleBottomPanel,
+    isOpen: bottomPanelOpen,
+  } = useBottomPanel()
   const sessionRef = useRef(sessionId)
-  sessionRef.current = sessionId
+  useEffect(() => {
+    sessionRef.current = sessionId
+  }, [sessionId])
 
-  const {
-    defaultLayout: outerLayout,
-    onLayoutChanged: onOuterLayoutChanged,
-  } = useDefaultLayout({ id: "app-main", storage: localStorage })
+  const { defaultLayout: outerLayout, onLayoutChanged: onOuterLayoutChanged } = useDefaultLayout({
+    id: 'app-main',
+    storage: localStorage,
+  })
 
-  const {
-    defaultLayout: innerLayout,
-    onLayoutChanged: onInnerLayoutChanged,
-  } = useDefaultLayout({ id: "app-top", storage: localStorage })
+  const { defaultLayout: innerLayout, onLayoutChanged: onInnerLayoutChanged } = useDefaultLayout({
+    id: 'app-top',
+    storage: localStorage,
+  })
 
   useEffect(() => {
     if (!sessionId) return
 
     function handleBeforeUnload() {
-      fetch(`/api/v1/sessions/${sessionRef.current}`, { method: "DELETE", keepalive: true })
+      fetch(`/api/v1/sessions/${sessionRef.current}`, { method: 'DELETE', keepalive: true })
     }
 
-    window.addEventListener("beforeunload", handleBeforeUnload)
+    window.addEventListener('beforeunload', handleBeforeUnload)
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
   }, [sessionId])
 
   return (
     <div className="flex h-full flex-col">
       {sessionId && <SessionStatusReporter sessionId={sessionId} bundleId={bundleId} />}
-      {sessionId && <CrashAlertDialog sessionId={sessionId} deviceId={deviceId} bundleId={bundleId} />}
+      {sessionId && (
+        <CrashAlertDialog sessionId={sessionId} deviceId={deviceId} bundleId={bundleId} />
+      )}
 
       <div className="border-b border-border px-4 py-2">
         <div className="flex items-center justify-between">
@@ -135,22 +199,20 @@ function AppLayoutWithChat({
               className="h-7 w-7"
               onClick={() =>
                 navigate({
-                  to: "/devices/$deviceId/apps",
+                  to: '/devices/$deviceId/apps',
                   params: { deviceId },
                 })
               }
             >
               <ArrowLeft className="h-3.5 w-3.5" />
             </Button>
-            <span className="text-sm font-semibold text-foreground">
-              {bundleId}
-            </span>
+            <span className="text-sm font-semibold text-foreground">{bundleId}</span>
           </div>
           <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant={bottomPanelOpen ? "secondary" : "ghost"}
+                  variant={bottomPanelOpen ? 'secondary' : 'ghost'}
                   size="icon"
                   className="h-7 w-7"
                   onClick={toggleBottomPanel}
@@ -164,7 +226,7 @@ function AppLayoutWithChat({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={chatOpen ? "secondary" : "ghost"}
+                    variant={chatOpen ? 'secondary' : 'ghost'}
                     size="icon"
                     className="h-7 w-7"
                     onClick={toggleChat}
@@ -206,12 +268,12 @@ function AppLayoutWithChat({
                           params={{ deviceId, bundleId }}
                           search={{ sessionId }}
                           className={cn(
-                            "flex items-center h-9 px-3 text-xs transition-colors",
-                            "border-b-2 border-transparent",
+                            'flex items-center h-9 px-3 text-xs transition-colors',
+                            'border-b-2 border-transparent',
                             tab.enabled
-                              ? "text-muted-foreground hover:text-foreground"
-                              : "text-muted-foreground/50 cursor-default",
-                            isActive && "border-foreground text-foreground",
+                              ? 'text-muted-foreground hover:text-foreground'
+                              : 'text-muted-foreground/50 cursor-default',
+                            isActive && 'border-foreground text-foreground'
                           )}
                           onClick={(e) => {
                             if (!tab.enabled) e.preventDefault()

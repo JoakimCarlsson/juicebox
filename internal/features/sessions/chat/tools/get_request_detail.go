@@ -30,36 +30,51 @@ func (t *GetRequestDetailTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *GetRequestDetailTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *GetRequestDetailTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[GetRequestDetailParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	row, err := t.db.GetHttpMessage(input.MessageID)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("lookup failed: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("lookup failed: %v", err),
+		), nil
 	}
 	if row == nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("no message found with ID: %s", input.MessageID)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("no message found with ID: %s", input.MessageID),
+		), nil
 	}
 
 	var reqHeaders map[string]string
-	json.Unmarshal([]byte(row.RequestHeaders), &reqHeaders)
+	_ = json.Unmarshal([]byte(row.RequestHeaders), &reqHeaders)
 
 	var respHeaders map[string]string
-	json.Unmarshal([]byte(row.ResponseHeaders), &respHeaders)
+	_ = json.Unmarshal([]byte(row.ResponseHeaders), &respHeaders)
 
 	detail := map[string]any{
-		"id":               row.ID,
-		"method":           row.Method,
-		"url":              row.URL,
-		"status_code":      row.StatusCode,
-		"duration_ms":      row.Duration,
-		"request_headers":  reqHeaders,
-		"request_body":     truncateBody(row.RequestBody, row.RequestBodyEncoding),
+		"id":              row.ID,
+		"method":          row.Method,
+		"url":             row.URL,
+		"status_code":     row.StatusCode,
+		"duration_ms":     row.Duration,
+		"request_headers": reqHeaders,
+		"request_body": truncateBody(
+			row.RequestBody,
+			row.RequestBodyEncoding,
+		),
 		"response_headers": respHeaders,
-		"response_body":    truncateBody(row.ResponseBody, row.ResponseBodyEncoding),
+		"response_body": truncateBody(
+			row.ResponseBody,
+			row.ResponseBodyEncoding,
+		),
 	}
 
 	return tool.NewJSONResponse(detail), nil
@@ -72,7 +87,10 @@ func truncateBody(body *string, encoding string) string {
 		return ""
 	}
 	if encoding == "base64" {
-		return "[binary data, base64 encoded, " + fmt.Sprintf("%d bytes", len(*body)) + "]"
+		return "[binary data, base64 encoded, " + fmt.Sprintf(
+			"%d bytes",
+			len(*body),
+		) + "]"
 	}
 	if len(*body) > maxBodySize {
 		return (*body)[:maxBodySize] + "\n... [truncated]"

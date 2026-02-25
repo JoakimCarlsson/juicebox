@@ -26,7 +26,10 @@ func (s *Service) pullKey(sessionID, dbPath string) string {
 	return sessionID + ":" + dbPath
 }
 
-func (s *Service) EnsurePulled(sess *session.Session, sessionID, dbPath string) (string, error) {
+func (s *Service) EnsurePulled(
+	sess *session.Session,
+	sessionID, dbPath string,
+) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -38,7 +41,11 @@ func (s *Service) EnsurePulled(sess *session.Session, sessionID, dbPath string) 
 		delete(s.pulled, key)
 	}
 
-	localPath, err := sess.Setup.PullDatabase(sess.DeviceID, sess.BundleID, dbPath)
+	localPath, err := sess.Setup.PullDatabase(
+		sess.DeviceID,
+		sess.BundleID,
+		dbPath,
+	)
 	if err != nil {
 		return "", fmt.Errorf("pull database: %w", err)
 	}
@@ -47,7 +54,10 @@ func (s *Service) EnsurePulled(sess *session.Session, sessionID, dbPath string) 
 	return localPath, nil
 }
 
-func (s *Service) OpenDB(sess *session.Session, sessionID, dbPath string) (*sql.DB, error) {
+func (s *Service) OpenDB(
+	sess *session.Session,
+	sessionID, dbPath string,
+) (*sql.DB, error) {
 	localPath, err := s.EnsurePulled(sess, sessionID, dbPath)
 	if err != nil {
 		return nil, err
@@ -61,14 +71,19 @@ func (s *Service) OpenDB(sess *session.Session, sessionID, dbPath string) (*sql.
 	return db, nil
 }
 
-func (s *Service) GetTables(sess *session.Session, sessionID, dbPath string) ([]bridge.DatabaseTable, error) {
+func (s *Service) GetTables(
+	sess *session.Session,
+	sessionID, dbPath string,
+) ([]bridge.DatabaseTable, error) {
 	db, err := s.OpenDB(sess, sessionID, dbPath)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+	rows, err := db.Query(
+		"SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+	)
 	if err != nil {
 		return nil, fmt.Errorf("query tables: %w", err)
 	}
@@ -90,7 +105,10 @@ func (s *Service) GetTables(sess *session.Session, sessionID, dbPath string) ([]
 	return tables, nil
 }
 
-func (s *Service) getColumns(db *sql.DB, tableName string) ([]bridge.DatabaseColumn, error) {
+func (s *Service) getColumns(
+	db *sql.DB,
+	tableName string,
+) ([]bridge.DatabaseColumn, error) {
 	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%q)", tableName))
 	if err != nil {
 		return nil, err
@@ -117,7 +135,10 @@ func (s *Service) getColumns(db *sql.DB, tableName string) ([]bridge.DatabaseCol
 	return columns, nil
 }
 
-func (s *Service) ExecQuery(sess *session.Session, sessionID, dbPath, sqlStr string) (*QueryResponse, error) {
+func (s *Service) ExecQuery(
+	sess *session.Session,
+	sessionID, dbPath, sqlStr string,
+) (*QueryResponse, error) {
 	db, err := s.OpenDB(sess, sessionID, dbPath)
 	if err != nil {
 		return nil, err

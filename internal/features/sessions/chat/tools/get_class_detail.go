@@ -19,7 +19,10 @@ type GetClassDetailTool struct {
 	sessionID string
 }
 
-func NewGetClassDetail(manager *session.Manager, sessionID string) *GetClassDetailTool {
+func NewGetClassDetail(
+	manager *session.Manager,
+	sessionID string,
+) *GetClassDetailTool {
 	return &GetClassDetailTool{manager: manager, sessionID: sessionID}
 }
 
@@ -31,19 +34,31 @@ func (t *GetClassDetailTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *GetClassDetailTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *GetClassDetailTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[GetClassDetailParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	if input.ClassName == "" {
 		return tool.NewTextErrorResponse("className is required"), nil
 	}
 
-	raw, err := t.manager.AgentInvoke(t.sessionID, "classes", "detail", []any{input.ClassName})
+	raw, err := t.manager.AgentInvoke(
+		t.sessionID,
+		"classes",
+		"detail",
+		[]any{input.ClassName},
+	)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("failed to get class detail: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("failed to get class detail: %v", err),
+		), nil
 	}
 
 	var detail json.RawMessage = raw

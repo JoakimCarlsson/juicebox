@@ -1,6 +1,6 @@
-import { useEffect } from "react"
-import { useDeviceSocket } from "@/contexts/DeviceSocketContext"
-import { useAppStatus } from "@/contexts/AppStatusContext"
+import { useEffect } from 'react'
+import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
+import { useAppStatus } from '@/contexts/AppStatusContext'
 
 interface StatusReporterProps {
   deviceId: string

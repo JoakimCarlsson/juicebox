@@ -65,11 +65,16 @@ func (h *Handler) Read(c *router.Context) {
 	if content.Encoding == "base64" {
 		data, err := base64.StdEncoding.DecodeString(content.Content)
 		if err != nil {
-			response.Error(c, http.StatusInternalServerError, "failed to decode file")
+			response.Error(
+				c,
+				http.StatusInternalServerError,
+				"failed to decode file",
+			)
 			return
 		}
 		filename := filepath.Base(path)
-		c.Writer.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
+		c.Writer.Header().
+			Set("Content-Disposition", `attachment; filename="`+filename+`"`)
 		c.Writer.Header().Set("Content-Type", "application/octet-stream")
 		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.Write(data) //nolint:errcheck
@@ -99,11 +104,19 @@ func (h *Handler) Find(c *router.Context) {
 		basePath = "/data/data/" + sess.BundleID
 	}
 
-	paths, err := sess.Setup.FindFiles(sess.DeviceID, sess.BundleID, pattern, basePath)
+	paths, err := sess.Setup.FindFiles(
+		sess.DeviceID,
+		sess.BundleID,
+		pattern,
+		basePath,
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, FindResponse{Pattern: pattern, BasePath: basePath, Paths: paths})
+	c.JSON(
+		http.StatusOK,
+		FindResponse{Pattern: pattern, BasePath: basePath, Paths: paths},
+	)
 }

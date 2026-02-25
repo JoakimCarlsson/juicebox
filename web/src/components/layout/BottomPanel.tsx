@@ -1,61 +1,49 @@
-import {
-  useBottomPanel,
-  type PanelTab,
-} from "@/contexts/BottomPanelContext"
-import { useEventLog, type EventLogEntry } from "@/contexts/EventLogContext"
-import { useScriptOutput } from "@/contexts/ScriptOutputContext"
-import type { LogEntry } from "@/types/session"
-import { Button } from "@/components/ui/button"
-import {
-  Terminal,
-  AlertTriangle,
-  Trash2,
-  CheckCircle2,
-  ScrollText,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useEffect, useMemo, useRef } from "react"
+import { useBottomPanel, type PanelTab } from '@/contexts/BottomPanelContext'
+import { useEventLog, type EventLogEntry } from '@/contexts/EventLogContext'
+import { useScriptOutput } from '@/contexts/ScriptOutputContext'
+import type { LogEntry } from '@/types/session'
+import { Button } from '@/components/ui/button'
+import { Terminal, AlertTriangle, Trash2, CheckCircle2, ScrollText } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useEffect, useMemo, useRef } from 'react'
 
 const tabs: { value: PanelTab; label: string; icon: React.ReactNode }[] = [
   {
-    value: "console",
-    label: "Console",
+    value: 'console',
+    label: 'Console',
     icon: <Terminal className="mr-1.5 h-3 w-3" />,
   },
   {
-    value: "problems",
-    label: "Problems",
+    value: 'problems',
+    label: 'Problems',
     icon: <AlertTriangle className="mr-1.5 h-3 w-3" />,
   },
   {
-    value: "output",
-    label: "Output",
+    value: 'output',
+    label: 'Output',
     icon: <ScrollText className="mr-1.5 h-3 w-3" />,
   },
 ]
 
 function isLogEntry(payload: unknown): payload is LogEntry {
-  if (!payload || typeof payload !== "object") return false
+  if (!payload || typeof payload !== 'object') return false
   const p = payload as Record<string, unknown>
   return (
-    typeof p.level === "string" &&
-    typeof p.source === "string" &&
-    typeof p.message === "string"
+    typeof p.level === 'string' && typeof p.source === 'string' && typeof p.message === 'string'
   )
 }
 
 function getProblemsCount(entries: EventLogEntry[]): number {
-  return entries.filter(
-    (e) => e.envelope.type === "agent-error" || e.envelope.type === "crash",
-  ).length
+  return entries.filter((e) => e.envelope.type === 'agent-error' || e.envelope.type === 'crash')
+    .length
 }
 
 function formatTime(timestamp: number): string {
   const d = new Date(timestamp)
-  const h = d.getHours().toString().padStart(2, "0")
-  const m = d.getMinutes().toString().padStart(2, "0")
-  const s = d.getSeconds().toString().padStart(2, "0")
-  const ms = d.getMilliseconds().toString().padStart(3, "0")
+  const h = d.getHours().toString().padStart(2, '0')
+  const m = d.getMinutes().toString().padStart(2, '0')
+  const s = d.getSeconds().toString().padStart(2, '0')
+  const ms = d.getMilliseconds().toString().padStart(3, '0')
   return `${h}:${m}:${s}.${ms}`
 }
 
@@ -66,7 +54,7 @@ export function BottomPanel() {
   const problemsCount = getProblemsCount(entries)
 
   const handleClear = () => {
-    if (activeTab === "output") {
+    if (activeTab === 'output') {
       scriptOutput.clear()
     } else {
       clear()
@@ -82,21 +70,20 @@ export function BottomPanel() {
               key={tab.value}
               onClick={() => setActiveTab(tab.value)}
               className={cn(
-                "flex items-center h-9 px-3 text-xs transition-colors",
-                "border-b-2 border-transparent",
-                "text-muted-foreground hover:text-foreground",
-                activeTab === tab.value &&
-                  "border-foreground text-foreground",
+                'flex items-center h-9 px-3 text-xs transition-colors',
+                'border-b-2 border-transparent',
+                'text-muted-foreground hover:text-foreground',
+                activeTab === tab.value && 'border-foreground text-foreground'
               )}
             >
               {tab.icon}
               {tab.label}
-              {tab.value === "problems" && problemsCount > 0 && (
+              {tab.value === 'problems' && problemsCount > 0 && (
                 <span className="ml-1.5 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-medium leading-none text-destructive-foreground">
                   {problemsCount}
                 </span>
               )}
-              {tab.value === "output" && scriptOutput.entries.length > 0 && (
+              {tab.value === 'output' && scriptOutput.entries.length > 0 && (
                 <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium leading-none text-primary-foreground">
                   {scriptOutput.entries.length}
                 </span>
@@ -104,21 +91,15 @@ export function BottomPanel() {
             </button>
           ))}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={handleClear}
-          title="Clear"
-        >
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleClear} title="Clear">
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>
 
       <div className="flex-1 overflow-auto">
-        {activeTab === "console" && <ConsoleTab />}
-        {activeTab === "problems" && <ProblemsTab />}
-        {activeTab === "output" && <OutputTab />}
+        {activeTab === 'console' && <ConsoleTab />}
+        {activeTab === 'problems' && <ProblemsTab />}
+        {activeTab === 'output' && <OutputTab />}
       </div>
     </div>
   )
@@ -130,11 +111,8 @@ function ConsoleTab() {
   const autoScrollRef = useRef(true)
 
   const logEntries = useMemo(
-    () =>
-      entries.filter(
-        (e) => e.envelope.type === "log" && isLogEntry(e.envelope.payload),
-      ),
-    [entries],
+    () => entries.filter((e) => e.envelope.type === 'log' && isLogEntry(e.envelope.payload)),
+    [entries]
   )
 
   useEffect(() => {
@@ -147,8 +125,8 @@ function ConsoleTab() {
       autoScrollRef.current = atBottom
     }
 
-    el.addEventListener("scroll", handleScroll)
-    return () => el.removeEventListener("scroll", handleScroll)
+    el.addEventListener('scroll', handleScroll)
+    return () => el.removeEventListener('scroll', handleScroll)
   }, [])
 
   useEffect(() => {
@@ -158,11 +136,7 @@ function ConsoleTab() {
   }, [logEntries])
 
   if (logEntries.length === 0) {
-    return (
-      <div className="p-3 font-mono text-xs text-muted-foreground">
-        No log entries.
-      </div>
-    )
+    return <div className="p-3 font-mono text-xs text-muted-foreground">No log entries.</div>
   }
 
   return (
@@ -174,21 +148,16 @@ function ConsoleTab() {
             <div
               key={entry.id}
               className={cn(
-                "flex items-start gap-2 px-3 py-0.5 border-l-2",
-                payload.level === "error" &&
-                  "bg-red-500/10 border-l-red-500 text-red-700 dark:text-red-300",
-                payload.level === "warn" &&
-                  "bg-amber-500/10 border-l-amber-500 text-amber-700 dark:text-amber-300",
-                payload.level === "info" &&
-                  "border-l-transparent text-foreground",
+                'flex items-start gap-2 px-3 py-0.5 border-l-2',
+                payload.level === 'error' &&
+                  'bg-red-500/10 border-l-red-500 text-red-700 dark:text-red-300',
+                payload.level === 'warn' &&
+                  'bg-amber-500/10 border-l-amber-500 text-amber-700 dark:text-amber-300',
+                payload.level === 'info' && 'border-l-transparent text-foreground'
               )}
             >
-              <span className="shrink-0 text-muted-foreground">
-                {formatTime(entry.timestamp)}
-              </span>
-              <span className="shrink-0 text-muted-foreground w-16 truncate">
-                {payload.source}
-              </span>
+              <span className="shrink-0 text-muted-foreground">{formatTime(entry.timestamp)}</span>
+              <span className="shrink-0 text-muted-foreground w-16 truncate">{payload.source}</span>
               <span className="break-all">{payload.message}</span>
             </div>
           )
@@ -202,11 +171,8 @@ function ProblemsTab() {
   const { entries } = useEventLog()
 
   const problems = useMemo(
-    () =>
-      entries.filter(
-        (e) => e.envelope.type === "agent-error" || e.envelope.type === "crash",
-      ),
-    [entries],
+    () => entries.filter((e) => e.envelope.type === 'agent-error' || e.envelope.type === 'crash'),
+    [entries]
   )
 
   if (problems.length === 0) {
@@ -225,7 +191,7 @@ function ProblemsTab() {
         const source = isLogEntry(payload) ? payload.source : entry.envelope.type
         const message = isLogEntry(payload)
           ? payload.message
-          : typeof payload === "object" && payload
+          : typeof payload === 'object' && payload
             ? JSON.stringify(payload)
             : String(payload)
 
@@ -234,12 +200,8 @@ function ProblemsTab() {
             key={entry.id}
             className="flex items-start gap-2 px-3 py-0.5 border-l-2 bg-red-500/10 border-l-red-500 text-red-700 dark:text-red-300"
           >
-            <span className="shrink-0 text-muted-foreground">
-              {formatTime(entry.timestamp)}
-            </span>
-            <span className="shrink-0 text-muted-foreground w-16 truncate">
-              {source}
-            </span>
+            <span className="shrink-0 text-muted-foreground">{formatTime(entry.timestamp)}</span>
+            <span className="shrink-0 text-muted-foreground w-16 truncate">{source}</span>
             <span className="break-all">{message}</span>
           </div>
         )
@@ -263,8 +225,8 @@ function OutputTab() {
       autoScrollRef.current = atBottom
     }
 
-    el.addEventListener("scroll", handleScroll)
-    return () => el.removeEventListener("scroll", handleScroll)
+    el.addEventListener('scroll', handleScroll)
+    return () => el.removeEventListener('scroll', handleScroll)
   }, [])
 
   useEffect(() => {
@@ -288,17 +250,15 @@ function OutputTab() {
           <div
             key={entry.id}
             className={cn(
-              "flex items-start gap-2 px-3 py-0.5 border-l-2",
+              'flex items-start gap-2 px-3 py-0.5 border-l-2',
               entry.isError
-                ? "bg-red-500/10 border-l-red-500 text-red-700 dark:text-red-300"
-                : "border-l-transparent text-foreground",
+                ? 'bg-red-500/10 border-l-red-500 text-red-700 dark:text-red-300'
+                : 'border-l-transparent text-foreground'
             )}
           >
-            <span className="shrink-0 text-muted-foreground">
-              {formatTime(entry.timestamp)}
-            </span>
+            <span className="shrink-0 text-muted-foreground">{formatTime(entry.timestamp)}</span>
             <pre className="whitespace-pre-wrap break-all flex-1">
-              {typeof entry.payload === "string"
+              {typeof entry.payload === 'string'
                 ? entry.payload
                 : JSON.stringify(entry.payload, null, 2)}
             </pre>

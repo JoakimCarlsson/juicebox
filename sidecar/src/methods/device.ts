@@ -1,10 +1,12 @@
 import frida from "frida";
 import { Buffer } from "node:buffer";
 import type { JsonRpcRequest, JsonRpcResponse } from "../types.ts";
-import { ok, fail } from "../state.ts";
+import { fail, ok } from "../state.ts";
 import { normalizePlatform } from "../utils.ts";
 
-export async function handleListDevices(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleListDevices(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const mgr = frida.getDeviceManager();
   const devices = await mgr.enumerateDevices();
   const usb = devices.filter((d) => d.type === "usb");
@@ -22,7 +24,9 @@ export async function handleListDevices(req: JsonRpcRequest): Promise<JsonRpcRes
   return ok(req.id, result);
 }
 
-export async function handleListApps(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleListApps(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const deviceId = req.params?.deviceId as string;
   if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
   const device = await frida.getDevice(deviceId);
@@ -37,7 +41,9 @@ export async function handleListApps(req: JsonRpcRequest): Promise<JsonRpcRespon
   );
 }
 
-export async function handleListProcesses(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleListProcesses(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const deviceId = req.params?.deviceId as string;
   if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
   const device = await frida.getDevice(deviceId);
@@ -51,7 +57,9 @@ export async function handleListProcesses(req: JsonRpcRequest): Promise<JsonRpcR
   );
 }
 
-export async function handleGetDeviceInfo(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleGetDeviceInfo(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const deviceId = req.params?.deviceId as string;
   if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
   const device = await frida.getDevice(deviceId);
@@ -67,7 +75,9 @@ export async function handleGetDeviceInfo(req: JsonRpcRequest): Promise<JsonRpcR
   });
 }
 
-export async function handleGetAppIcon(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+export async function handleGetAppIcon(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
   const deviceId = req.params?.deviceId as string;
   const identifier = req.params?.identifier as string;
   if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
@@ -81,8 +91,9 @@ export async function handleGetAppIcon(req: JsonRpcRequest): Promise<JsonRpcResp
   const icons = apps[0].parameters?.icons as
     | { format: string; image: Buffer }[]
     | undefined;
-  if (!icons || icons.length === 0)
+  if (!icons || icons.length === 0) {
     return fail(req.id, -32602, "no icon available");
+  }
   const icon = icons[icons.length - 1];
   const b64 = Buffer.from(icon.image).toString("base64");
   return ok(req.id, { format: icon.format, data: b64 });

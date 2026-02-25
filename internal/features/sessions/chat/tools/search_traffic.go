@@ -10,11 +10,11 @@ import (
 )
 
 type SearchTrafficParams struct {
-	Method       string `json:"method,omitempty" description:"HTTP method filter (GET, POST, etc.)"`
-	Host         string `json:"host,omitempty" description:"Host or URL substring to filter by"`
-	StatusCode   *int   `json:"status_code,omitempty" description:"HTTP status code to filter by"`
+	Method       string `json:"method,omitempty"        description:"HTTP method filter (GET, POST, etc.)"`
+	Host         string `json:"host,omitempty"          description:"Host or URL substring to filter by"`
+	StatusCode   *int   `json:"status_code,omitempty"   description:"HTTP status code to filter by"`
 	BodyContains string `json:"body_contains,omitempty" description:"Text to search for in request or response bodies"`
-	Limit        int    `json:"limit,omitempty" description:"Max results to return (default 50)"`
+	Limit        int    `json:"limit,omitempty"         description:"Max results to return (default 50)"`
 }
 
 type SearchTrafficTool struct {
@@ -34,15 +34,29 @@ func (t *SearchTrafficTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *SearchTrafficTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *SearchTrafficTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[SearchTrafficParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
-	rows, err := t.db.SearchHttpMessages(t.sessionID, input.Method, input.Host, input.StatusCode, input.BodyContains, input.Limit)
+	rows, err := t.db.SearchHttpMessages(
+		t.sessionID,
+		input.Method,
+		input.Host,
+		input.StatusCode,
+		input.BodyContains,
+		input.Limit,
+	)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("search failed: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("search failed: %v", err),
+		), nil
 	}
 
 	if len(rows) == 0 {

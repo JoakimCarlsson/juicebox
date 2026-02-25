@@ -1,6 +1,7 @@
-.PHONY: install dev build build-agent sidecar clean kill-ports
+.PHONY: install dev build build-agent sidecar clean kill-ports lint fmt check
 
 PORTS := 8080 5173
+DENO := $(HOME)/.deno/bin/deno
 
 kill-ports:
 	@for port in $(PORTS); do \
@@ -13,12 +14,12 @@ kill-ports:
 
 install:
 	cd web && bun install
-	cd agent && deno install --allow-scripts=npm:frida
+	cd agent && $(DENO) install --allow-scripts=npm:frida
 	go mod tidy
 
 dev: kill-ports build-agent
 	@echo "Starting Air, Vite dev server, and Frida sidecar..."
-	@(cd web && bun run dev) & $(shell go env GOPATH)/bin/air & (cd sidecar && deno task dev) & wait
+	@(cd web && bun run dev) & $(shell go env GOPATH)/bin/air & (cd sidecar && $(DENO) task dev) & wait
 
 build: build-web
 	go build -o juicebox ./cmd/juicebox/
@@ -27,10 +28,26 @@ build-web:
 	cd web && bun run build
 
 build-agent:
-	cd agent && deno task build
+	cd agent && $(DENO) task build
 
 sidecar:
-	cd sidecar && deno task dev
+	cd sidecar && $(DENO) task dev
+
+lint:
+	go vet ./...
+	$(shell go env GOPATH)/bin/golangci-lint run ./...
+	cd web && bun eslint src
+	cd agent && $(DENO) lint
+	cd sidecar && $(DENO) lint
+
+fmt:
+	$(shell go env GOPATH)/bin/goimports -w .
+	$(shell go env GOPATH)/bin/golines -m 80 --ignored-dirs=deps -w .
+	cd web && bun prettier --write "src/**/*.{ts,tsx}"
+	cd agent && $(DENO) fmt
+	cd sidecar && $(DENO) fmt
+
+check: lint
 
 clean:
 	rm -f juicebox

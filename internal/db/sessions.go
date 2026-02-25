@@ -20,7 +20,14 @@ type SessionRow struct {
 func (d *DB) InsertSession(s *SessionRow) error {
 	_, err := d.conn.Exec(
 		`INSERT INTO sessions (id, device_id, bundle_id, pid, name, platform, capabilities, started_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		s.ID, s.DeviceID, s.BundleID, s.PID, s.Name, s.Platform, s.Capabilities, s.StartedAt,
+		s.ID,
+		s.DeviceID,
+		s.BundleID,
+		s.PID,
+		s.Name,
+		s.Platform,
+		s.Capabilities,
+		s.StartedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("db.InsertSession: %w", err)
@@ -29,7 +36,11 @@ func (d *DB) InsertSession(s *SessionRow) error {
 }
 
 func (d *DB) EndSession(id string, endedAt int64) error {
-	_, err := d.conn.Exec(`UPDATE sessions SET ended_at = ? WHERE id = ?`, endedAt, id)
+	_, err := d.conn.Exec(
+		`UPDATE sessions SET ended_at = ? WHERE id = ?`,
+		endedAt,
+		id,
+	)
 	if err != nil {
 		return fmt.Errorf("db.EndSession: %w", err)
 	}
@@ -38,7 +49,8 @@ func (d *DB) EndSession(id string, endedAt int64) error {
 
 func (d *DB) GetSession(id string) (*SessionRow, error) {
 	row := d.conn.QueryRow(
-		`SELECT id, device_id, bundle_id, pid, name, platform, capabilities, started_at, ended_at FROM sessions WHERE id = ?`, id,
+		`SELECT id, device_id, bundle_id, pid, name, platform, capabilities, started_at, ended_at FROM sessions WHERE id = ?`,
+		id,
 	)
 	s := &SessionRow{}
 	if err := row.Scan(&s.ID, &s.DeviceID, &s.BundleID, &s.PID, &s.Name, &s.Platform, &s.Capabilities, &s.StartedAt, &s.EndedAt); err != nil {
@@ -50,11 +62,16 @@ func (d *DB) GetSession(id string) (*SessionRow, error) {
 	return s, nil
 }
 
-func (d *DB) ListSessions(deviceID string, limit, offset int) ([]SessionRow, error) {
+func (d *DB) ListSessions(
+	deviceID string,
+	limit, offset int,
+) ([]SessionRow, error) {
 	rows, err := d.conn.Query(
 		`SELECT id, device_id, bundle_id, pid, name, platform, capabilities, started_at, ended_at
 		 FROM sessions WHERE device_id = ? ORDER BY started_at DESC LIMIT ? OFFSET ?`,
-		deviceID, limit, offset,
+		deviceID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListSessions: %w", err)
@@ -67,7 +84,8 @@ func (d *DB) ListAllSessions(limit, offset int) ([]SessionRow, error) {
 	rows, err := d.conn.Query(
 		`SELECT id, device_id, bundle_id, pid, name, platform, capabilities, started_at, ended_at
 		 FROM sessions ORDER BY started_at DESC LIMIT ? OFFSET ?`,
-		limit, offset,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListAllSessions: %w", err)
@@ -78,19 +96,26 @@ func (d *DB) ListAllSessions(limit, offset int) ([]SessionRow, error) {
 
 func (d *DB) CountSessions(deviceID string) (int, error) {
 	var count int
-	err := d.conn.QueryRow(`SELECT COUNT(*) FROM sessions WHERE device_id = ?`, deviceID).Scan(&count)
+	err := d.conn.QueryRow(`SELECT COUNT(*) FROM sessions WHERE device_id = ?`, deviceID).
+		Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("db.CountSessions: %w", err)
 	}
 	return count, nil
 }
 
-func (d *DB) ListSessionsByBundle(deviceID, bundleID string, limit, offset int) ([]SessionRow, error) {
+func (d *DB) ListSessionsByBundle(
+	deviceID, bundleID string,
+	limit, offset int,
+) ([]SessionRow, error) {
 	rows, err := d.conn.Query(
 		`SELECT id, device_id, bundle_id, pid, name, platform, capabilities, started_at, ended_at
 		 FROM sessions WHERE device_id = ? AND bundle_id = ?
 		 ORDER BY started_at DESC LIMIT ? OFFSET ?`,
-		deviceID, bundleID, limit, offset,
+		deviceID,
+		bundleID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListSessionsByBundle: %w", err)
@@ -112,7 +137,11 @@ func (d *DB) CountSessionsByBundle(deviceID, bundleID string) (int, error) {
 }
 
 func (d *DB) ReopenSession(id string, pid int) error {
-	_, err := d.conn.Exec(`UPDATE sessions SET ended_at = NULL, pid = ? WHERE id = ?`, pid, id)
+	_, err := d.conn.Exec(
+		`UPDATE sessions SET ended_at = NULL, pid = ? WHERE id = ?`,
+		pid,
+		id,
+	)
 	if err != nil {
 		return fmt.Errorf("db.ReopenSession: %w", err)
 	}
@@ -128,7 +157,10 @@ func (d *DB) RenameSession(id, name string) error {
 }
 
 func (d *DB) CloseOrphanedSessions(endedAt int64) (int64, error) {
-	res, err := d.conn.Exec(`UPDATE sessions SET ended_at = ? WHERE ended_at IS NULL`, endedAt)
+	res, err := d.conn.Exec(
+		`UPDATE sessions SET ended_at = ? WHERE ended_at IS NULL`,
+		endedAt,
+	)
 	if err != nil {
 		return 0, fmt.Errorf("db.CloseOrphanedSessions: %w", err)
 	}

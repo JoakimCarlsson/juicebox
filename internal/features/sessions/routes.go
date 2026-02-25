@@ -23,7 +23,14 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
-func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB, appConfig *config.Config, chatStore *chat.ChatSessionStore, hubManager *devicehub.Manager) {
+func RegisterRoutes(
+	r *router.Router,
+	manager *session.Manager,
+	database *db.DB,
+	appConfig *config.Config,
+	chatStore *chat.ChatSessionStore,
+	hubManager *devicehub.Manager,
+) {
 	runner := scripting.NewRunner(database, manager)
 	fileManager := scripting.NewFileManager(database, nil)
 	scriptsHandler := scripts.NewHandler(fileManager, runner)
@@ -36,7 +43,15 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	renameHandler := rename.NewHandler(database)
 	sqliteService := sqlitepkg.NewService()
 	sqliteHandler := sqlitepkg.NewHandler(manager, sqliteService)
-	chatHandler := chat.NewHandler(database, manager, &appConfig.LLM, chatStore, sqliteService, hubManager, runner)
+	chatHandler := chat.NewHandler(
+		database,
+		manager,
+		&appConfig.LLM,
+		chatStore,
+		sqliteService,
+		hubManager,
+		runner,
+	)
 	interceptHandler := intercept.NewHandler(manager)
 	fsHandler := filesystem.NewHandler(manager)
 	classesHandler := classes.NewHandler(manager)
@@ -54,9 +69,15 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	r.GET("/sessions/{sessionId}/chat/history", chatHandler.History)
 	r.GET("/sessions/{sessionId}/intercept", interceptHandler.GetState)
 	r.PUT("/sessions/{sessionId}/intercept", interceptHandler.UpdateState)
-	r.GET("/sessions/{sessionId}/intercept/pending", interceptHandler.ListPending)
+	r.GET(
+		"/sessions/{sessionId}/intercept/pending",
+		interceptHandler.ListPending,
+	)
 	r.POST("/sessions/{sessionId}/intercept/resolve", interceptHandler.Resolve)
-	r.POST("/sessions/{sessionId}/intercept/resolve-all", interceptHandler.ResolveAll)
+	r.POST(
+		"/sessions/{sessionId}/intercept/resolve-all",
+		interceptHandler.ResolveAll,
+	)
 
 	r.GET("/sessions/{sessionId}/fs/ls", fsHandler.List)
 	r.GET("/sessions/{sessionId}/fs/read", fsHandler.Read)

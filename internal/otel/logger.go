@@ -12,7 +12,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func SetupLogger(serviceName, level, format string, hubManager *devicehub.Manager) {
+func SetupLogger(
+	serviceName, level, format string,
+	hubManager *devicehub.Manager,
+) {
 	var baseHandler slog.Handler
 
 	opts := &slog.HandlerOptions{
@@ -56,7 +59,10 @@ type traceContextHandler struct {
 	handler slog.Handler
 }
 
-func (h *traceContextHandler) Enabled(ctx context.Context, level slog.Level) bool {
+func (h *traceContextHandler) Enabled(
+	ctx context.Context,
+	level slog.Level,
+) bool {
 	return h.handler.Enabled(ctx, level)
 }
 

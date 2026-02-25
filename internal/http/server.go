@@ -25,7 +25,14 @@ type Server struct {
 	chatStore    *chat.ChatSessionStore
 }
 
-func NewServer(db *db.DB, bridgeClient *bridge.Client, manager *session.Manager, hubManager *devicehub.Manager, appConfig *config.Config, chatStore *chat.ChatSessionStore) *Server {
+func NewServer(
+	db *db.DB,
+	bridgeClient *bridge.Client,
+	manager *session.Manager,
+	hubManager *devicehub.Manager,
+	appConfig *config.Config,
+	chatStore *chat.ChatSessionStore,
+) *Server {
 	r := router.New()
 
 	s := &Server{
@@ -38,7 +45,15 @@ func NewServer(db *db.DB, bridgeClient *bridge.Client, manager *session.Manager,
 		chatStore:    chatStore,
 	}
 
-	RegisterRoutes(r, db, bridgeClient, manager, hubManager, appConfig, chatStore)
+	RegisterRoutes(
+		r,
+		db,
+		bridgeClient,
+		manager,
+		hubManager,
+		appConfig,
+		chatStore,
+	)
 	s.serveSPA(r)
 
 	return s
@@ -74,6 +89,6 @@ func (s *Server) serveSPA(r *router.Router) {
 		}
 
 		c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-		c.Writer.Write(index)
+		_, _ = c.Writer.Write(index)
 	})
 }

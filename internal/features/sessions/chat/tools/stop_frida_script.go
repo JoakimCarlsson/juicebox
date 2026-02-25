@@ -19,7 +19,10 @@ type StopFridaScriptTool struct {
 	sessionID string
 }
 
-func NewStopFridaScript(runner *scripting.Runner, sessionID string) *StopFridaScriptTool {
+func NewStopFridaScript(
+	runner *scripting.Runner,
+	sessionID string,
+) *StopFridaScriptTool {
 	return &StopFridaScriptTool{runner: runner, sessionID: sessionID}
 }
 
@@ -31,10 +34,15 @@ func (t *StopFridaScriptTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *StopFridaScriptTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *StopFridaScriptTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[StopFridaScriptParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	if input.Name == "" {
@@ -43,11 +51,18 @@ func (t *StopFridaScriptTool) Run(ctx context.Context, params tool.ToolCall) (to
 
 	resp, err := t.runner.Stop(t.sessionID, input.Name)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("failed to stop script: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("failed to stop script: %v", err),
+		), nil
 	}
 
 	if len(resp.Messages) == 0 {
-		return tool.NewTextResponse(fmt.Sprintf("Script '%s' stopped. No output was collected.", input.Name)), nil
+		return tool.NewTextResponse(
+			fmt.Sprintf(
+				"Script '%s' stopped. No output was collected.",
+				input.Name,
+			),
+		), nil
 	}
 
 	result := map[string]any{

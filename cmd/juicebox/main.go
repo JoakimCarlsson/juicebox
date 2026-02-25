@@ -68,9 +68,18 @@ func main() {
 		"android": session.NewAndroidSetup(bridgeClient),
 		"ios":     &session.IOSSetup{},
 	}
-	manager := session.NewManager(certManager, bridgeClient, hubManager, database, writer, deviceSetups)
+	manager := session.NewManager(
+		certManager,
+		bridgeClient,
+		hubManager,
+		database,
+		writer,
+		deviceSetups,
+	)
 
-	chatSessionStore, err := sqlitestore.SessionStore(context.Background(), database.RawConn(),
+	chatSessionStore, err := sqlitestore.SessionStore(
+		context.Background(),
+		database.RawConn(),
 		sqlitestore.WithTablePrefix("chat_"),
 	)
 	if err != nil {
@@ -78,7 +87,14 @@ func main() {
 	}
 	chatStore := chat.NewChatSessionStore(chatSessionStore)
 
-	srv := apphttp.NewServer(database, bridgeClient, manager, hubManager, appConfig, chatStore)
+	srv := apphttp.NewServer(
+		database,
+		bridgeClient,
+		manager,
+		hubManager,
+		appConfig,
+		chatStore,
+	)
 
 	if err := http.ListenAndServe(":8080", srv.Router()); err != nil {
 		log.Fatal(err)

@@ -109,8 +109,12 @@ func (d *DB) Migrate() error {
 	if _, err := d.conn.Exec(schema); err != nil {
 		return fmt.Errorf("db.Migrate: %w", err)
 	}
-	_, _ = d.conn.Exec(`ALTER TABLE sessions ADD COLUMN platform TEXT NOT NULL DEFAULT 'android'`)
-	_, _ = d.conn.Exec(`ALTER TABLE sessions ADD COLUMN capabilities TEXT NOT NULL DEFAULT '[]'`)
+	_, _ = d.conn.Exec(
+		`ALTER TABLE sessions ADD COLUMN platform TEXT NOT NULL DEFAULT 'android'`,
+	)
+	_, _ = d.conn.Exec(
+		`ALTER TABLE sessions ADD COLUMN capabilities TEXT NOT NULL DEFAULT '[]'`,
+	)
 	_, _ = d.conn.Exec(`DROP TABLE IF EXISTS scripts`)
 	return nil
 }

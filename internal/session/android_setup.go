@@ -19,7 +19,10 @@ func NewAndroidSetup(bridgeClient *bridge.Client) *AndroidSetup {
 	return &AndroidSetup{bridge: bridgeClient}
 }
 
-func (a *AndroidSetup) PrepareInterception(deviceID, certPath string, localProxyPort int) error {
+func (a *AndroidSetup) PrepareInterception(
+	deviceID, certPath string,
+	localProxyPort int,
+) error {
 	if err := adb.InstallCACert(deviceID, certPath); err != nil {
 		return err
 	}
@@ -27,19 +30,24 @@ func (a *AndroidSetup) PrepareInterception(deviceID, certPath string, localProxy
 		return err
 	}
 	if err := adb.SetProxy(deviceID, "127.0.0.1", deviceProxyPort); err != nil {
-		adb.RemoveReverse(deviceID, deviceProxyPort)
+		_ = adb.RemoveReverse(deviceID, deviceProxyPort)
 		return err
 	}
 	return nil
 }
 
 func (a *AndroidSetup) CleanupInterception(deviceID string) error {
-	adb.ClearProxy(deviceID)
-	adb.RemoveReverse(deviceID, deviceProxyPort)
+	_ = adb.ClearProxy(deviceID)
+	_ = adb.RemoveReverse(deviceID, deviceProxyPort)
 	return nil
 }
 
-func (a *AndroidSetup) StartLogStream(deviceID string, pid int, sink func(*logcat.Entry), logger *slog.Logger) (io.Closer, error) {
+func (a *AndroidSetup) StartLogStream(
+	deviceID string,
+	pid int,
+	sink func(*logcat.Entry),
+	logger *slog.Logger,
+) (io.Closer, error) {
 	lc := logcat.NewStreamer(deviceID, pid, sink, logger)
 	if err := lc.Start(); err != nil {
 		return nil, err
@@ -47,23 +55,33 @@ func (a *AndroidSetup) StartLogStream(deviceID string, pid int, sink func(*logca
 	return lc, nil
 }
 
-func (a *AndroidSetup) ListFiles(deviceID, bundleID, path string) ([]bridge.FileEntry, error) {
+func (a *AndroidSetup) ListFiles(
+	deviceID, bundleID, path string,
+) ([]bridge.FileEntry, error) {
 	return a.bridge.ListFiles(deviceID, bundleID, path)
 }
 
-func (a *AndroidSetup) ReadFile(deviceID, bundleID, path string) (*bridge.FileContent, error) {
+func (a *AndroidSetup) ReadFile(
+	deviceID, bundleID, path string,
+) (*bridge.FileContent, error) {
 	return a.bridge.ReadFile(deviceID, bundleID, path)
 }
 
-func (a *AndroidSetup) FindFiles(deviceID, bundleID, pattern, base string) ([]string, error) {
+func (a *AndroidSetup) FindFiles(
+	deviceID, bundleID, pattern, base string,
+) ([]string, error) {
 	return a.bridge.FindFiles(deviceID, bundleID, pattern, base)
 }
 
-func (a *AndroidSetup) PullDatabase(deviceID, bundleID, path string) (string, error) {
+func (a *AndroidSetup) PullDatabase(
+	deviceID, bundleID, path string,
+) (string, error) {
 	return a.bridge.PullDatabase(deviceID, bundleID, path)
 }
 
-func (a *AndroidSetup) ListProcesses(deviceID string) ([]bridge.Process, error) {
+func (a *AndroidSetup) ListProcesses(
+	deviceID string,
+) ([]bridge.Process, error) {
 	return a.bridge.ListProcesses(deviceID)
 }
 

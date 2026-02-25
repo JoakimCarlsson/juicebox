@@ -1,14 +1,14 @@
-import { Link, useParams } from "@tanstack/react-router"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { RefreshCw, Smartphone } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ThemeToggle } from "@/components/layout/ThemeToggle"
-import { devicesQueryOptions, deviceInfoQueryOptions } from "@/features/devices/queries"
-import { cn } from "@/lib/utils"
-import type { Device } from "@/types/device"
+import { Link, useParams } from '@tanstack/react-router'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { RefreshCw, Smartphone } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
+import { devicesQueryOptions, deviceInfoQueryOptions } from '@/features/devices/queries'
+import { cn } from '@/lib/utils'
+import type { Device } from '@/types/device'
 
 function DeviceItem({ device, active }: { device: Device; active: boolean }) {
   const { data: info } = useQuery({
@@ -16,12 +16,12 @@ function DeviceItem({ device, active }: { device: Device; active: boolean }) {
     enabled: active,
   })
 
-  const platformLabel = info?.platform === "ios" ? "iOS" : info?.platform === "android" ? "Android" : info?.platform
-  const osVersion = info?.os && typeof info.os === "object" && "version" in info.os
-    ? String(info.os.version)
-    : null
+  const platformLabel =
+    info?.platform === 'ios' ? 'iOS' : info?.platform === 'android' ? 'Android' : info?.platform
+  const osVersion =
+    info?.os && typeof info.os === 'object' && 'version' in info.os ? String(info.os.version) : null
   const subtitle = info
-    ? [platformLabel, info.arch, osVersion].filter(Boolean).join(" \u00B7 ")
+    ? [platformLabel, info.arch, osVersion].filter(Boolean).join(' \u00B7 ')
     : null
 
   return (
@@ -29,9 +29,9 @@ function DeviceItem({ device, active }: { device: Device; active: boolean }) {
       to="/devices/$deviceId"
       params={{ deviceId: device.id }}
       className={cn(
-        "flex items-start gap-2 rounded-md px-2 py-2 text-sm transition-colors",
-        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        active && "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
+        'flex items-start gap-2 rounded-md px-2 py-2 text-sm transition-colors',
+        'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+        active && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
       )}
     >
       <Smartphone className="h-4 w-4 shrink-0 mt-0.5" />
@@ -55,26 +55,22 @@ export function Sidebar() {
   return (
     <div className="flex h-full w-64 flex-col border-r border-border bg-sidebar shrink-0">
       <div className="flex items-center gap-2 px-4 py-4">
-        <span className="text-lg font-bold tracking-tight text-sidebar-foreground">
-          Juicebox
-        </span>
+        <span className="text-lg font-bold tracking-tight text-sidebar-foreground">Juicebox</span>
       </div>
 
       <Separator />
 
       <div className="flex items-center justify-between px-4 py-2">
         <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Devices {devices ? `(${devices.length})` : ""}
+          Devices {devices ? `(${devices.length})` : ''}
         </span>
         <Button
           variant="ghost"
           size="icon"
           className="h-6 w-6"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ["devices"] })}
+          onClick={() => queryClient.invalidateQueries({ queryKey: ['devices'] })}
         >
-          <RefreshCw
-            className={cn("h-3 w-3", isRefetching && "animate-spin")}
-          />
+          <RefreshCw className={cn('h-3 w-3', isRefetching && 'animate-spin')} />
         </Button>
       </div>
 
@@ -92,11 +88,7 @@ export function Sidebar() {
         ) : (
           <div className="space-y-1 py-1">
             {devices?.map((device) => (
-              <DeviceItem
-                key={device.id}
-                device={device}
-                active={deviceId === device.id}
-              />
+              <DeviceItem key={device.id} device={device} active={deviceId === device.id} />
             ))}
           </div>
         )}

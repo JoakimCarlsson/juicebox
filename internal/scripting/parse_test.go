@@ -93,7 +93,8 @@ func TestParseEditBlocks_IncrementalStability(t *testing.T) {
 		t.Fatalf("after part1+part2: expected 2 blocks, got %d", len(blocks2))
 	}
 
-	if blocks2[0].Filename != blocks1[0].Filename || blocks2[0].Replace != blocks1[0].Replace {
+	if blocks2[0].Filename != blocks1[0].Filename ||
+		blocks2[0].Replace != blocks1[0].Replace {
 		t.Error("block 0 changed between incremental parses")
 	}
 	if blocks2[1].Filename != "spy.ts" {
@@ -105,8 +106,16 @@ func TestApplyEdits_MultipleBlocksSameFile(t *testing.T) {
 	original := "func foo(a, b) {\n  return a + b;\n}\nfunc bar(x) {\n  return x;\n}\n"
 
 	blocks := []EditBlock{
-		{Filename: "test.ts", Search: "func foo(a, b) {\n", Replace: "func foo(a: any, b: any) {\n"},
-		{Filename: "test.ts", Search: "func bar(x) {\n", Replace: "func bar(x: any) {\n"},
+		{
+			Filename: "test.ts",
+			Search:   "func foo(a, b) {\n",
+			Replace:  "func foo(a: any, b: any) {\n",
+		},
+		{
+			Filename: "test.ts",
+			Search:   "func bar(x) {\n",
+			Replace:  "func bar(x: any) {\n",
+		},
 	}
 
 	getContent := func(filename string) (string, bool) {
@@ -137,7 +146,10 @@ func TestParseEditBlocks_IncompleteBlockNotReturned(t *testing.T) {
 	partial := "hook.ts\n```typescript\n<<<<<<< SEARCH\n=======\nconsole.log(1);\n"
 	blocks := ParseEditBlocks(partial)
 	if len(blocks) != 0 {
-		t.Fatalf("incomplete block should not be returned, got %d blocks", len(blocks))
+		t.Fatalf(
+			"incomplete block should not be returned, got %d blocks",
+			len(blocks),
+		)
 	}
 
 	complete := partial + ">>>>>>> REPLACE\n```\n"

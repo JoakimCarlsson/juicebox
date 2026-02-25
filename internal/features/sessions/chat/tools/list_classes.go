@@ -19,7 +19,10 @@ type ListClassesTool struct {
 	sessionID string
 }
 
-func NewListClasses(manager *session.Manager, sessionID string) *ListClassesTool {
+func NewListClasses(
+	manager *session.Manager,
+	sessionID string,
+) *ListClassesTool {
 	return &ListClassesTool{manager: manager, sessionID: sessionID}
 }
 
@@ -31,15 +34,27 @@ func (t *ListClassesTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *ListClassesTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *ListClassesTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[ListClassesParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
-	raw, err := t.manager.AgentInvoke(t.sessionID, "classes", "list", []any{input.Query})
+	raw, err := t.manager.AgentInvoke(
+		t.sessionID,
+		"classes",
+		"list",
+		[]any{input.Query},
+	)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("failed to list classes: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("failed to list classes: %v", err),
+		), nil
 	}
 
 	var classes []string
@@ -48,7 +63,9 @@ func (t *ListClassesTool) Run(ctx context.Context, params tool.ToolCall) (tool.T
 	}
 
 	if len(classes) == 0 {
-		return tool.NewTextResponse(fmt.Sprintf("No loaded classes matching %q found.", input.Query)), nil
+		return tool.NewTextResponse(
+			fmt.Sprintf("No loaded classes matching %q found.", input.Query),
+		), nil
 	}
 
 	return tool.NewJSONResponse(classes), nil

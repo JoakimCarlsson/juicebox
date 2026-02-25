@@ -1,4 +1,6 @@
-export async function exec(cmd: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
+export async function exec(
+  cmd: string[],
+): Promise<{ code: number; stdout: string; stderr: string }> {
   const p = new Deno.Command(cmd[0], {
     args: cmd.slice(1),
     stdout: "piped",

@@ -42,13 +42,13 @@ func (h *Handler) Handle(c *router.Context) {
 	messages := make([]HttpMessageResponse, 0, len(rows))
 	for _, r := range rows {
 		var reqHeaders map[string]string
-		json.Unmarshal([]byte(r.RequestHeaders), &reqHeaders)
+		_ = json.Unmarshal([]byte(r.RequestHeaders), &reqHeaders)
 		if reqHeaders == nil {
 			reqHeaders = map[string]string{}
 		}
 
 		var respHeaders map[string]string
-		json.Unmarshal([]byte(r.ResponseHeaders), &respHeaders)
+		_ = json.Unmarshal([]byte(r.ResponseHeaders), &respHeaders)
 		if respHeaders == nil {
 			respHeaders = map[string]string{}
 		}

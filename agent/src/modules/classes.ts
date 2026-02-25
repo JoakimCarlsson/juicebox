@@ -5,7 +5,10 @@ import Java from "frida-java-bridge";
 
 const MAX_RESULTS = 500;
 
-function withJava<T>(fallback: T, fn: (resolve: (v: T) => void) => void): Promise<T> {
+function withJava<T>(
+  fallback: T,
+  fn: (resolve: (v: T) => void) => void,
+): Promise<T> {
   if (!Java.available) return Promise.resolve(fallback);
   return new Promise<T>((resolve) => {
     Java.perform(() => {
@@ -18,9 +21,7 @@ function list(query: unknown): Promise<string[]> {
   return withJava([] as string[], (resolve) => {
     const q = String(query ?? "").toLowerCase();
     const all = Java.enumerateLoadedClassesSync();
-    const filtered = q
-      ? all.filter((c) => c.toLowerCase().includes(q))
-      : all;
+    const filtered = q ? all.filter((c) => c.toLowerCase().includes(q)) : all;
     filtered.sort();
     resolve(filtered.slice(0, MAX_RESULTS));
   });
@@ -150,7 +151,10 @@ function invokeMethod(
 
     const isStatic = (jmethod.getModifiers() & 0x0008) !== 0;
     if (!isStatic) {
-      resolve({ error: `${mn} is an instance method — invoke requires a live object reference` });
+      resolve({
+        error:
+          `${mn} is an instance method — invoke requires a live object reference`,
+      });
       return;
     }
 
@@ -160,8 +164,12 @@ function invokeMethod(
         resolve({ error: `method ${mn} not accessible on ${cn}` });
         return;
       }
-      const ret = a.length === 0 ? method.call(wrapper) : method.call(wrapper, ...a);
-      resolve({ value: ret !== null && ret !== undefined ? String(ret) : null });
+      const ret = a.length === 0
+        ? method.call(wrapper)
+        : method.call(wrapper, ...a);
+      resolve({
+        value: ret !== null && ret !== undefined ? String(ret) : null,
+      });
     } catch (e: any) {
       resolve({ error: String(e.message ?? e) });
     }

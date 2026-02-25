@@ -1,24 +1,24 @@
-import { useState } from "react"
-import { useNavigate } from "@tanstack/react-router"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Play } from "lucide-react"
+import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Play } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Skeleton } from "@/components/ui/skeleton"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { appSessionsQueryOptions } from "@/features/sessions/queries"
-import { attachApp, renameSession } from "@/features/sessions/api"
-import { formatRelativeTime } from "@/lib/time"
-import type { App } from "@/types/device"
-import type { EvasionConfig } from "@/types/session"
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { appSessionsQueryOptions } from '@/features/sessions/queries'
+import { attachApp, renameSession } from '@/features/sessions/api'
+import { formatRelativeTime } from '@/lib/time'
+import type { App } from '@/types/device'
+import type { EvasionConfig } from '@/types/session'
 
 interface SessionPickerDialogProps {
   app: App | null
@@ -31,7 +31,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
   const queryClient = useQueryClient()
   const [attaching, setAttaching] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [name, setName] = useState("")
+  const [name, setName] = useState('')
   const [evasion, setEvasion] = useState<EvasionConfig>({
     frida_bypass: true,
     root_bypass: true,
@@ -39,7 +39,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
   })
 
   const { data, isLoading } = useQuery({
-    ...appSessionsQueryOptions(deviceId, app?.identifier ?? ""),
+    ...appSessionsQueryOptions(deviceId, app?.identifier ?? ''),
     enabled: !!app,
   })
 
@@ -54,16 +54,18 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
       if (name.trim()) {
         await renameSession(resp.sessionId, name.trim())
       }
-      await queryClient.invalidateQueries({ queryKey: ["devices", deviceId, "sessions", app.identifier] })
+      await queryClient.invalidateQueries({
+        queryKey: ['devices', deviceId, 'sessions', app.identifier],
+      })
       onClose()
-      setName("")
+      setName('')
       await navigate({
-        to: "/devices/$deviceId/app/$bundleId/home",
+        to: '/devices/$deviceId/app/$bundleId/home',
         params: { deviceId, bundleId: app.identifier },
         search: { sessionId: resp.sessionId },
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to attach")
+      setError(err instanceof Error ? err.message : 'Failed to attach')
       setAttaching(false)
     }
   }
@@ -74,15 +76,17 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
     setError(null)
     try {
       const resp = await attachApp(deviceId, app.identifier, sessionId, evasion)
-      await queryClient.invalidateQueries({ queryKey: ["devices", deviceId, "sessions", app.identifier] })
+      await queryClient.invalidateQueries({
+        queryKey: ['devices', deviceId, 'sessions', app.identifier],
+      })
       onClose()
       await navigate({
-        to: "/devices/$deviceId/app/$bundleId/home",
+        to: '/devices/$deviceId/app/$bundleId/home',
         params: { deviceId, bundleId: app.identifier },
         search: { sessionId: resp.sessionId },
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to attach")
+      setError(err instanceof Error ? err.message : 'Failed to attach')
       setAttaching(false)
     }
   }
@@ -92,7 +96,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
       open={!!app}
       onOpenChange={(open) => {
         if (!open && !attaching) {
-          setName("")
+          setName('')
           onClose()
         }
       }}
@@ -102,9 +106,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
           <>
             <DialogHeader>
               <DialogTitle>{app.name}</DialogTitle>
-              <DialogDescription className="font-mono">
-                {app.identifier}
-              </DialogDescription>
+              <DialogDescription className="font-mono">{app.identifier}</DialogDescription>
             </DialogHeader>
 
             <div className="flex items-center gap-2">
@@ -113,7 +115,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleNewSession()
+                  if (e.key === 'Enter') handleNewSession()
                 }}
                 disabled={attaching}
                 className="h-9 text-sm"
@@ -129,11 +131,13 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
                 Evasion
               </p>
               <div className="space-y-2">
-                {([
-                  { key: "frida_bypass" as const, label: "Frida bypass" },
-                  { key: "root_bypass" as const, label: "Root bypass" },
-                  { key: "emulator_bypass" as const, label: "Emulator bypass" },
-                ] as const).map(({ key, label }) => (
+                {(
+                  [
+                    { key: 'frida_bypass' as const, label: 'Frida bypass' },
+                    { key: 'root_bypass' as const, label: 'Root bypass' },
+                    { key: 'emulator_bypass' as const, label: 'Emulator bypass' },
+                  ] as const
+                ).map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between">
                     <span className="text-sm text-foreground">{label}</span>
                     <Switch
@@ -146,9 +150,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
               </div>
             </div>
 
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
             {sessions.length > 0 && (
               <div className="space-y-2">
@@ -166,7 +168,7 @@ export function SessionPickerDialog({ app, deviceId, onClose }: SessionPickerDia
                         className="flex w-full items-center justify-between h-auto px-3 py-2.5"
                       >
                         <span className="text-sm text-foreground">
-                          {session.name || "Untitled"}
+                          {session.name || 'Untitled'}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {formatRelativeTime(session.startedAt)}

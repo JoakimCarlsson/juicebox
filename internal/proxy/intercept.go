@@ -75,7 +75,10 @@ type InterceptEngine struct {
 	logger   *slog.Logger
 }
 
-func NewInterceptEngine(notifier InterceptNotifier, logger *slog.Logger) *InterceptEngine {
+func NewInterceptEngine(
+	notifier InterceptNotifier,
+	logger *slog.Logger,
+) *InterceptEngine {
 	return &InterceptEngine{
 		pending:  make(map[string]*interceptEntry),
 		notifier: notifier,
@@ -120,7 +123,10 @@ func (ie *InterceptEngine) ListPending() []PendingRequest {
 	return result
 }
 
-func (ie *InterceptEngine) MaybeIntercept(req *http.Request, reqBody []byte) (*http.Request, []byte, bool) {
+func (ie *InterceptEngine) MaybeIntercept(
+	req *http.Request,
+	reqBody []byte,
+) (*http.Request, []byte, bool) {
 	ie.mu.RLock()
 	if !ie.enabled {
 		ie.mu.RUnlock()
@@ -169,10 +175,17 @@ func (ie *InterceptEngine) MaybeIntercept(req *http.Request, reqBody []byte) (*h
 				RequestID: id,
 				Action:    ActionForward,
 			}
-			ie.logger.Info("intercept timeout, auto-forwarding", "request_id", id)
+			ie.logger.Info(
+				"intercept timeout, auto-forwarding",
+				"request_id",
+				id,
+			)
 		}
 		ie.mu.Unlock()
-		ie.notifier("intercept_resolved", map[string]any{"id": id, "action": "timeout"})
+		ie.notifier(
+			"intercept_resolved",
+			map[string]any{"id": id, "action": "timeout"},
+		)
 	})
 	ie.mu.Unlock()
 
@@ -205,7 +218,13 @@ func (ie *InterceptEngine) Resolve(decision InterceptDecision) error {
 	entry.timer.Stop()
 	entry.decision <- decision
 
-	ie.notifier("intercept_resolved", map[string]any{"id": decision.RequestID, "action": string(decision.Action)})
+	ie.notifier(
+		"intercept_resolved",
+		map[string]any{
+			"id":     decision.RequestID,
+			"action": string(decision.Action),
+		},
+	)
 	return nil
 }
 
@@ -224,7 +243,10 @@ func (ie *InterceptEngine) ResolveAll(action InterceptAction) {
 			RequestID: id,
 			Action:    action,
 		}
-		ie.notifier("intercept_resolved", map[string]any{"id": id, "action": string(action)})
+		ie.notifier(
+			"intercept_resolved",
+			map[string]any{"id": id, "action": string(action)},
+		)
 	}
 }
 
@@ -258,7 +280,10 @@ func (ie *InterceptEngine) matches(req *http.Request) bool {
 		}
 		if rule.ContentType != "" {
 			ct := req.Header.Get("Content-Type")
-			if !strings.Contains(strings.ToLower(ct), strings.ToLower(rule.ContentType)) {
+			if !strings.Contains(
+				strings.ToLower(ct),
+				strings.ToLower(rule.ContentType),
+			) {
 				continue
 			}
 		}
@@ -267,7 +292,11 @@ func (ie *InterceptEngine) matches(req *http.Request) bool {
 	return false
 }
 
-func (ie *InterceptEngine) MaybeInterceptResponse(req *http.Request, resp *http.Response, respBody []byte) ([]byte, int, http.Header, bool) {
+func (ie *InterceptEngine) MaybeInterceptResponse(
+	req *http.Request,
+	resp *http.Response,
+	respBody []byte,
+) ([]byte, int, http.Header, bool) {
 	ie.mu.RLock()
 	if !ie.enabled {
 		ie.mu.RUnlock()
@@ -324,10 +353,17 @@ func (ie *InterceptEngine) MaybeInterceptResponse(req *http.Request, resp *http.
 				RequestID: id,
 				Action:    ActionForward,
 			}
-			ie.logger.Info("intercept timeout, auto-forwarding response", "request_id", id)
+			ie.logger.Info(
+				"intercept timeout, auto-forwarding response",
+				"request_id",
+				id,
+			)
 		}
 		ie.mu.Unlock()
-		ie.notifier("intercept_resolved", map[string]any{"id": id, "action": "timeout"})
+		ie.notifier(
+			"intercept_resolved",
+			map[string]any{"id": id, "action": "timeout"},
+		)
 	})
 	ie.mu.Unlock()
 
@@ -340,14 +376,22 @@ func (ie *InterceptEngine) MaybeInterceptResponse(req *http.Request, resp *http.
 	case ActionDrop:
 		return nil, 0, nil, true
 	case ActionModify:
-		modBody, modStatus, modHeaders := applyResponseModifications(resp, respBody, dec)
+		modBody, modStatus, modHeaders := applyResponseModifications(
+			resp,
+			respBody,
+			dec,
+		)
 		return modBody, modStatus, modHeaders, false
 	default:
 		return respBody, resp.StatusCode, resp.Header, false
 	}
 }
 
-func applyResponseModifications(resp *http.Response, respBody []byte, dec InterceptDecision) ([]byte, int, http.Header) {
+func applyResponseModifications(
+	resp *http.Response,
+	respBody []byte,
+	dec InterceptDecision,
+) ([]byte, int, http.Header) {
 	statusCode := resp.StatusCode
 	headers := resp.Header.Clone()
 
@@ -366,7 +410,11 @@ func applyResponseModifications(resp *http.Response, respBody []byte, dec Interc
 	return respBody, statusCode, headers
 }
 
-func applyRequestModifications(req *http.Request, reqBody []byte, dec InterceptDecision) (*http.Request, []byte) {
+func applyRequestModifications(
+	req *http.Request,
+	reqBody []byte,
+	dec InterceptDecision,
+) (*http.Request, []byte) {
 	if dec.Method != nil {
 		req.Method = *dec.Method
 	}

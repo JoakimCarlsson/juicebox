@@ -1,9 +1,9 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
-import { devicesQueryOptions } from "@/features/devices/queries"
-import { Smartphone } from "lucide-react"
+import { createFileRoute, Navigate } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import { devicesQueryOptions } from '@/features/devices/queries'
+import { Smartphone } from 'lucide-react'
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute('/')({
   component: IndexPage,
 })
 

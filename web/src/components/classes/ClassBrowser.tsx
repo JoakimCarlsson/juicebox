@@ -1,13 +1,13 @@
-import { useState, useCallback } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { listClassesQueryOptions } from "@/features/classes/queries"
-import { ClassDetail } from "./ClassDetail"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Search, ChevronLeft, ChevronRight, AlertCircle, Blocks } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { listClassesQueryOptions } from '@/features/classes/queries'
+import { ClassDetail } from './ClassDetail'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Search, ChevronLeft, ChevronRight, AlertCircle, Blocks } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface ClassBrowserProps {
   sessionId: string
@@ -16,13 +16,13 @@ interface ClassBrowserProps {
 const PAGE_SIZE = 100
 
 export function ClassBrowser({ sessionId }: ClassBrowserProps) {
-  const [searchInput, setSearchInput] = useState("")
-  const [query, setQuery] = useState("")
+  const [searchInput, setSearchInput] = useState('')
+  const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
   const [selectedClass, setSelectedClass] = useState<string | null>(null)
 
   const { data, isLoading, error } = useQuery(
-    listClassesQueryOptions(sessionId, query, PAGE_SIZE, page * PAGE_SIZE),
+    listClassesQueryOptions(sessionId, query, PAGE_SIZE, page * PAGE_SIZE)
   )
 
   const handleSearch = useCallback(() => {
@@ -45,17 +45,12 @@ export function ClassBrowser({ sessionId }: ClassBrowserProps) {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSearch()
+                  if (e.key === 'Enter') handleSearch()
                 }}
                 className="pl-7 h-7 text-xs"
               />
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0"
-              onClick={handleSearch}
-            >
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleSearch}>
               <Search className="h-3 w-3" />
             </Button>
           </div>
@@ -82,7 +77,10 @@ export function ClassBrowser({ sessionId }: ClassBrowserProps) {
               <span className="text-[10px] text-muted-foreground">
                 {data.total.toLocaleString()} classes
                 {query && (
-                  <> matching <span className="text-foreground font-medium">"{query}"</span></>
+                  <>
+                    {' '}
+                    matching <span className="text-foreground font-medium">"{query}"</span>
+                  </>
                 )}
               </span>
             </div>
@@ -95,21 +93,19 @@ export function ClassBrowser({ sessionId }: ClassBrowserProps) {
               ) : (
                 <div>
                   {data.classes.map((cls) => {
-                    const parts = cls.split(".")
+                    const parts = cls.split('.')
                     const name = parts.pop()!
-                    const pkg = parts.join(".")
+                    const pkg = parts.join('.')
                     return (
                       <button
                         key={cls}
                         onClick={() => setSelectedClass(cls)}
                         className={cn(
-                          "flex flex-col w-full px-3 py-1.5 text-left hover:bg-muted/50 transition-colors",
-                          selectedClass === cls && "bg-muted",
+                          'flex flex-col w-full px-3 py-1.5 text-left hover:bg-muted/50 transition-colors',
+                          selectedClass === cls && 'bg-muted'
                         )}
                       >
-                        <span className="text-xs font-mono text-foreground truncate">
-                          {name}
-                        </span>
+                        <span className="text-xs font-mono text-foreground truncate">{name}</span>
                         {pkg && (
                           <span className="text-[10px] font-mono text-muted-foreground truncate">
                             {pkg}
@@ -157,9 +153,7 @@ export function ClassBrowser({ sessionId }: ClassBrowserProps) {
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <Blocks className="h-10 w-10 mb-3 opacity-30" />
             <p className="text-sm">Select a class to inspect</p>
-            <p className="text-xs mt-1">
-              Search for classes by package name or keyword
-            </p>
+            <p className="text-xs mt-1">Search for classes by package name or keyword</p>
           </div>
         )}
       </div>

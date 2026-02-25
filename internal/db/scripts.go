@@ -28,7 +28,12 @@ func (d *DB) UpsertScriptFile(f ScriptFileRow) error {
 		`INSERT INTO script_files (id, session_id, name, content, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(session_id, name) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at`,
-		f.ID, f.SessionID, f.Name, f.Content, f.CreatedAt, f.UpdatedAt,
+		f.ID,
+		f.SessionID,
+		f.Name,
+		f.Content,
+		f.CreatedAt,
+		f.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("db.UpsertScriptFile: %w", err)
@@ -39,7 +44,8 @@ func (d *DB) UpsertScriptFile(f ScriptFileRow) error {
 func (d *DB) GetScriptFile(sessionID, name string) (*ScriptFileRow, error) {
 	row := d.conn.QueryRow(
 		`SELECT id, session_id, name, content, created_at, updated_at FROM script_files WHERE session_id = ? AND name = ?`,
-		sessionID, name,
+		sessionID,
+		name,
 	)
 	var f ScriptFileRow
 	if err := row.Scan(&f.ID, &f.SessionID, &f.Name, &f.Content, &f.CreatedAt, &f.UpdatedAt); err != nil {
@@ -53,7 +59,8 @@ func (d *DB) GetScriptFile(sessionID, name string) (*ScriptFileRow, error) {
 
 func (d *DB) GetScriptFileByID(id string) (*ScriptFileRow, error) {
 	row := d.conn.QueryRow(
-		`SELECT id, session_id, name, content, created_at, updated_at FROM script_files WHERE id = ?`, id,
+		`SELECT id, session_id, name, content, created_at, updated_at FROM script_files WHERE id = ?`,
+		id,
 	)
 	var f ScriptFileRow
 	if err := row.Scan(&f.ID, &f.SessionID, &f.Name, &f.Content, &f.CreatedAt, &f.UpdatedAt); err != nil {
@@ -97,7 +104,12 @@ func (d *DB) DeleteScriptFile(id string) error {
 func (d *DB) InsertScriptRun(r ScriptRunRow) error {
 	_, err := d.conn.Exec(
 		`INSERT INTO script_runs (id, session_id, script_file_id, output, status, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
-		r.ID, r.SessionID, r.ScriptFileID, r.Output, r.Status, r.Timestamp,
+		r.ID,
+		r.SessionID,
+		r.ScriptFileID,
+		r.Output,
+		r.Status,
+		r.Timestamp,
 	)
 	if err != nil {
 		return fmt.Errorf("db.InsertScriptRun: %w", err)
@@ -116,10 +128,14 @@ func (d *DB) UpdateScriptRun(id, output, status string) error {
 	return nil
 }
 
-func (d *DB) CompleteScriptRunByFile(sessionID, scriptFileID, output string) error {
+func (d *DB) CompleteScriptRunByFile(
+	sessionID, scriptFileID, output string,
+) error {
 	_, err := d.conn.Exec(
 		`UPDATE script_runs SET output = ?, status = 'done' WHERE session_id = ? AND script_file_id = ? AND status = 'running'`,
-		output, sessionID, scriptFileID,
+		output,
+		sessionID,
+		scriptFileID,
 	)
 	if err != nil {
 		return fmt.Errorf("db.CompleteScriptRunByFile: %w", err)

@@ -30,10 +30,21 @@ func (d *DB) InsertHttpMessage(m *HttpMessageRow) error {
 		 status_code, response_headers, response_body, response_body_encoding,
 		 response_body_size, duration, timestamp)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		m.ID, m.SessionID, m.Method, m.URL,
-		m.RequestHeaders, m.RequestBody, m.RequestBodyEncoding, m.RequestBodySize,
-		m.StatusCode, m.ResponseHeaders, m.ResponseBody, m.ResponseBodyEncoding,
-		m.ResponseBodySize, m.Duration, m.Timestamp,
+		m.ID,
+		m.SessionID,
+		m.Method,
+		m.URL,
+		m.RequestHeaders,
+		m.RequestBody,
+		m.RequestBodyEncoding,
+		m.RequestBodySize,
+		m.StatusCode,
+		m.ResponseHeaders,
+		m.ResponseBody,
+		m.ResponseBodyEncoding,
+		m.ResponseBodySize,
+		m.Duration,
+		m.Timestamp,
 	)
 	if err != nil {
 		return fmt.Errorf("db.InsertHttpMessage: %w", err)
@@ -41,7 +52,10 @@ func (d *DB) InsertHttpMessage(m *HttpMessageRow) error {
 	return nil
 }
 
-func (d *DB) ListHttpMessages(sessionID string, limit, offset int) ([]HttpMessageRow, error) {
+func (d *DB) ListHttpMessages(
+	sessionID string,
+	limit, offset int,
+) ([]HttpMessageRow, error) {
 	rows, err := d.conn.Query(
 		`SELECT id, session_id, method, url,
 		 request_headers, request_body, request_body_encoding, request_body_size,
@@ -73,7 +87,8 @@ func (d *DB) ListHttpMessages(sessionID string, limit, offset int) ([]HttpMessag
 
 func (d *DB) CountHttpMessages(sessionID string) (int, error) {
 	var count int
-	err := d.conn.QueryRow(`SELECT COUNT(*) FROM http_messages WHERE session_id = ?`, sessionID).Scan(&count)
+	err := d.conn.QueryRow(`SELECT COUNT(*) FROM http_messages WHERE session_id = ?`, sessionID).
+		Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("db.CountHttpMessages: %w", err)
 	}
@@ -103,7 +118,12 @@ func (d *DB) GetHttpMessage(id string) (*HttpMessageRow, error) {
 	return &m, nil
 }
 
-func (d *DB) SearchHttpMessages(sessionID, method, host string, statusCode *int, bodyContains string, limit int) ([]HttpMessageRow, error) {
+func (d *DB) SearchHttpMessages(
+	sessionID, method, host string,
+	statusCode *int,
+	bodyContains string,
+	limit int,
+) ([]HttpMessageRow, error) {
 	query := `SELECT id, session_id, method, url,
 		 request_headers, request_body, request_body_encoding, request_body_size,
 		 status_code, response_headers, response_body, response_body_encoding,

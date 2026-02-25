@@ -11,7 +11,10 @@ import (
 )
 
 type SchemaProvider interface {
-	GetTables(sess *session.Session, sessionID, dbPath string) ([]bridge.DatabaseTable, error)
+	GetTables(
+		sess *session.Session,
+		sessionID, dbPath string,
+	) ([]bridge.DatabaseTable, error)
 }
 
 type GetSchemaParams struct {
@@ -24,8 +27,16 @@ type GetSchemaTool struct {
 	sessionID string
 }
 
-func NewGetSchema(provider SchemaProvider, manager *session.Manager, sessionID string) *GetSchemaTool {
-	return &GetSchemaTool{provider: provider, manager: manager, sessionID: sessionID}
+func NewGetSchema(
+	provider SchemaProvider,
+	manager *session.Manager,
+	sessionID string,
+) *GetSchemaTool {
+	return &GetSchemaTool{
+		provider:  provider,
+		manager:   manager,
+		sessionID: sessionID,
+	}
 }
 
 func (t *GetSchemaTool) Info() tool.ToolInfo {
@@ -36,10 +47,15 @@ func (t *GetSchemaTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *GetSchemaTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *GetSchemaTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[GetSchemaParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	if input.DbPath == "" {
@@ -53,7 +69,9 @@ func (t *GetSchemaTool) Run(ctx context.Context, params tool.ToolCall) (tool.Too
 
 	tables, err := t.provider.GetTables(sess, t.sessionID, input.DbPath)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("get_schema failed: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("get_schema failed: %v", err),
+		), nil
 	}
 
 	if len(tables) == 0 {

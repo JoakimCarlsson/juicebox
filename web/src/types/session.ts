@@ -39,7 +39,7 @@ export interface DeviceEnvelope {
 }
 
 export interface LogEntry {
-  level: "info" | "warn" | "error"
+  level: 'info' | 'warn' | 'error'
   source: string
   message: string
 }
@@ -49,7 +49,7 @@ export interface LogcatEntry {
   timestamp: string
   pid: number
   tid: number
-  level: "V" | "D" | "I" | "W" | "E" | "F"
+  level: 'V' | 'D' | 'I' | 'W' | 'E' | 'F'
   tag: string
   message: string
 }
@@ -85,7 +85,7 @@ export interface LogsResponse {
 
 export interface CrashEvent {
   id: string
-  crashType: "native" | "java"
+  crashType: 'native' | 'java'
   signal: string | null
   address: string | null
   registers: Record<string, string> | null
@@ -176,7 +176,7 @@ export interface InterceptRule {
 
 export interface PendingRequest {
   id: string
-  phase: "request" | "response"
+  phase: 'request' | 'response'
   method: string
   url: string
   headers: Record<string, string>
@@ -197,7 +197,7 @@ export interface InterceptState {
 
 export interface InterceptDecision {
   requestId: string
-  action: "forward" | "modify" | "drop"
+  action: 'forward' | 'modify' | 'drop'
   method?: string
   url?: string
   headers?: Record<string, string>

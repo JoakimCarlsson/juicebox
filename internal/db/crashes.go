@@ -23,7 +23,17 @@ func (d *DB) InsertCrash(c *CrashRow) error {
 	_, err := d.conn.Exec(
 		`INSERT INTO crashes (id, session_id, crash_type, signal, address, registers, backtrace, java_stack_trace, exception_class, exception_message, timestamp)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.SessionID, c.CrashType, c.Signal, c.Address, c.Registers, c.Backtrace, c.JavaStackTrace, c.ExceptionClass, c.ExceptionMessage, c.Timestamp,
+		c.ID,
+		c.SessionID,
+		c.CrashType,
+		c.Signal,
+		c.Address,
+		c.Registers,
+		c.Backtrace,
+		c.JavaStackTrace,
+		c.ExceptionClass,
+		c.ExceptionMessage,
+		c.Timestamp,
 	)
 	if err != nil {
 		return fmt.Errorf("db.InsertCrash: %w", err)
@@ -31,11 +41,16 @@ func (d *DB) InsertCrash(c *CrashRow) error {
 	return nil
 }
 
-func (d *DB) ListCrashes(sessionID string, limit, offset int) ([]CrashRow, error) {
+func (d *DB) ListCrashes(
+	sessionID string,
+	limit, offset int,
+) ([]CrashRow, error) {
 	rows, err := d.conn.Query(
 		`SELECT id, session_id, crash_type, signal, address, registers, backtrace, java_stack_trace, exception_class, exception_message, timestamp
 		 FROM crashes WHERE session_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?`,
-		sessionID, limit, offset,
+		sessionID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListCrashes: %w", err)
@@ -46,14 +61,19 @@ func (d *DB) ListCrashes(sessionID string, limit, offset int) ([]CrashRow, error
 
 func (d *DB) CountCrashes(sessionID string) (int, error) {
 	var count int
-	err := d.conn.QueryRow(`SELECT COUNT(*) FROM crashes WHERE session_id = ?`, sessionID).Scan(&count)
+	err := d.conn.QueryRow(`SELECT COUNT(*) FROM crashes WHERE session_id = ?`, sessionID).
+		Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("db.CountCrashes: %w", err)
 	}
 	return count, nil
 }
 
-func (d *DB) SearchCrashes(sessionID string, sinceTimestamp int64, limit int) ([]CrashRow, error) {
+func (d *DB) SearchCrashes(
+	sessionID string,
+	sinceTimestamp int64,
+	limit int,
+) ([]CrashRow, error) {
 	query := `SELECT id, session_id, crash_type, signal, address, registers, backtrace, java_stack_trace, exception_class, exception_message, timestamp
 		 FROM crashes WHERE session_id = ?`
 	args := []any{sessionID}

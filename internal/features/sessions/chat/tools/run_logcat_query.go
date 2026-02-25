@@ -10,8 +10,8 @@ import (
 )
 
 type RunLogcatQueryParams struct {
-	Tag   string `json:"tag,omitempty" description:"Filter by log tag (substring match)"`
-	Text  string `json:"text,omitempty" description:"Filter by message text (substring match)"`
+	Tag   string `json:"tag,omitempty"   description:"Filter by log tag (substring match)"`
+	Text  string `json:"text,omitempty"  description:"Filter by message text (substring match)"`
 	Level string `json:"level,omitempty" description:"Filter by log level (V, D, I, W, E, F)"`
 	Limit int    `json:"limit,omitempty" description:"Max results to return (default 100)"`
 }
@@ -33,15 +33,28 @@ func (t *RunLogcatQueryTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *RunLogcatQueryTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *RunLogcatQueryTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[RunLogcatQueryParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
-	rows, err := t.db.SearchLogcatEntries(t.sessionID, input.Tag, input.Text, input.Level, input.Limit)
+	rows, err := t.db.SearchLogcatEntries(
+		t.sessionID,
+		input.Tag,
+		input.Text,
+		input.Level,
+		input.Limit,
+	)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("search failed: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("search failed: %v", err),
+		), nil
 	}
 
 	if len(rows) == 0 {

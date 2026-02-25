@@ -17,7 +17,14 @@ func (d *DB) InsertLogcatEntry(e *LogcatEntryRow) error {
 	_, err := d.conn.Exec(
 		`INSERT INTO logcat_entries (id, session_id, timestamp, pid, tid, level, tag, message)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		e.ID, e.SessionID, e.Timestamp, e.PID, e.TID, e.Level, e.Tag, e.Message,
+		e.ID,
+		e.SessionID,
+		e.Timestamp,
+		e.PID,
+		e.TID,
+		e.Level,
+		e.Tag,
+		e.Message,
 	)
 	if err != nil {
 		return fmt.Errorf("db.InsertLogcatEntry: %w", err)
@@ -25,7 +32,10 @@ func (d *DB) InsertLogcatEntry(e *LogcatEntryRow) error {
 	return nil
 }
 
-func (d *DB) ListLogcatEntries(sessionID string, limit, offset int) ([]LogcatEntryRow, error) {
+func (d *DB) ListLogcatEntries(
+	sessionID string,
+	limit, offset int,
+) ([]LogcatEntryRow, error) {
 	rows, err := d.conn.Query(
 		`SELECT id, session_id, timestamp, pid, tid, level, tag, message
 		 FROM logcat_entries WHERE session_id = ? ORDER BY id ASC LIMIT ? OFFSET ?`,
@@ -49,14 +59,18 @@ func (d *DB) ListLogcatEntries(sessionID string, limit, offset int) ([]LogcatEnt
 
 func (d *DB) CountLogcatEntries(sessionID string) (int, error) {
 	var count int
-	err := d.conn.QueryRow(`SELECT COUNT(*) FROM logcat_entries WHERE session_id = ?`, sessionID).Scan(&count)
+	err := d.conn.QueryRow(`SELECT COUNT(*) FROM logcat_entries WHERE session_id = ?`, sessionID).
+		Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("db.CountLogcatEntries: %w", err)
 	}
 	return count, nil
 }
 
-func (d *DB) SearchLogcatEntries(sessionID, tag, text, level string, limit int) ([]LogcatEntryRow, error) {
+func (d *DB) SearchLogcatEntries(
+	sessionID, tag, text, level string,
+	limit int,
+) ([]LogcatEntryRow, error) {
 	query := `SELECT id, session_id, timestamp, pid, tid, level, tag, message
 		 FROM logcat_entries WHERE session_id = ?`
 	args := []any{sessionID}

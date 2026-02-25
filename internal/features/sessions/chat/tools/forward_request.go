@@ -19,7 +19,10 @@ type ForwardRequestTool struct {
 	sessionID string
 }
 
-func NewForwardRequest(manager *session.Manager, sessionID string) *ForwardRequestTool {
+func NewForwardRequest(
+	manager *session.Manager,
+	sessionID string,
+) *ForwardRequestTool {
 	return &ForwardRequestTool{manager: manager, sessionID: sessionID}
 }
 
@@ -31,15 +34,22 @@ func (t *ForwardRequestTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *ForwardRequestTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *ForwardRequestTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[ForwardRequestParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	sess := t.manager.GetSession(t.sessionID)
 	if sess == nil || sess.Intercept == nil {
-		return tool.NewTextErrorResponse("session not found or intercept not available"), nil
+		return tool.NewTextErrorResponse(
+			"session not found or intercept not available",
+		), nil
 	}
 
 	decision := proxy.InterceptDecision{
@@ -48,8 +58,12 @@ func (t *ForwardRequestTool) Run(ctx context.Context, params tool.ToolCall) (too
 	}
 
 	if err := sess.Intercept.Resolve(decision); err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("failed to resolve: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("failed to resolve: %v", err),
+		), nil
 	}
 
-	return tool.NewTextResponse(fmt.Sprintf("Request %s forwarded.", input.RequestID)), nil
+	return tool.NewTextResponse(
+		fmt.Sprintf("Request %s forwarded.", input.RequestID),
+	), nil
 }

@@ -1,21 +1,13 @@
-import { useState, useCallback, useRef, useEffect } from "react"
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { queryOptions } from "@tanstack/react-query"
-import { getTables, executeQuery, exportCsv } from "@/features/sqlite/api"
-import type { DatabaseTable, QueryResponse } from "@/features/sqlite/api"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Database,
-  Play,
-  Download,
-  AlertCircle,
-  Table,
-  Key,
-  Loader2,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { queryOptions } from '@tanstack/react-query'
+import { getTables, executeQuery, exportCsv } from '@/features/sqlite/api'
+import type { DatabaseTable, QueryResponse } from '@/features/sqlite/api'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Database, Play, Download, AlertCircle, Table, Key, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface DatabaseViewerProps {
   sessionId: string
@@ -24,7 +16,7 @@ interface DatabaseViewerProps {
 
 function tablesQueryOptions(sessionId: string, dbPath: string) {
   return queryOptions({
-    queryKey: ["sessions", sessionId, "sqlite", "tables", dbPath],
+    queryKey: ['sessions', sessionId, 'sqlite', 'tables', dbPath],
     queryFn: () => getTables(sessionId, dbPath),
     enabled: !!sessionId && !!dbPath,
     staleTime: 30_000,
@@ -34,10 +26,15 @@ function tablesQueryOptions(sessionId: string, dbPath: string) {
 export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
   const { data, isLoading, error } = useQuery(tablesQueryOptions(sessionId, dbPath))
   const [selectedTable, setSelectedTable] = useState<string | null>(null)
-  const [sql, setSql] = useState("")
+  const [sql, setSql] = useState('')
   const [queryResult, setQueryResult] = useState<QueryResponse | null>(null)
   const [queryError, setQueryError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const didInitialQuery = useRef(false)
+
+  const firstTableName = data?.tables?.[0]?.name ?? null
+  const effectiveTable = selectedTable ?? firstTableName
+  const displaySql = sql || (effectiveTable ? `SELECT * FROM "${effectiveTable}" LIMIT 100` : '')
 
   const mutation = useMutation({
     mutationFn: (sqlStr: string) => executeQuery(sessionId, dbPath, sqlStr),
@@ -51,41 +48,44 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
     },
   })
 
-  const handleTableClick = useCallback((tableName: string) => {
-    setSelectedTable(tableName)
-    const q = `SELECT * FROM "${tableName}" LIMIT 100`
-    setSql(q)
-    mutation.mutate(q)
-  }, [mutation])
-
-  const handleExecute = useCallback(() => {
-    if (sql.trim()) {
-      mutation.mutate(sql.trim())
-    }
-  }, [sql, mutation])
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault()
-      handleExecute()
-    }
-  }, [handleExecute])
-
-  const handleExport = useCallback(() => {
-    if (sql.trim()) {
-      exportCsv(sessionId, dbPath, sql.trim())
-    }
-  }, [sessionId, dbPath, sql])
-
-  useEffect(() => {
-    if (data?.tables.length && !selectedTable) {
-      const first = data.tables[0].name
-      setSelectedTable(first)
-      const q = `SELECT * FROM "${first}" LIMIT 100`
+  const handleTableClick = useCallback(
+    (tableName: string) => {
+      setSelectedTable(tableName)
+      const q = `SELECT * FROM "${tableName}" LIMIT 100`
       setSql(q)
       mutation.mutate(q)
+    },
+    [mutation]
+  )
+
+  const handleExecute = useCallback(() => {
+    if (displaySql.trim()) {
+      mutation.mutate(displaySql.trim())
     }
-  }, [data])
+  }, [displaySql, mutation])
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault()
+        handleExecute()
+      }
+    },
+    [handleExecute]
+  )
+
+  const handleExport = useCallback(() => {
+    if (displaySql.trim()) {
+      exportCsv(sessionId, dbPath, displaySql.trim())
+    }
+  }, [sessionId, dbPath, displaySql])
+
+  useEffect(() => {
+    if (effectiveTable && !didInitialQuery.current) {
+      didInitialQuery.current = true
+      mutation.mutate(`SELECT * FROM "${effectiveTable}" LIMIT 100`)
+    }
+  }, [effectiveTable, mutation])
 
   if (isLoading) {
     return (
@@ -121,7 +121,7 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
           <span className="text-xs text-muted-foreground font-mono truncate">{dbPath}</span>
         </div>
         <span className="text-[10px] text-muted-foreground/60 shrink-0 ml-4">
-          {data.tables.length} table{data.tables.length !== 1 ? "s" : ""}
+          {data.tables.length} table{data.tables.length !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -131,10 +131,10 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
             key={table.name}
             onClick={() => handleTableClick(table.name)}
             className={cn(
-              "flex items-center gap-1 px-2 py-1 rounded text-xs font-mono whitespace-nowrap transition-colors",
-              selectedTable === table.name
-                ? "bg-foreground/10 text-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+              'flex items-center gap-1 px-2 py-1 rounded text-xs font-mono whitespace-nowrap transition-colors',
+              effectiveTable === table.name
+                ? 'bg-foreground/10 text-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             )}
           >
             <Table className="h-3 w-3" />
@@ -143,23 +143,21 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
         ))}
       </div>
 
-      {selectedTable && (
-        <SchemaBar table={data.tables.find((t) => t.name === selectedTable)} />
-      )}
+      {effectiveTable && <SchemaBar table={data.tables.find((t) => t.name === effectiveTable)} />}
 
       <div className="flex flex-col border-b border-border shrink-0">
         <div className="relative">
           <textarea
             ref={textareaRef}
-            value={sql}
+            value={displaySql}
             onChange={(e) => setSql(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="SELECT * FROM ..."
             rows={3}
             className={cn(
-              "w-full px-4 py-2 text-xs font-mono bg-background text-foreground",
-              "resize-none outline-none placeholder:text-muted-foreground/50",
-              "border-none focus:ring-0",
+              'w-full px-4 py-2 text-xs font-mono bg-background text-foreground',
+              'resize-none outline-none placeholder:text-muted-foreground/50',
+              'border-none focus:ring-0'
             )}
             spellCheck={false}
           />
@@ -170,7 +168,7 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
             size="sm"
             className="h-6 text-xs px-2.5"
             onClick={handleExecute}
-            disabled={!sql.trim() || mutation.isPending}
+            disabled={!displaySql.trim() || mutation.isPending}
           >
             {mutation.isPending ? (
               <Loader2 className="mr-1 h-3 w-3 animate-spin" />
@@ -182,12 +180,7 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
           <span className="text-[10px] text-muted-foreground/50">Ctrl+Enter</span>
           <div className="flex-1" />
           {queryResult && queryResult.rows.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 text-xs px-2"
-              onClick={handleExport}
-            >
+            <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={handleExport}>
               <Download className="mr-1 h-3 w-3" />
               CSV
             </Button>
@@ -210,9 +203,7 @@ export function DatabaseViewer({ sessionId, dbPath }: DatabaseViewerProps) {
           </div>
         )}
 
-        {queryResult && !mutation.isPending && (
-          <QueryResultsTable result={queryResult} />
-        )}
+        {queryResult && !mutation.isPending && <QueryResultsTable result={queryResult} />}
 
         {!queryResult && !queryError && !mutation.isPending && (
           <div className="flex flex-col items-center justify-center gap-2 h-full text-muted-foreground">
@@ -238,7 +229,7 @@ function SchemaBar({ table }: { table: DatabaseTable | undefined }) {
         >
           {col.pk && <Key className="h-2.5 w-2.5 text-amber-500" />}
           <span className="text-foreground/80">{col.name}</span>
-          <span className="text-muted-foreground/50">{col.type || "ANY"}</span>
+          <span className="text-muted-foreground/50">{col.type || 'ANY'}</span>
         </Badge>
       ))}
     </div>
@@ -249,7 +240,7 @@ function QueryResultsTable({ result }: { result: QueryResponse }) {
   if (result.rowsAffected !== undefined && result.rowsAffected > 0) {
     return (
       <div className="flex items-center justify-center p-6 text-sm text-muted-foreground">
-        {result.rowsAffected} row{result.rowsAffected !== 1 ? "s" : ""} affected
+        {result.rowsAffected} row{result.rowsAffected !== 1 ? 's' : ''} affected
       </div>
     )
   }
@@ -291,7 +282,7 @@ function QueryResultsTable({ result }: { result: QueryResponse }) {
                   <td
                     key={j}
                     className="px-2 py-0.5 text-xs font-mono max-w-xs truncate"
-                    title={cell == null ? "NULL" : String(cell)}
+                    title={cell == null ? 'NULL' : String(cell)}
                   >
                     {cell == null ? (
                       <span className="text-muted-foreground/40 italic">NULL</span>
@@ -307,7 +298,7 @@ function QueryResultsTable({ result }: { result: QueryResponse }) {
       </div>
       <div className="flex items-center px-4 py-1 border-t border-border bg-muted/20 shrink-0">
         <span className="text-[10px] text-muted-foreground">
-          {result.rowCount} row{result.rowCount !== 1 ? "s" : ""}
+          {result.rowCount} row{result.rowCount !== 1 ? 's' : ''}
         </span>
       </div>
     </div>

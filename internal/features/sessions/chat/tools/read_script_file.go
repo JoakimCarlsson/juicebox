@@ -18,7 +18,10 @@ type ReadScriptFileTool struct {
 	sessionID string
 }
 
-func NewReadScriptFile(files *scripting.FileManager, sessionID string) *ReadScriptFileTool {
+func NewReadScriptFile(
+	files *scripting.FileManager,
+	sessionID string,
+) *ReadScriptFileTool {
 	return &ReadScriptFileTool{files: files, sessionID: sessionID}
 }
 
@@ -30,10 +33,15 @@ func (t *ReadScriptFileTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *ReadScriptFileTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *ReadScriptFileTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[ReadScriptFileParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	if input.Name == "" {
@@ -42,7 +50,9 @@ func (t *ReadScriptFileTool) Run(ctx context.Context, params tool.ToolCall) (too
 
 	file, err := t.files.Get(t.sessionID, input.Name)
 	if err != nil || file == nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("script file %q not found", input.Name)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("script file %q not found", input.Name),
+		), nil
 	}
 
 	return tool.NewTextResponse(file.Content), nil

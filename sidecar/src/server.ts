@@ -1,12 +1,33 @@
 import type { JsonRpcRequest, JsonRpcResponse } from "./types.ts";
-import { sessions, ok, fail } from "./state.ts";
+import { fail, ok, sessions } from "./state.ts";
 import { handleAttach, handleDetach } from "./methods/session.ts";
-import { handleRunScript, handleGetScriptOutput, handleStopScript } from "./methods/scripts.ts";
-import { handleListDevices, handleListApps, handleListProcesses, handleGetDeviceInfo, handleGetAppIcon } from "./methods/device.ts";
-import { handleListFiles, handleReadFile, handleFindFiles, handlePullDatabase } from "./methods/files.ts";
-import { handleAgentInvoke, handleAgentInterfaces, handleAgentSnapshot, handleAgentRestore } from "./methods/agent.ts";
+import {
+  handleGetScriptOutput,
+  handleRunScript,
+  handleStopScript,
+} from "./methods/scripts.ts";
+import {
+  handleGetAppIcon,
+  handleGetDeviceInfo,
+  handleListApps,
+  handleListDevices,
+  handleListProcesses,
+} from "./methods/device.ts";
+import {
+  handleFindFiles,
+  handleListFiles,
+  handlePullDatabase,
+  handleReadFile,
+} from "./methods/files.ts";
+import {
+  handleAgentInterfaces,
+  handleAgentInvoke,
+  handleAgentRestore,
+  handleAgentSnapshot,
+} from "./methods/agent.ts";
 
-export const SOCKET_PATH = Deno.env.get("JUICEBOX_SOCKET") ?? "/tmp/juicebox.sock";
+export const SOCKET_PATH = Deno.env.get("JUICEBOX_SOCKET") ??
+  "/tmp/juicebox.sock";
 
 async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
   try {
@@ -104,7 +125,9 @@ async function handleSubscribe(
     for (const line of state.messageBuffer) {
       try {
         await conn.write(new TextEncoder().encode(line));
-      } catch { break; }
+      } catch {
+        break;
+      }
     }
     state.messageBuffer.length = 0;
   }
@@ -137,11 +160,9 @@ export async function handleConnection(conn: Deno.Conn): Promise<void> {
     if (chunks.length === 0) return;
 
     const raw = new TextDecoder().decode(
-      chunks.length === 1
-        ? chunks[0]
-        : new Uint8Array(
-            chunks.reduce((acc, c) => [...acc, ...c], [] as number[]),
-          ),
+      chunks.length === 1 ? chunks[0] : new Uint8Array(
+        chunks.reduce((acc, c) => [...acc, ...c], [] as number[]),
+      ),
     );
     const req: JsonRpcRequest = JSON.parse(raw);
 

@@ -10,7 +10,7 @@ import (
 )
 
 type FindFilesParams struct {
-	Pattern  string `json:"pattern" description:"Filename glob pattern (e.g. '*.xml', '*.db', 'shared_prefs')."`
+	Pattern  string `json:"pattern"             description:"Filename glob pattern (e.g. '*.xml', '*.db', 'shared_prefs')."`
 	BasePath string `json:"base_path,omitempty" description:"Directory to search from. Defaults to the app's data directory."`
 }
 
@@ -20,7 +20,10 @@ type FindFilesTool struct {
 	bundleID string
 }
 
-func NewFindFiles(setup session.DeviceSetup, deviceID, bundleID string) *FindFilesTool {
+func NewFindFiles(
+	setup session.DeviceSetup,
+	deviceID, bundleID string,
+) *FindFilesTool {
 	return &FindFilesTool{setup: setup, deviceID: deviceID, bundleID: bundleID}
 }
 
@@ -32,10 +35,15 @@ func (t *FindFilesTool) Info() tool.ToolInfo {
 	)
 }
 
-func (t *FindFilesTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
+func (t *FindFilesTool) Run(
+	ctx context.Context,
+	params tool.ToolCall,
+) (tool.ToolResponse, error) {
 	input, err := agent.ParseToolInput[FindFilesParams](params.Input)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("invalid input: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("invalid input: %v", err),
+		), nil
 	}
 
 	if input.Pattern == "" {
@@ -47,13 +55,26 @@ func (t *FindFilesTool) Run(ctx context.Context, params tool.ToolCall) (tool.Too
 		basePath = "/data/data/" + t.bundleID
 	}
 
-	paths, err := t.setup.FindFiles(t.deviceID, t.bundleID, input.Pattern, basePath)
+	paths, err := t.setup.FindFiles(
+		t.deviceID,
+		t.bundleID,
+		input.Pattern,
+		basePath,
+	)
 	if err != nil {
-		return tool.NewTextErrorResponse(fmt.Sprintf("find_files failed: %v", err)), nil
+		return tool.NewTextErrorResponse(
+			fmt.Sprintf("find_files failed: %v", err),
+		), nil
 	}
 
 	if len(paths) == 0 {
-		return tool.NewTextResponse(fmt.Sprintf("No files matching %q found under %q.", input.Pattern, basePath)), nil
+		return tool.NewTextResponse(
+			fmt.Sprintf(
+				"No files matching %q found under %q.",
+				input.Pattern,
+				basePath,
+			),
+		), nil
 	}
 
 	return tool.NewJSONResponse(paths), nil

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import { useNavigate } from "@tanstack/react-router"
-import { AlertTriangle, RotateCcw, ArrowRight, Cpu, Coffee, Skull } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { AlertTriangle, RotateCcw, ArrowRight, Cpu, Coffee, Skull } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -8,13 +8,13 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { useDeviceSocket } from "@/contexts/DeviceSocketContext"
-import { attachApp } from "@/features/sessions/api"
-import type { CrashEvent, DeviceEnvelope } from "@/types/session"
-import { cn } from "@/lib/utils"
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
+import { attachApp } from '@/features/sessions/api'
+import type { CrashEvent, DeviceEnvelope } from '@/types/session'
+import { cn } from '@/lib/utils'
 
 interface CrashAlertDialogProps {
   sessionId: string
@@ -23,14 +23,14 @@ interface CrashAlertDialogProps {
 }
 
 type AlertState =
-  | { kind: "closed" }
-  | { kind: "crash"; crash: CrashEvent; detached: boolean }
-  | { kind: "detached" }
+  | { kind: 'closed' }
+  | { kind: 'crash'; crash: CrashEvent; detached: boolean }
+  | { kind: 'detached' }
 
 export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDialogProps) {
   const { subscribe } = useDeviceSocket()
   const navigate = useNavigate()
-  const [state, setState] = useState<AlertState>({ kind: "closed" })
+  const [state, setState] = useState<AlertState>({ kind: 'closed' })
   const [reattaching, setReattaching] = useState(false)
   const lastCrashTime = useRef(0)
 
@@ -40,20 +40,20 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
     const unsub = subscribe(null, (envelope: DeviceEnvelope) => {
       if (envelope.sessionId !== sessionId) return
 
-      if (envelope.type === "crash") {
+      if (envelope.type === 'crash') {
         const crash = envelope.payload as CrashEvent
         lastCrashTime.current = Date.now()
-        setState({ kind: "crash", crash, detached: false })
+        setState({ kind: 'crash', crash, detached: false })
       }
 
-      if (envelope.type === "detached") {
+      if (envelope.type === 'detached') {
         const recentCrash = Date.now() - lastCrashTime.current < 5000
         setState((prev) => {
-          if (prev.kind === "crash") {
+          if (prev.kind === 'crash') {
             return { ...prev, detached: true }
           }
           if (!recentCrash) {
-            return { kind: "detached" }
+            return { kind: 'detached' }
           }
           return prev
         })
@@ -67,9 +67,9 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
     setReattaching(true)
     try {
       const resp = await attachApp(deviceId, bundleId, sessionId)
-      setState({ kind: "closed" })
+      setState({ kind: 'closed' })
       navigate({
-        to: "/devices/$deviceId/app/$bundleId/home",
+        to: '/devices/$deviceId/app/$bundleId/home',
         params: { deviceId, bundleId },
         search: { sessionId: resp.sessionId },
         replace: true,
@@ -80,33 +80,40 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
   }, [deviceId, bundleId, sessionId, navigate])
 
   const handleViewCrashes = useCallback(() => {
-    setState({ kind: "closed" })
+    setState({ kind: 'closed' })
     navigate({
-      to: "/devices/$deviceId/app/$bundleId/crashes",
+      to: '/devices/$deviceId/app/$bundleId/crashes',
       params: { deviceId, bundleId },
       search: { sessionId },
     })
   }, [deviceId, bundleId, sessionId, navigate])
 
   const handleDismiss = useCallback(() => {
-    setState({ kind: "closed" })
+    setState({ kind: 'closed' })
     setReattaching(false)
   }, [])
 
-  if (state.kind === "closed") return null
+  if (state.kind === 'closed') return null
 
-  const showReattach = state.kind === "detached" || (state.kind === "crash" && state.detached)
-  const crash = state.kind === "crash" ? state.crash : null
+  const showReattach = state.kind === 'detached' || (state.kind === 'crash' && state.detached)
+  const crash = state.kind === 'crash' ? state.crash : null
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) handleDismiss() }}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) handleDismiss()
+      }}
+    >
       <DialogContent showCloseButton={!reattaching} className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-full",
-              crash ? "bg-red-500/10" : "bg-amber-500/10",
-            )}>
+            <div
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded-full',
+                crash ? 'bg-red-500/10' : 'bg-amber-500/10'
+              )}
+            >
               {crash ? (
                 <Skull className="h-5 w-5 text-red-500" />
               ) : (
@@ -114,13 +121,11 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
               )}
             </div>
             <div>
-              <DialogTitle>
-                {crash ? "App Crashed" : "Session Lost"}
-              </DialogTitle>
+              <DialogTitle>{crash ? 'App Crashed' : 'Session Lost'}</DialogTitle>
               <DialogDescription>
                 {crash
-                  ? "The target app encountered a fatal error"
-                  : "The connection to the target app was lost"}
+                  ? 'The target app encountered a fatal error'
+                  : 'The connection to the target app was lost'}
               </DialogDescription>
             </div>
           </div>
@@ -130,18 +135,21 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
           <div className="rounded-md border border-red-500/20 bg-red-500/5 p-3 space-y-2">
             <div className="flex items-center gap-2">
               <Badge
-                variant={crash.crashType === "native" ? "destructive" : "secondary"}
+                variant={crash.crashType === 'native' ? 'destructive' : 'secondary'}
                 className="text-[10px] px-1.5 py-0"
               >
-                {crash.crashType === "native" ? (
+                {crash.crashType === 'native' ? (
                   <Cpu className="mr-1 h-2.5 w-2.5" />
                 ) : (
                   <Coffee className="mr-1 h-2.5 w-2.5" />
                 )}
-                {crash.crashType === "native" ? "NATIVE" : "JAVA"}
+                {crash.crashType === 'native' ? 'NATIVE' : 'JAVA'}
               </Badge>
               {crash.signal && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono border-red-500/30 text-red-600 dark:text-red-400">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 font-mono border-red-500/30 text-red-600 dark:text-red-400"
+                >
                   {crash.signal}
                 </Badge>
               )}
@@ -158,7 +166,7 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
               </p>
             )}
 
-            {crash.crashType === "native" && crash.backtrace && crash.backtrace.length > 0 && (
+            {crash.crashType === 'native' && crash.backtrace && crash.backtrace.length > 0 && (
               <div className="text-[11px] font-mono text-muted-foreground space-y-0.5">
                 {crash.backtrace.slice(0, 3).map((frame, i) => (
                   <div key={i} className="truncate">
@@ -173,7 +181,7 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
               </div>
             )}
 
-            {crash.crashType === "java" && crash.javaStackTrace && (
+            {crash.crashType === 'java' && crash.javaStackTrace && (
               <pre className="text-[11px] font-mono text-muted-foreground whitespace-pre-wrap break-all line-clamp-4 leading-4">
                 {crash.javaStackTrace}
               </pre>
@@ -183,7 +191,8 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
 
         {showReattach && (
           <p className="text-xs text-muted-foreground">
-            The app process has terminated. You can reattach to restore the session with all its history.
+            The app process has terminated. You can reattach to restore the session with all its
+            history.
           </p>
         )}
 
@@ -196,8 +205,8 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
           )}
           {showReattach && (
             <Button size="sm" onClick={handleReattach} disabled={reattaching}>
-              <RotateCcw className={cn("mr-1.5 h-3.5 w-3.5", reattaching && "animate-spin")} />
-              {reattaching ? "Reattaching..." : "Reattach"}
+              <RotateCcw className={cn('mr-1.5 h-3.5 w-3.5', reattaching && 'animate-spin')} />
+              {reattaching ? 'Reattaching...' : 'Reattach'}
             </Button>
           )}
           {!showReattach && (

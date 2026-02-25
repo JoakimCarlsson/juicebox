@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef } from "react"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-import type { HttpMessage } from "@/types/session"
-import { parseUrl, statusColor, methodColor } from "./helpers"
+import { useCallback, useEffect, useRef } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import type { HttpMessage } from '@/types/session'
+import { parseUrl, statusColor, methodColor } from './helpers'
 
 export function RequestList({
   messages,
@@ -23,8 +23,7 @@ export function RequestList({
   const handleScroll = useCallback(() => {
     const el = listRef.current
     if (!el) return
-    isAtBottom.current =
-      el.scrollHeight - el.scrollTop - el.clientHeight < 30
+    isAtBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 30
   }, [])
 
   useEffect(() => {
@@ -34,11 +33,7 @@ export function RequestList({
   }, [messages.length, autoScroll])
 
   return (
-    <div
-      ref={listRef}
-      onScroll={handleScroll}
-      className="h-full overflow-auto"
-    >
+    <div ref={listRef} onScroll={handleScroll} className="h-full overflow-auto">
       <table className="w-full">
         <thead className="sticky top-0 bg-background z-10">
           <tr className="border-b border-border">
@@ -65,18 +60,15 @@ export function RequestList({
                 key={msg.id}
                 onClick={() => onSelect(msg.id)}
                 className={cn(
-                  "cursor-pointer border-b border-border transition-colors hover:bg-muted/50",
-                  selectedId === msg.id && "bg-accent",
-                  isPending && "bg-amber-500/5",
+                  'cursor-pointer border-b border-border transition-colors hover:bg-muted/50',
+                  selectedId === msg.id && 'bg-accent',
+                  isPending && 'bg-amber-500/5'
                 )}
               >
                 <td className="px-3 py-1.5">
                   <Badge
                     variant="secondary"
-                    className={cn(
-                      "font-mono text-[10px] px-1.5 py-0",
-                      methodColor(msg.method),
-                    )}
+                    className={cn('font-mono text-[10px] px-1.5 py-0', methodColor(msg.method))}
                   >
                     {msg.method}
                   </Badge>
@@ -88,26 +80,21 @@ export function RequestList({
                         PAUSED
                       </Badge>
                       {msg.statusCode > 0 && (
-                        <span className={cn("text-[10px] font-mono", statusColor(msg.statusCode))}>
+                        <span className={cn('text-[10px] font-mono', statusColor(msg.statusCode))}>
                           {msg.statusCode}
                         </span>
                       )}
                     </div>
                   ) : (
                     <span
-                      className={cn(
-                        "text-xs font-mono font-medium",
-                        statusColor(msg.statusCode),
-                      )}
+                      className={cn('text-xs font-mono font-medium', statusColor(msg.statusCode))}
                     >
-                      {msg.statusCode || "\u2014"}
+                      {msg.statusCode || '\u2014'}
                     </span>
                   )}
                 </td>
                 <td className="px-2 py-1.5 max-w-0">
-                  <span className="block truncate text-xs font-mono text-foreground">
-                    {host}
-                  </span>
+                  <span className="block truncate text-xs font-mono text-foreground">{host}</span>
                 </td>
                 <td className="px-2 py-1.5 max-w-0">
                   <span className="block truncate text-xs font-mono text-muted-foreground">
