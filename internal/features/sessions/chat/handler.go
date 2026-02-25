@@ -84,6 +84,116 @@ type sseErrorEvent struct {
 	Message string `json:"message"`
 }
 
+var (
+	fileWriteOpenRe = regexp.MustCompile(`<file-write\s+src="([^"]+)">\n?`)
+	fileEditOpenRe  = regexp.MustCompile(`<file-edit\s+src="([^"]+)">\n?`)
+	searchReplaceRe = regexp.MustCompile(`(?s)<<<<<<< SEARCH\n(.*?)\n=======\n(.*?)\n>>>>>>> REPLACE`)
+)
+
+type streamParser struct {
+	buf    string
+	cursor int
+
+	insideFileWrite string
+	insideFileEdit  string
+
+	sessionID string
+	store     *db.DB
+	hub       *devicehub.Hub
+}
+
+func (p *streamParser) feed(delta string) {
+	p.buf += delta
+
+	for p.cursor < len(p.buf) {
+		if p.insideFileWrite == "" && p.insideFileEdit == "" {
+			remaining := p.buf[p.cursor:]
+
+			wm := fileWriteOpenRe.FindStringIndex(remaining)
+			em := fileEditOpenRe.FindStringIndex(remaining)
+
+			if wm != nil {
+				names := fileWriteOpenRe.FindStringSubmatch(remaining)
+				p.insideFileWrite = names[1]
+				p.cursor += wm[1]
+			} else if em != nil {
+				names := fileEditOpenRe.FindStringSubmatch(remaining)
+				p.insideFileEdit = names[1]
+				p.cursor += em[1]
+			} else {
+				break
+			}
+		} else if p.insideFileWrite != "" {
+			const closeTag = "</file-write>"
+			idx := strings.Index(p.buf[p.cursor:], closeTag)
+			if idx == -1 {
+				break
+			}
+			content := p.buf[p.cursor : p.cursor+idx]
+			p.cursor += idx + len(closeTag)
+			p.saveFileWrite(p.insideFileWrite, content)
+			p.insideFileWrite = ""
+		} else if p.insideFileEdit != "" {
+			const closeTag = "</file-edit>"
+			idx := strings.Index(p.buf[p.cursor:], closeTag)
+			if idx == -1 {
+				break
+			}
+			body := p.buf[p.cursor : p.cursor+idx]
+			p.cursor += idx + len(closeTag)
+			p.applyFileEdit(p.insideFileEdit, body)
+			p.insideFileEdit = ""
+		}
+	}
+}
+
+func (p *streamParser) saveFileWrite(name, content string) {
+	now := time.Now().UnixMilli()
+	fileID := fmt.Sprintf("sf_%d", time.Now().UnixNano())
+	_ = p.store.UpsertScriptFile(db.ScriptFileRow{
+		ID:        fileID,
+		SessionID: p.sessionID,
+		Name:      name,
+		Content:   content,
+		CreatedAt: now,
+		UpdatedAt: now,
+	})
+	payload, _ := json.Marshal(map[string]string{"name": name})
+	if data, err := devicehub.Marshal("file_write", p.sessionID, json.RawMessage(payload)); err == nil {
+		p.hub.Broadcast(data)
+	}
+}
+
+func (p *streamParser) applyFileEdit(name, body string) {
+	file, err := p.store.GetScriptFile(p.sessionID, name)
+	if err != nil || file == nil {
+		return
+	}
+
+	updated := file.Content
+	for _, sr := range searchReplaceRe.FindAllStringSubmatch(body, -1) {
+		search, replace := sr[1], sr[2]
+		if !strings.Contains(updated, search) {
+			continue
+		}
+		updated = strings.Replace(updated, search, replace, 1)
+	}
+
+	now := time.Now().UnixMilli()
+	_ = p.store.UpsertScriptFile(db.ScriptFileRow{
+		ID:        file.ID,
+		SessionID: p.sessionID,
+		Name:      name,
+		Content:   updated,
+		CreatedAt: file.CreatedAt,
+		UpdatedAt: now,
+	})
+	payload, _ := json.Marshal(map[string]string{"name": name})
+	if data, err := devicehub.Marshal("file_write", p.sessionID, json.RawMessage(payload)); err == nil {
+		p.hub.Broadcast(data)
+	}
+}
+
 func (h *Handler) Handle(c *router.Context) {
 	sessionID := c.Param("sessionId")
 	if sessionID == "" {
@@ -182,22 +292,21 @@ func (h *Handler) Handle(c *router.Context) {
 	c.SSEHandler(router.DefaultSSEConfig(), func(ctx context.Context, send router.SSESendFunc) error {
 		eventCh := a.ChatStream(ctx, req.Message)
 
-		var fullContent string
-		var fileBlocksSaved bool
+		parser := &streamParser{
+			sessionID: sessionID,
+			store:     h.db,
+			hub:       hub,
+		}
 
 		for event := range eventCh {
 			switch event.Type {
 			case types.EventContentDelta:
-				fullContent += event.Content
+				parser.feed(event.Content)
 				if err := send("content", sseContentEvent{Delta: event.Content}); err != nil {
 					return err
 				}
 
 			case types.EventToolUseStart:
-				if !fileBlocksSaved {
-					processFileBlocks(fullContent, sessionID, h.db, hub)
-					fileBlocksSaved = true
-				}
 				if event.ToolCall != nil {
 					if err := send("tool_start", sseToolStartEvent{
 						Name: event.ToolCall.Name,
@@ -219,12 +328,6 @@ func (h *Handler) Handle(c *router.Context) {
 				}
 
 			case types.EventComplete:
-				if !fileBlocksSaved {
-					processFileBlocks(fullContent, sessionID, h.db, hub)
-				}
-				fullContent = ""
-				fileBlocksSaved = false
-
 				evt := sseDoneEvent{}
 				if event.Response != nil {
 					evt.InputTokens = event.Response.Usage.InputTokens
@@ -243,63 +346,6 @@ func (h *Handler) Handle(c *router.Context) {
 
 		return nil
 	})
-}
-
-var (
-	fileWriteRe     = regexp.MustCompile(`(?s)<file-write\s+src="([^"]+)">\n?(.*?)</file-write>`)
-	fileEditRe      = regexp.MustCompile(`(?s)<file-edit\s+src="([^"]+)">\n?(.*?)</file-edit>`)
-	searchReplaceRe = regexp.MustCompile(`(?s)<<<<<<< SEARCH\n(.*?)\n=======\n(.*?)\n>>>>>>> REPLACE`)
-)
-
-func processFileBlocks(content, sessionID string, store *db.DB, hub *devicehub.Hub) {
-	now := time.Now().UnixMilli()
-
-	for _, match := range fileWriteRe.FindAllStringSubmatch(content, -1) {
-		name, code := match[1], match[2]
-		fileID := fmt.Sprintf("sf_%d", time.Now().UnixNano())
-		_ = store.UpsertScriptFile(db.ScriptFileRow{
-			ID:        fileID,
-			SessionID: sessionID,
-			Name:      name,
-			Content:   code,
-			CreatedAt: now,
-			UpdatedAt: now,
-		})
-		payload, _ := json.Marshal(map[string]string{"name": name})
-		if data, err := devicehub.Marshal("file_write", sessionID, json.RawMessage(payload)); err == nil {
-			hub.Broadcast(data)
-		}
-	}
-
-	for _, match := range fileEditRe.FindAllStringSubmatch(content, -1) {
-		name, body := match[1], match[2]
-		file, err := store.GetScriptFile(sessionID, name)
-		if err != nil || file == nil {
-			continue
-		}
-
-		updated := file.Content
-		for _, sr := range searchReplaceRe.FindAllStringSubmatch(body, -1) {
-			search, replace := sr[1], sr[2]
-			if !strings.Contains(updated, search) {
-				continue
-			}
-			updated = strings.Replace(updated, search, replace, 1)
-		}
-
-		_ = store.UpsertScriptFile(db.ScriptFileRow{
-			ID:        file.ID,
-			SessionID: sessionID,
-			Name:      name,
-			Content:   updated,
-			CreatedAt: file.CreatedAt,
-			UpdatedAt: now,
-		})
-		payload, _ := json.Marshal(map[string]string{"name": name})
-		if data, err := devicehub.Marshal("file_write", sessionID, json.RawMessage(payload)); err == nil {
-			hub.Broadcast(data)
-		}
-	}
 }
 
 func (h *Handler) Status(c *router.Context) {

@@ -422,7 +422,8 @@ async function handleRunScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
   const state = sessions.get(sessionId);
   if (!state) return fail(req.id, -32602, "session not found");
 
-  const tmpDir = Deno.env.get("TMPDIR") ?? "/tmp";
+  const tmpDir = resolve(import.meta.dirname!, ".tmp");
+  await Deno.mkdir(tmpDir, { recursive: true });
   const tmpFile = `${tmpDir}/jb_script_${Date.now()}.ts`;
   const outFile = tmpFile.replace(/\.ts$/, ".js");
 
