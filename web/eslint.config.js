@@ -14,6 +14,11 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/error-boundaries': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   }

@@ -527,73 +527,6 @@ function FileTree({
 
   const cancelEdit = useCallback(() => setEditingId(null), [])
 
-  const creatingDepth = creating
-    ? creating.parentPath
-      ? creating.parentPath.split('/').length + 1
-      : 1
-    : 0
-
-  const renderNodes = (nodes: TreeNode[], depth: number) => {
-    const elements: React.ReactNode[] = []
-
-    if (creating) {
-      const matchesLevel =
-        depth === creatingDepth && ((!creating.parentPath && depth === 1) || false)
-      if (matchesLevel) {
-        elements.push(
-          <NewNodeInput
-            key="__creating__"
-            depth={depth}
-            isFolder={creating.type === 'folder'}
-            onCommit={commitCreate}
-            onCancel={cancelCreate}
-          />
-        )
-      }
-    }
-
-    for (const node of nodes) {
-      elements.push(
-        <TreeNodeRow
-          key={node.id}
-          node={node}
-          depth={depth}
-          selectedId={selectedId}
-          editingId={editingId}
-          onSelect={(n) => onSelectFile(n.fullPath)}
-          onStartEdit={setEditingId}
-          onCommitEdit={commitEdit}
-          onCancelEdit={cancelEdit}
-          onCreateFile={(p) => startCreate(p, 'file')}
-          onCreateFolder={(p) => startCreate(p, 'folder')}
-          onRequestDelete={onRequestDelete}
-          onRequestDeleteFolder={onRequestDeleteFolder}
-          openFolders={openFolders}
-          toggleFolder={toggleFolder}
-        />
-      )
-
-      if (
-        creating &&
-        node.children &&
-        openFolders.has(node.id) &&
-        creating.parentPath === node.fullPath
-      ) {
-        elements.push(
-          <NewNodeInput
-            key="__creating__"
-            depth={depth + 1}
-            isFolder={creating.type === 'folder'}
-            onCommit={commitCreate}
-            onCancel={cancelCreate}
-          />
-        )
-      }
-    }
-
-    return elements
-  }
-
   const [deletingFile, setDeletingFile] = useState<{
     id: string
     name: string
@@ -778,10 +711,6 @@ function FileTree({
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
 
 function HooksPage() {
   const { sessionId } = useSearch({
