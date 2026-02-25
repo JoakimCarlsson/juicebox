@@ -27,9 +27,13 @@ function getCallerStack(): string {
   }
 }
 
-function extractClipText(clipData: any): { content: string | null; mimeType: string | null } {
+function extractClipText(
+  clipData: any,
+): { content: string | null; mimeType: string | null } {
   try {
-    if (clipData === null || clipData === undefined) return { content: null, mimeType: null };
+    if (clipData === null || clipData === undefined) {
+      return { content: null, mimeType: null };
+    }
     const count = clipData.getItemCount();
     if (count === 0) return { content: null, mimeType: null };
 
@@ -47,7 +51,10 @@ function extractClipText(clipData: any): { content: string | null; mimeType: str
 
     const uri = item.getUri();
     if (uri !== null) {
-      return { content: String(uri.toString()), mimeType: mimeType ?? "text/uri-list" };
+      return {
+        content: String(uri.toString()),
+        mimeType: mimeType ?? "text/uri-list",
+      };
     }
 
     return { content: null, mimeType };

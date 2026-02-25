@@ -87,7 +87,12 @@ func (h *Handler) Disable(c *router.Context) {
 		return
 	}
 
-	raw, err := h.manager.AgentInvoke(sessionID, "clipboard", "disable", []any{})
+	raw, err := h.manager.AgentInvoke(
+		sessionID,
+		"clipboard",
+		"disable",
+		[]any{},
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

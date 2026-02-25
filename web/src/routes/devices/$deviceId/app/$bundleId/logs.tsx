@@ -1,6 +1,14 @@
 import { createFileRoute, useSearch } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Trash2, FileText, ArrowDown, Clipboard, ChevronDown, ChevronRight } from 'lucide-react'
+import {
+  Search,
+  Trash2,
+  FileText,
+  ArrowDown,
+  Clipboard,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'

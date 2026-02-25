@@ -142,9 +142,7 @@ export async function fetchClipboardEvents(
   limit = 500,
   offset = 0
 ): Promise<ClipboardEventsResponse> {
-  const res = await fetch(
-    `/api/v1/sessions/${sessionId}/clipboard?limit=${limit}&offset=${offset}`
-  )
+  const res = await fetch(`/api/v1/sessions/${sessionId}/clipboard?limit=${limit}&offset=${offset}`)
   if (!res.ok) throw new Error('Failed to fetch clipboard events')
   return res.json()
 }
