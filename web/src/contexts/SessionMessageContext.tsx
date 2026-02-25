@@ -25,13 +25,15 @@ export function SessionMessageProvider({ sessionId, children }: SessionMessagePr
   const [messages, setMessages] = useState<AgentMessage[]>([])
   const prevConnected = useRef(false)
   const seenIds = useRef(new Set<string>())
+  const [prevSessionId, setPrevSessionId] = useState(sessionId)
 
-  useEffect(() => {
+  if (sessionId !== prevSessionId) {
+    setPrevSessionId(sessionId)
     if (!sessionId) {
       setMessages([])
       seenIds.current = new Set()
     }
-  }, [sessionId])
+  }
 
   const prevSourceId = useRef('')
 

@@ -36,7 +36,9 @@ export function InterceptProvider({ sessionId, children }: InterceptProviderProp
   const [rules, setRules] = useState<InterceptRule[]>([])
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([])
   const sessionIdRef = useRef(sessionId)
-  sessionIdRef.current = sessionId
+  useEffect(() => {
+    sessionIdRef.current = sessionId
+  }, [sessionId])
 
   useEffect(() => {
     if (!sessionId) return

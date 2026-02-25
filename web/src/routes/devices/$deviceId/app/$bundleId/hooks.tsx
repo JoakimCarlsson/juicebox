@@ -404,8 +404,9 @@ function FileTree({
     return base
   }, [files, virtualFolders])
 
-  // Auto-open all folders on mount / when tree changes
-  useEffect(() => {
+  const [prevTree, setPrevTree] = useState<TreeNode[]>([])
+  if (tree !== prevTree) {
+    setPrevTree(tree)
     const ids = new Set<string>()
     const walk = (nodes: TreeNode[]) => {
       for (const n of nodes) {
@@ -421,10 +422,11 @@ function FileTree({
       for (const id of ids) merged.add(id)
       return merged
     })
-  }, [tree])
+  }
 
-  // Prune virtual folders that now have real files
-  useEffect(() => {
+  const [prevFiles, setPrevFiles] = useState(files)
+  if (files !== prevFiles) {
+    setPrevFiles(files)
     setVirtualFolders((prev) => {
       const next = prev.filter((vf) => {
         const path = vf.parentPath ? `${vf.parentPath}/${vf.name}` : vf.name
@@ -432,7 +434,7 @@ function FileTree({
       })
       return next.length === prev.length ? prev : next
     })
-  }, [files])
+  }
 
   const toggleFolder = useCallback((id: string) => {
     setOpenFolders((prev) => {
@@ -525,18 +527,15 @@ function FileTree({
 
   const cancelEdit = useCallback(() => setEditingId(null), [])
 
-  // Find the depth where the new-node input should appear
   const creatingDepth = creating
     ? creating.parentPath
       ? creating.parentPath.split('/').length + 1
       : 1
     : 0
 
-  // Render the create input inside the right location
   const renderNodes = (nodes: TreeNode[], depth: number) => {
     const elements: React.ReactNode[] = []
 
-    // If creating at this level, show the input first
     if (creating) {
       const matchesLevel =
         depth === creatingDepth && ((!creating.parentPath && depth === 1) || false)
@@ -574,7 +573,6 @@ function FileTree({
         />
       )
 
-      // If creating inside this folder
       if (
         creating &&
         node.children &&
@@ -596,31 +594,24 @@ function FileTree({
     return elements
   }
 
-  // Delete handlers are lifted to the parent via props — we just
-  // expose them here so the tree rows can call them.
   const [deletingFile, setDeletingFile] = useState<{
     id: string
     name: string
   } | null>(null)
   const [deletingFolder, setDeletingFolder] = useState<string | null>(null)
 
-  const onRequestDelete = useCallback(
-    (fileId: string, fullPath: string) => setDeletingFile({ id: fileId, name: fullPath }),
-    []
-  )
-  const onRequestDeleteFolder = useCallback(
-    (folderPath: string) => setDeletingFolder(folderPath),
-    []
-  )
+  const onRequestDelete = (fileId: string, fullPath: string) =>
+    setDeletingFile({ id: fileId, name: fullPath })
+  const onRequestDeleteFolder = (folderPath: string) => setDeletingFolder(folderPath)
 
-  const confirmDelete = useCallback(async () => {
+  const confirmDelete = async () => {
     if (!deletingFile) return
     await deleteScriptFile(sessionId, deletingFile.id)
     onFilesChanged()
     setDeletingFile(null)
-  }, [sessionId, deletingFile, onFilesChanged])
+  }
 
-  const confirmDeleteFolder = useCallback(async () => {
+  const confirmDeleteFolder = async () => {
     if (!deletingFolder) return
     const affected = files.filter(
       (f) => f.name.startsWith(deletingFolder + '/') || f.name === deletingFolder
@@ -630,7 +621,7 @@ function FileTree({
     }
     onFilesChanged()
     setDeletingFolder(null)
-  }, [sessionId, deletingFolder, files, onFilesChanged])
+  }
 
   return (
     <div className="flex h-full flex-col border-r border-border">
