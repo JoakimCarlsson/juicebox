@@ -171,7 +171,7 @@ func RemoveCACert(deviceID string, pemPath string) error {
 	}
 
 	remotePath := fmt.Sprintf("/system/etc/security/cacerts/%s.0", hash)
-	shell(deviceID, fmt.Sprintf("rm -f %s", remotePath))
+	_ = shell(deviceID, fmt.Sprintf("rm -f %s", remotePath))
 	return nil
 }
 

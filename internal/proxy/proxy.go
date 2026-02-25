@@ -136,7 +136,9 @@ func (p *Proxy) handleConnect(clientConn net.Conn, connectReq *http.Request) {
 	}
 	hostname, _, _ := net.SplitHostPort(host)
 
-	_, _ = clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
+	_, _ = clientConn.Write(
+		[]byte("HTTP/1.1 200 Connection Established\r\n\r\n"),
+	)
 
 	cert, err := p.certManager.GetCert(hostname)
 	if err != nil {

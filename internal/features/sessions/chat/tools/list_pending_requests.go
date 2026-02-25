@@ -67,6 +67,6 @@ func (t *ListPendingRequestsTool) Run(
 	return tool.NewJSONResponse(map[string]any{
 		"count":   len(results),
 		"pending": results,
-		"hint": "Use modify_and_forward, forward_request, or drop_request with the request ID to act on these requests.",
+		"hint":    "Use modify_and_forward, forward_request, or drop_request with the request ID to act on these requests.",
 	}), nil
 }
