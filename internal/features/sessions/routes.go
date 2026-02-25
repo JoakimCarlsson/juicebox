@@ -8,6 +8,7 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/attach"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/chat"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/classes"
+	clipboardpkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/clipboard"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/crashes"
 	cryptopkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/crypto"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/detach"
@@ -57,6 +58,7 @@ func RegisterRoutes(
 	classesHandler := classes.NewHandler(manager)
 	crashesHandler := crashes.NewHandler(database)
 	cryptoHandler := cryptopkg.NewHandler(database, manager)
+	clipboardHandler := clipboardpkg.NewHandler(database, manager)
 
 	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
@@ -92,6 +94,10 @@ func RegisterRoutes(
 	r.POST("/sessions/{sessionId}/crypto/enable", cryptoHandler.Enable)
 	r.GET("/sessions/{sessionId}/crypto/keystore", cryptoHandler.Keystore)
 	r.GET("/sessions/{sessionId}/crypto/sharedprefs", cryptoHandler.SharedPrefs)
+
+	r.GET("/sessions/{sessionId}/clipboard", clipboardHandler.Handle)
+	r.POST("/sessions/{sessionId}/clipboard/enable", clipboardHandler.Enable)
+	r.POST("/sessions/{sessionId}/clipboard/disable", clipboardHandler.Disable)
 
 	r.GET("/sessions/{sessionId}/classes", classesHandler.List)
 	r.GET("/sessions/{sessionId}/classes/detail", classesHandler.Detail)

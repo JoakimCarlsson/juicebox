@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import type { PanelImperativeHandle } from 'react-resizable-panels'
 
-export type PanelTab = 'console' | 'problems' | 'output'
+export type PanelTab = 'console' | 'problems' | 'output' | 'clipboard'
 
 interface BottomPanelContextValue {
   isOpen: boolean

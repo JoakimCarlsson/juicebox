@@ -426,6 +426,32 @@ func (m *Manager) bridgeSubscribeForward(sess *Session) {
 			}
 		}
 
+		if msg.Type == "clipboard" {
+			var clipEvt struct {
+				ID          string  `json:"id"`
+				Direction   string  `json:"direction"`
+				Content     *string `json:"content"`
+				MimeType    *string `json:"mimeType"`
+				CallerStack *string `json:"callerStack"`
+				Timestamp   int64   `json:"timestamp"`
+			}
+			if err := json.Unmarshal(msg.Payload, &clipEvt); err == nil &&
+				clipEvt.ID != "" {
+				if clipEvt.Timestamp == 0 {
+					clipEvt.Timestamp = time.Now().UnixMilli()
+				}
+				m.writer.WriteClipboardEvent(&db.ClipboardEventRow{
+					ID:          clipEvt.ID,
+					SessionID:   sess.ID,
+					Direction:   clipEvt.Direction,
+					Content:     clipEvt.Content,
+					MimeType:    clipEvt.MimeType,
+					CallerStack: clipEvt.CallerStack,
+					Timestamp:   clipEvt.Timestamp,
+				})
+			}
+		}
+
 		if msg.Type == "crash" {
 			var crash struct {
 				ID               string            `json:"id"`

@@ -84,6 +84,17 @@ CREATE TABLE IF NOT EXISTS crypto_events (
 );
 CREATE INDEX IF NOT EXISTS idx_crypto_session ON crypto_events(session_id, timestamp);
 
+CREATE TABLE IF NOT EXISTS clipboard_events (
+    id           TEXT PRIMARY KEY,
+    session_id   TEXT NOT NULL REFERENCES sessions(id),
+    direction    TEXT NOT NULL,
+    content      TEXT,
+    mime_type    TEXT,
+    caller_stack TEXT,
+    timestamp    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_clipboard_session ON clipboard_events(session_id, timestamp);
+
 CREATE TABLE IF NOT EXISTS script_files (
     id         TEXT PRIMARY KEY,
     session_id TEXT NOT NULL REFERENCES sessions(id),
