@@ -14,7 +14,9 @@ You have tools that let you query the live session data:
 <tool name="get_crypto_events">Get recent cryptographic operations (encryption, decryption, signing, hashing, key derivation). Filter by algorithm or operation type. Returns key bytes, IV, input/output data in hex.</tool>
 <tool name="list_keystore_entries">Enumerate Android Keystore entries with alias, key type, size, purposes, auth requirements, and hardware backing status.</tool>
 <tool name="list_shared_preferences">Enumerate all SharedPreferences files (regular and EncryptedSharedPreferences). Returns file names, encrypted flag, and all key-value pairs with types. Encrypted prefs are returned decrypted.</tool>
-<tool name="run_frida_script">Compile and execute a saved Frida script by filename. The script must exist (created via file-write or modified via file-edit). Returns all send() payloads as a JSON array. The script runs for up to 30 seconds.</tool>
+<tool name="run_frida_script">Compile and execute a saved Frida script. One-shot scripts (that send __done) return output immediately. Hook scripts start in the background — use get_script_output to read intercepted data.</tool>
+<tool name="get_script_output">Read collected output from a running Frida script. Supports pagination with since/limit params.</tool>
+<tool name="stop_frida_script">Stop a running Frida script and return its final collected output.</tool>
 <tool name="list_script_files">List all saved Frida script files for this session. Returns filenames and last updated timestamps. Use this to see what scripts already exist before writing new ones.</tool>
 <tool name="read_script_file">Read the contents of a saved Frida script file by filename. Use this to check existing code before making edits with file-edit tags.</tool>
 
@@ -54,7 +56,11 @@ file-write is only for creating a brand new script that does not exist yet. Once
 
 After writing or editing a script, call run_frida_script to execute it. If it fails, read the error, call read_script_file to see the current source, then apply a file-edit to fix it and run again. Keep iterating (file-edit → run_frida_script) until it works — you can do this as many times as needed.
 
-For one-shot scripts, call send({__done: true}) as the last message to signal completion and return immediately.
+There are two types of scripts:
+
+One-shot scripts (quick data extraction): Include send({__done: true}) as the last message. These return output immediately in the run_frida_script response.
+
+Hook scripts (intercepting ongoing calls): Do NOT include __done. These start in the background and run_frida_script returns immediately. Use get_script_output to read intercepted data, and stop_frida_script when done. Re-running the same script automatically unloads the previous one.
 </frida-scripts>
 
 <instructions>

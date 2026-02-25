@@ -80,5 +80,22 @@ type DatabaseColumn struct {
 }
 
 type RunScriptResponse struct {
-	Messages []json.RawMessage `json:"messages"`
+	Mode              string            `json:"mode"`
+	Name              string            `json:"name,omitempty"`
+	Messages          []json.RawMessage `json:"messages"`
+	MessagesCollected int               `json:"messagesCollected,omitempty"`
+}
+
+type GetScriptOutputResponse struct {
+	Name          string            `json:"name"`
+	Running       bool              `json:"running"`
+	TotalMessages int               `json:"totalMessages"`
+	Since         int               `json:"since"`
+	Messages      []json.RawMessage `json:"messages"`
+}
+
+type StopScriptResponse struct {
+	Name          string            `json:"name"`
+	TotalMessages int               `json:"totalMessages"`
+	Messages      []json.RawMessage `json:"messages"`
 }

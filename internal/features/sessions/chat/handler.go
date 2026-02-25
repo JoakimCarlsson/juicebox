@@ -259,6 +259,8 @@ func (h *Handler) Handle(c *router.Context) {
 				chattools.NewListKeystoreEntries(h.manager, sessionID),
 				chattools.NewListSharedPreferences(h.manager, sessionID),
 				chattools.NewRunFridaScript(h.manager, h.db, sessionID),
+				chattools.NewGetScriptOutput(h.manager, sessionID),
+				chattools.NewStopFridaScript(h.manager, sessionID),
 				chattools.NewListScriptFiles(h.db, sessionID),
 				chattools.NewReadScriptFile(h.db, sessionID),
 			)

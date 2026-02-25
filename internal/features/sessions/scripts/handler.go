@@ -169,7 +169,7 @@ func (h *Handler) Run(c *router.Context) {
 		Timestamp:    now,
 	})
 
-	resp, err := h.manager.RunScript(sessionID, file.Content, 30)
+	resp, err := h.manager.RunScript(sessionID, file.Content, req.Name, 30)
 	if err != nil {
 		_ = h.db.UpdateScriptRun(runID, "", "error")
 		c.JSON(http.StatusInternalServerError, map[string]any{

@@ -29,7 +29,7 @@ func NewRunFridaScript(manager *session.Manager, database *db.DB, sessionID stri
 func (t *RunFridaScriptTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"run_frida_script",
-		"Compile and execute a saved Frida script by filename. The script must have been written first using <file-write> tags. Returns all send() payloads as a JSON array.",
+		"Compile and execute a saved Frida script. One-shot scripts (that send __done) return output immediately. Hook scripts start in the background — use get_script_output to read intercepted data.",
 		RunFridaScriptParams{},
 	)
 }
@@ -65,18 +65,29 @@ func (t *RunFridaScriptTool) Run(ctx context.Context, params tool.ToolCall) (too
 		Timestamp:    now,
 	})
 
-	resp, err := t.manager.RunScript(t.sessionID, file.Content, 30)
+	resp, err := t.manager.RunScript(t.sessionID, file.Content, input.Name, 3)
 	if err != nil {
 		_ = t.db.UpdateScriptRun(runID, "", "error")
 		return tool.NewTextErrorResponse(fmt.Sprintf("script execution failed: %v", err)), nil
 	}
 
-	outputJSON, _ := json.Marshal(resp.Messages)
-	_ = t.db.UpdateScriptRun(runID, string(outputJSON), "done")
+	if resp.Mode == "oneshot" {
+		outputJSON, _ := json.Marshal(resp.Messages)
+		_ = t.db.UpdateScriptRun(runID, string(outputJSON), "done")
 
-	if len(resp.Messages) == 0 {
-		return tool.NewTextResponse("Script executed successfully but produced no send() output."), nil
+		if len(resp.Messages) == 0 {
+			return tool.NewTextResponse("Script executed successfully but produced no send() output."), nil
+		}
+
+		return tool.NewJSONResponse(resp.Messages), nil
 	}
 
-	return tool.NewJSONResponse(resp.Messages), nil
+	_ = t.db.UpdateScriptRun(runID, "", "running")
+	return tool.NewTextResponse(fmt.Sprintf(
+		"Script '%s' is now running in the background and intercepting calls. "+
+			"Output is streaming to the console panel. "+
+			"Use get_script_output to read collected messages, or stop_frida_script to stop it. "+
+			"(%d messages collected so far during startup.)",
+		input.Name, resp.MessagesCollected,
+	)), nil
 }

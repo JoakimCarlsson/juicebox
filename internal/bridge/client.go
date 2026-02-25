@@ -239,11 +239,12 @@ func (c *Client) PullDatabase(deviceId, bundleId, dbPath string) (string, error)
 	return resp.LocalPath, nil
 }
 
-func (c *Client) RunScript(sessionId, code string, timeoutSecs int) (*RunScriptResponse, error) {
+func (c *Client) RunScript(sessionId, code, name string, initialWaitSecs int) (*RunScriptResponse, error) {
 	raw, err := c.call("runScript", map[string]any{
-		"sessionId": sessionId,
-		"code":      code,
-		"timeout":   timeoutSecs,
+		"sessionId":   sessionId,
+		"code":        code,
+		"name":        name,
+		"initialWait": initialWaitSecs,
 	})
 	if err != nil {
 		return nil, err
@@ -252,6 +253,42 @@ func (c *Client) RunScript(sessionId, code string, timeoutSecs int) (*RunScriptR
 	var resp RunScriptResponse
 	if err := json.Unmarshal(raw, &resp); err != nil {
 		return nil, fmt.Errorf("bridge.RunScript: %w", err)
+	}
+
+	return &resp, nil
+}
+
+func (c *Client) GetScriptOutput(sessionId, name string, since, limit int) (*GetScriptOutputResponse, error) {
+	raw, err := c.call("getScriptOutput", map[string]any{
+		"sessionId": sessionId,
+		"name":      name,
+		"since":     since,
+		"limit":     limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp GetScriptOutputResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.GetScriptOutput: %w", err)
+	}
+
+	return &resp, nil
+}
+
+func (c *Client) StopScript(sessionId, name string) (*StopScriptResponse, error) {
+	raw, err := c.call("stopScript", map[string]any{
+		"sessionId": sessionId,
+		"name":      name,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp StopScriptResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.StopScript: %w", err)
 	}
 
 	return &resp, nil

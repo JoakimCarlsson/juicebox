@@ -255,14 +255,34 @@ func (m *Manager) GetSession(sessionId string) *Session {
 	return m.sessions[sessionId]
 }
 
-func (m *Manager) RunScript(sessionID, code string, timeoutSecs int) (*bridge.RunScriptResponse, error) {
+func (m *Manager) RunScript(sessionID, code, name string, initialWaitSecs int) (*bridge.RunScriptResponse, error) {
 	m.mu.RLock()
 	sess, ok := m.sessions[sessionID]
 	m.mu.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("session %s not found", sessionID)
 	}
-	return m.bridge.RunScript(sess.BridgeSession, code, timeoutSecs)
+	return m.bridge.RunScript(sess.BridgeSession, code, name, initialWaitSecs)
+}
+
+func (m *Manager) GetScriptOutput(sessionID, name string, since, limit int) (*bridge.GetScriptOutputResponse, error) {
+	m.mu.RLock()
+	sess, ok := m.sessions[sessionID]
+	m.mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("session %s not found", sessionID)
+	}
+	return m.bridge.GetScriptOutput(sess.BridgeSession, name, since, limit)
+}
+
+func (m *Manager) StopScript(sessionID, name string) (*bridge.StopScriptResponse, error) {
+	m.mu.RLock()
+	sess, ok := m.sessions[sessionID]
+	m.mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("session %s not found", sessionID)
+	}
+	return m.bridge.StopScript(sess.BridgeSession, name)
 }
 
 func (m *Manager) AgentInvoke(sessionID, namespace, method string, args []any) (json.RawMessage, error) {

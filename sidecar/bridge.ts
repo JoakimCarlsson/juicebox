@@ -209,6 +209,14 @@ interface JsonRpcResponse {
   error?: { code: number; message: string };
 }
 
+interface UserScriptState {
+  name: string;
+  script: frida.Script;
+  messages: unknown[];
+  startedAt: number;
+  done: boolean;
+}
+
 interface SessionState {
   id: string;
   deviceId: string;
@@ -218,6 +226,7 @@ interface SessionState {
   script: frida.Script;
   subscribers: Set<Deno.Conn>;
   messageBuffer: string[];
+  userScripts: Map<string, UserScriptState>;
 }
 
 const sessions = new Map<string, SessionState>();
@@ -271,6 +280,7 @@ async function handleAttach(
     script,
     subscribers: new Set(),
     messageBuffer: [],
+    userScripts: new Map(),
   };
 
   sessions.set(sessionId, state);
@@ -318,6 +328,10 @@ async function handleAttach(
       } catch {}
     }
     state.subscribers.clear();
+    for (const [, us] of state.userScripts) {
+      try { us.script.unload(); } catch {}
+    }
+    state.userScripts.clear();
     sessions.delete(sessionId);
     console.log(`session ${sessionId} detached: reason=${reason}${crash ? ` crash=${crash.summary}` : ""}`);
   });
@@ -393,6 +407,11 @@ async function handleDetach(req: JsonRpcRequest): Promise<JsonRpcResponse> {
   const state = sessions.get(sessionId);
   if (!state) return fail(req.id, -32602, "session not found");
 
+  for (const [, us] of state.userScripts) {
+    try { await us.script.unload(); } catch {}
+  }
+  state.userScripts.clear();
+
   try {
     await state.script.unload();
   } catch {}
@@ -415,12 +434,19 @@ async function handleDetach(req: JsonRpcRequest): Promise<JsonRpcResponse> {
 async function handleRunScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
   const sessionId = req.params?.sessionId as string;
   const code = req.params?.code as string;
-  const timeoutMs = ((req.params?.timeout as number) ?? 30) * 1000;
+  const name = (req.params?.name as string) ?? `script_${Date.now()}`;
+  const initialWaitMs = ((req.params?.initialWait as number) ?? 3) * 1000;
   if (!sessionId) return fail(req.id, -32602, "missing param: sessionId");
   if (!code) return fail(req.id, -32602, "missing param: code");
 
   const state = sessions.get(sessionId);
   if (!state) return fail(req.id, -32602, "session not found");
+
+  const existing = state.userScripts.get(name);
+  if (existing) {
+    try { await existing.script.unload(); } catch {}
+    state.userScripts.delete(name);
+  }
 
   const tmpDir = resolve(import.meta.dirname!, ".tmp");
   await Deno.mkdir(tmpDir, { recursive: true });
@@ -448,14 +474,21 @@ async function handleRunScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
     const compiledJS = await Deno.readTextFile(outFile);
     const userScript = await state.session.createScript(compiledJS);
 
-    const collected: unknown[] = [];
+    const scriptState: UserScriptState = {
+      name,
+      script: userScript,
+      messages: [],
+      startedAt: Date.now(),
+      done: false,
+    };
+
     let resolveDone: (() => void) | null = null;
     const donePromise = new Promise<void>((r) => { resolveDone = r; });
 
     userScript.message.connect((_message: frida.Message, _data: Buffer | null) => {
       const msg = _message as { type: string; payload?: unknown };
       if (msg.type === "send" && msg.payload != null) {
-        collected.push(msg.payload);
+        scriptState.messages.push(msg.payload);
 
         const line = JSON.stringify({ type: "script_output", payload: msg.payload }) + "\n";
         const encoded = new TextEncoder().encode(line);
@@ -464,11 +497,12 @@ async function handleRunScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
         }
 
         if (typeof msg.payload === "object" && msg.payload !== null && (msg.payload as Record<string, unknown>).__done === true) {
+          scriptState.done = true;
           resolveDone?.();
         }
       } else if (msg.type === "error") {
         const description = (msg as Record<string, unknown>).description ?? String(msg);
-        collected.push({ error: description });
+        scriptState.messages.push({ error: description });
 
         const errLine = JSON.stringify({ type: "script_output", payload: { error: description } }) + "\n";
         const errEncoded = new TextEncoder().encode(errLine);
@@ -480,16 +514,71 @@ async function handleRunScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
 
     await userScript.load();
 
-    const timeout = new Promise<void>((r) => setTimeout(r, timeoutMs));
+    const timeout = new Promise<void>((r) => setTimeout(r, initialWaitMs));
     await Promise.race([donePromise, timeout]);
 
-    try { await userScript.unload(); } catch {}
+    if (scriptState.done) {
+      try { await userScript.unload(); } catch {}
+      return ok(req.id, { mode: "oneshot", messages: scriptState.messages });
+    }
 
-    return ok(req.id, { messages: collected });
+    state.userScripts.set(name, scriptState);
+    return ok(req.id, {
+      mode: "streaming",
+      name,
+      messagesCollected: scriptState.messages.length,
+      messages: scriptState.messages.slice(0, 20),
+    });
   } finally {
     try { await Deno.remove(tmpFile); } catch {}
     try { await Deno.remove(outFile); } catch {}
   }
+}
+
+async function handleGetScriptOutput(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+  const sessionId = req.params?.sessionId as string;
+  const name = req.params?.name as string;
+  const since = (req.params?.since as number) ?? 0;
+  const limit = (req.params?.limit as number) ?? 100;
+  if (!sessionId) return fail(req.id, -32602, "missing param: sessionId");
+  if (!name) return fail(req.id, -32602, "missing param: name");
+
+  const state = sessions.get(sessionId);
+  if (!state) return fail(req.id, -32602, "session not found");
+
+  const scriptState = state.userScripts.get(name);
+  if (!scriptState) return fail(req.id, -32602, `no running script named "${name}"`);
+
+  const messages = scriptState.messages.slice(since, since + limit);
+  return ok(req.id, {
+    name,
+    running: !scriptState.done,
+    totalMessages: scriptState.messages.length,
+    since,
+    messages,
+  });
+}
+
+async function handleStopScript(req: JsonRpcRequest): Promise<JsonRpcResponse> {
+  const sessionId = req.params?.sessionId as string;
+  const name = req.params?.name as string;
+  if (!sessionId) return fail(req.id, -32602, "missing param: sessionId");
+  if (!name) return fail(req.id, -32602, "missing param: name");
+
+  const state = sessions.get(sessionId);
+  if (!state) return fail(req.id, -32602, "session not found");
+
+  const scriptState = state.userScripts.get(name);
+  if (!scriptState) return fail(req.id, -32602, `no running script named "${name}"`);
+
+  try { await scriptState.script.unload(); } catch {}
+  state.userScripts.delete(name);
+
+  return ok(req.id, {
+    name,
+    totalMessages: scriptState.messages.length,
+    messages: scriptState.messages,
+  });
 }
 
 async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
@@ -595,6 +684,12 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
 
       case "runScript":
         return await handleRunScript(req);
+
+      case "getScriptOutput":
+        return await handleGetScriptOutput(req);
+
+      case "stopScript":
+        return await handleStopScript(req);
 
       case "agentInvoke": {
         const sessionId = req.params?.sessionId as string;
