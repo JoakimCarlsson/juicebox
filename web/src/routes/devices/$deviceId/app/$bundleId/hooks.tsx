@@ -882,7 +882,7 @@ function HooksPage() {
       await upsertScriptFile(sessionId, activeFileRef.current, codeRef.current)
       setDirty(false)
       await loadFiles()
-    } catch {}
+    } catch { /* ignored */ }
     setSaving(false)
   }, [sessionId, saving, loadFiles])
 
@@ -954,7 +954,7 @@ function HooksPage() {
           setCode('')
           setDirty(false)
         }
-      } catch {}
+      } catch { /* ignored */ }
     }
   }, [sessionId, loadFiles])
 
