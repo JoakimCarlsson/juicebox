@@ -10,11 +10,6 @@ function generateId(): string {
   return `crypto-${Date.now()}-${++_counter}`;
 }
 
-function toHex(arr: number[] | null | undefined): string | null {
-  if (!arr || arr.length === 0) return null;
-  return arr.map((b) => (b & 0xff).toString(16).padStart(2, "0")).join("");
-}
-
 function byteArrayToHex(javaArray: any): string | null {
   if (javaArray === null || javaArray === undefined) return null;
   try {

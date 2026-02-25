@@ -19,7 +19,7 @@ import (
 	"github.com/andybalholm/brotli"
 )
 
-const maxTotalBodyRead = 10 * 1024 * 1024 // 10MB
+const maxTotalBodyRead = 10 * 1024 * 1024
 
 type MessageSink func(AgentMessage)
 

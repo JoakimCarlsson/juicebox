@@ -53,10 +53,6 @@ export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/hooks')({
   component: HooksPage,
 })
 
-// ---------------------------------------------------------------------------
-// Tree data types
-// ---------------------------------------------------------------------------
-
 interface TreeNode {
   id: string
   name: string
@@ -108,10 +104,6 @@ function buildTree(files: ScriptFile[]): TreeNode[] {
   return root
 }
 
-// ---------------------------------------------------------------------------
-// Inline rename input
-// ---------------------------------------------------------------------------
-
 function InlineInput({
   defaultValue,
   onCommit,
@@ -151,10 +143,6 @@ function InlineInput({
     />
   )
 }
-
-// ---------------------------------------------------------------------------
-// Single tree node row
-// ---------------------------------------------------------------------------
 
 function TreeNodeRow({
   node,
@@ -317,10 +305,6 @@ function TreeNodeRow({
   )
 }
 
-// ---------------------------------------------------------------------------
-// New-node input (appears at the top of a folder / root when creating)
-// ---------------------------------------------------------------------------
-
 function NewNodeInput({
   depth,
   isFolder,
@@ -346,10 +330,6 @@ function NewNodeInput({
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// File tree panel
-// ---------------------------------------------------------------------------
 
 function FileTree({
   files,
@@ -489,7 +469,6 @@ function FileTree({
       if (!value.trim()) return
       const name = value.trim()
 
-      // Renaming a folder is done by renaming all files inside it
       if (id.startsWith('folder:')) {
         const oldPath = id.slice('folder:'.length)
         const affected = files.filter((f) => f.name === oldPath || f.name.startsWith(oldPath + '/'))
@@ -505,13 +484,11 @@ function FileTree({
         return
       }
 
-      // Renaming a virtual folder
       if (id.startsWith('vfolder:')) {
         setVirtualFolders((prev) => prev.map((vf) => (vf.id === id ? { ...vf, name } : vf)))
         return
       }
 
-      // Renaming a regular file
       const file = files.find((f) => f.id === id)
       if (!file) return
       const parts = file.name.split('/')
@@ -587,7 +564,6 @@ function FileTree({
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div className="flex-1 overflow-auto">
-            {/* Root-level create input */}
             {creating && !creating.parentPath && (
               <NewNodeInput
                 depth={1}
@@ -615,7 +591,6 @@ function FileTree({
                 toggleFolder={toggleFolder}
               />
             ))}
-            {/* Creating inside an open folder — rendered after the folder's TreeNodeRow */}
             {creating &&
               creating.parentPath &&
               (() => {
@@ -655,7 +630,6 @@ function FileTree({
         </ContextMenuContent>
       </ContextMenu>
 
-      {/* Delete file confirmation */}
       <Dialog
         open={!!deletingFile}
         onOpenChange={(open) => {
@@ -682,7 +656,6 @@ function FileTree({
         </DialogContent>
       </Dialog>
 
-      {/* Delete folder confirmation */}
       <Dialog
         open={!!deletingFolder}
         onOpenChange={(open) => {
@@ -756,7 +729,6 @@ function HooksPage() {
       .catch(() => {})
   }, [sessionId])
 
-  // WebSocket: live file writes & script output
   useEffect(() => {
     if (!sessionId) return
     return subscribe(null, (envelope) => {
@@ -867,10 +839,8 @@ function HooksPage() {
     [handleSave, handleRun]
   )
 
-  // When a file is deleted, clear editor if it was active
   const handleFilesChanged = useCallback(async () => {
     await loadFiles()
-    // Reload active file content in case it was renamed
     if (activeFileRef.current) {
       try {
         const res = await fetchScriptFiles(sessionId)
