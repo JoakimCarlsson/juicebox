@@ -117,6 +117,20 @@ export interface CryptoEventsResponse {
   total: number
 }
 
+export interface ClipboardEvent {
+  id: string
+  direction: 'read' | 'write'
+  content: string | null
+  mimeType: string | null
+  callerStack: string | null
+  timestamp: number
+}
+
+export interface ClipboardEventsResponse {
+  events: ClipboardEvent[]
+  total: number
+}
+
 export interface CertInfo {
   subject: string
   issuer: string

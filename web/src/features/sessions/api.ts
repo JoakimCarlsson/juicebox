@@ -6,6 +6,7 @@ import type {
   LogsResponse,
   CrashesResponse,
   CryptoEventsResponse,
+  ClipboardEventsResponse,
   KeystoreEntry,
   SharedPrefsResponse,
   InterceptState,
@@ -117,6 +118,34 @@ export async function fetchSessionCrypto(
 ): Promise<CryptoEventsResponse> {
   const res = await fetch(`/api/v1/sessions/${sessionId}/crypto?limit=${limit}&offset=${offset}`)
   if (!res.ok) throw new Error('Failed to fetch crypto events')
+  return res.json()
+}
+
+export async function enableClipboardMonitor(sessionId: string): Promise<{ enabled: boolean }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/clipboard/enable`, {
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error('Failed to enable clipboard monitor')
+  return res.json()
+}
+
+export async function disableClipboardMonitor(sessionId: string): Promise<{ disabled: boolean }> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/clipboard/disable`, {
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error('Failed to disable clipboard monitor')
+  return res.json()
+}
+
+export async function fetchClipboardEvents(
+  sessionId: string,
+  limit = 500,
+  offset = 0
+): Promise<ClipboardEventsResponse> {
+  const res = await fetch(
+    `/api/v1/sessions/${sessionId}/clipboard?limit=${limit}&offset=${offset}`
+  )
+  if (!res.ok) throw new Error('Failed to fetch clipboard events')
   return res.json()
 }
 

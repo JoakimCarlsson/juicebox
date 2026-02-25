@@ -3,10 +3,11 @@ package db
 import "log/slog"
 
 type writeOp struct {
-	httpMessage *HttpMessageRow
-	logcatEntry *LogcatEntryRow
-	crashRow    *CrashRow
-	cryptoEvent *CryptoEventRow
+	httpMessage    *HttpMessageRow
+	logcatEntry    *LogcatEntryRow
+	crashRow       *CrashRow
+	cryptoEvent    *CryptoEventRow
+	clipboardEvent *ClipboardEventRow
 }
 
 type AsyncWriter struct {
@@ -57,6 +58,14 @@ func (w *AsyncWriter) WriteCryptoEvent(c *CryptoEventRow) {
 	}
 }
 
+func (w *AsyncWriter) WriteClipboardEvent(c *ClipboardEventRow) {
+	select {
+	case w.ch <- writeOp{clipboardEvent: c}:
+	default:
+		slog.Warn("db write buffer full, dropping clipboard event", "id", c.ID)
+	}
+}
+
 func (w *AsyncWriter) loop() {
 	defer close(w.done)
 	for op := range w.ch {
@@ -78,6 +87,11 @@ func (w *AsyncWriter) loop() {
 		if op.cryptoEvent != nil {
 			if err := w.db.InsertCryptoEvent(op.cryptoEvent); err != nil {
 				slog.Error("async write crypto event", "error", err)
+			}
+		}
+		if op.clipboardEvent != nil {
+			if err := w.db.InsertClipboardEvent(op.clipboardEvent); err != nil {
+				slog.Error("async write clipboard event", "error", err)
 			}
 		}
 	}
