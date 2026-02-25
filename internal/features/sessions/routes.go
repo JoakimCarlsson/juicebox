@@ -19,10 +19,15 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/rename"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/scripts"
 	sqlitepkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
+	"github.com/joakimcarlsson/juicebox/internal/scripting"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB, appConfig *config.Config, chatStore *chat.ChatSessionStore, hubManager *devicehub.Manager) {
+	runner := scripting.NewRunner(database, manager)
+	fileManager := scripting.NewFileManager(database, nil)
+	scriptsHandler := scripts.NewHandler(fileManager, runner)
+
 	attachHandler := attach.NewHandler(manager)
 	detachHandler := detach.NewHandler(manager)
 	listHandler := list.NewHandler(database, manager)
@@ -30,13 +35,12 @@ func RegisterRoutes(r *router.Router, manager *session.Manager, database *db.DB,
 	logsHandler := logs.NewHandler(database)
 	renameHandler := rename.NewHandler(database)
 	sqliteHandler := sqlitepkg.NewHandler(manager)
-	chatHandler := chat.NewHandler(database, manager, &appConfig.LLM, chatStore, sqliteHandler, hubManager)
+	chatHandler := chat.NewHandler(database, manager, &appConfig.LLM, chatStore, sqliteHandler, hubManager, runner)
 	interceptHandler := intercept.NewHandler(manager)
 	fsHandler := filesystem.NewHandler(manager)
 	classesHandler := classes.NewHandler(manager)
 	crashesHandler := crashes.NewHandler(database)
 	cryptoHandler := cryptopkg.NewHandler(database, manager)
-	scriptsHandler := scripts.NewHandler(database, manager, hubManager)
 
 	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)

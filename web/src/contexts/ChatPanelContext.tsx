@@ -13,7 +13,6 @@ import {
   streamChat,
   type SSEEvent,
 } from "@/features/chat/api"
-import { useScriptEditor } from "@/contexts/ScriptEditorContext"
 
 export type MessagePart =
   | { type: "text"; content: string }
@@ -127,8 +126,6 @@ export function ChatPanelProvider({
     }
   }, [])
 
-  const scriptEditor = useScriptEditor()
-
   const sendMessage = useCallback(
     (text: string) => {
       if (!sessionId || isStreaming || !text.trim()) return
@@ -150,66 +147,9 @@ export function ChatPanelProvider({
       setMessages((prev) => [...prev, userMsg, assistantMsg])
       setIsStreaming(true)
 
-      let accumulated = ""
-      let cursor = 0
-      let insideFileWrite: string | null = null
-      let insideFileEdit: string | null = null
-
       const controller = streamChat(sessionId, text.trim(), (event: SSEEvent) => {
         switch (event.type) {
           case "content": {
-            accumulated += event.data.delta
-
-            while (cursor < accumulated.length) {
-              if (!insideFileWrite && !insideFileEdit) {
-                const remaining = accumulated.slice(cursor)
-                const writeMatch = remaining.match(/<file-write\s+src="([^"]+)">\n?/)
-                const editMatch = remaining.match(/<file-edit\s+src="([^"]+)">\n?/)
-
-                if (writeMatch && writeMatch.index !== undefined) {
-                  insideFileWrite = writeMatch[1]
-                  cursor += writeMatch.index + writeMatch[0].length
-                  scriptEditor.emit({ type: "file_write_start", name: writeMatch[1] })
-                } else if (editMatch && editMatch.index !== undefined) {
-                  insideFileEdit = editMatch[1]
-                  cursor += editMatch.index + editMatch[0].length
-                  scriptEditor.emit({ type: "file_edit_start", name: editMatch[1] })
-                } else {
-                  break
-                }
-              } else if (insideFileWrite) {
-                const closeTag = "</file-write>"
-                const closeIdx = accumulated.indexOf(closeTag, cursor)
-                if (closeIdx !== -1) {
-                  const content = accumulated.slice(cursor, closeIdx)
-                  if (content) {
-                    scriptEditor.emit({ type: "file_write_delta", name: insideFileWrite, delta: content })
-                  }
-                  scriptEditor.emit({ type: "file_write_end", name: insideFileWrite })
-                  cursor = closeIdx + closeTag.length
-                  insideFileWrite = null
-                } else {
-                  const safeEnd = accumulated.length - closeTag.length
-                  if (safeEnd > cursor) {
-                    const content = accumulated.slice(cursor, safeEnd)
-                    scriptEditor.emit({ type: "file_write_delta", name: insideFileWrite, delta: content })
-                    cursor = safeEnd
-                  }
-                  break
-                }
-              } else if (insideFileEdit) {
-                const closeTag = "</file-edit>"
-                const closeIdx = accumulated.indexOf(closeTag, cursor)
-                if (closeIdx !== -1) {
-                  scriptEditor.emit({ type: "file_edit_end", name: insideFileEdit })
-                  cursor = closeIdx + closeTag.length
-                  insideFileEdit = null
-                } else {
-                  break
-                }
-              }
-            }
-
             setMessages((prev) =>
               prev.map((m) => {
                 if (m.id !== assistantId) return m
@@ -254,6 +194,10 @@ export function ChatPanelProvider({
             )
             break
           }
+
+          case "edit_applied":
+          case "edit_failed":
+            break
 
           case "done":
             setMessages((prev) =>

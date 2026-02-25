@@ -25,6 +25,8 @@ export type SSEEvent =
   | { type: "content"; data: { delta: string } }
   | { type: "tool_start"; data: { name: string; id: string } }
   | { type: "tool_end"; data: { name: string; id: string; result: string } }
+  | { type: "edit_applied"; data: { success: boolean } }
+  | { type: "edit_failed"; data: { error: string } }
   | { type: "done"; data: { input_tokens: number; output_tokens: number } }
   | { type: "error"; data: { message: string } }
 

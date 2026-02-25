@@ -45,7 +45,6 @@ import {
 } from "@/components/ui/resizable"
 import { cn } from "@/lib/utils"
 import { useDeviceSocket } from "@/contexts/DeviceSocketContext"
-import { useScriptEditor } from "@/contexts/ScriptEditorContext"
 import { useScriptOutput } from "@/contexts/ScriptOutputContext"
 import { useBottomPanel } from "@/contexts/BottomPanelContext"
 import {
@@ -878,7 +877,6 @@ function HooksPage() {
     from: "/devices/$deviceId/app/$bundleId/hooks",
   })
   const { subscribe } = useDeviceSocket()
-  const scriptEditor = useScriptEditor()
   const scriptOutput = useScriptOutput()
   const bottomPanel = useBottomPanel()
 
@@ -943,40 +941,6 @@ function HooksPage() {
       }
     })
   }, [subscribe, sessionId, loadFiles, scriptOutput])
-
-  // AI script editor events
-  useEffect(() => {
-    return scriptEditor.subscribe((event) => {
-      switch (event.type) {
-        case "file_write_start":
-          setActiveFile(event.name)
-          setCode("")
-          setDirty(false)
-          break
-        case "file_write_delta":
-          setCode((prev) => prev + event.delta)
-          break
-        case "file_write_end":
-          setDirty(false)
-          loadFiles()
-          break
-        case "file_edit_end":
-          loadFiles()
-          fetchScriptFiles(sessionId)
-            .then((res) => {
-              const f = (res.files ?? []).find(
-                (f) => f.name === event.name,
-              )
-              if (f && activeFileRef.current === event.name) {
-                setCode(f.content)
-                setDirty(false)
-              }
-            })
-            .catch(() => {})
-          break
-      }
-    })
-  }, [scriptEditor, sessionId, loadFiles])
 
   const selectedFileId = useMemo(
     () => files.find((f) => f.name === activeFile)?.id,

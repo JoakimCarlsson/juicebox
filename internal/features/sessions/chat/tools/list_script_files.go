@@ -5,18 +5,18 @@ import (
 	"fmt"
 
 	"github.com/joakimcarlsson/ai/tool"
-	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/scripting"
 )
 
 type ListScriptFilesParams struct{}
 
 type ListScriptFilesTool struct {
-	db        *db.DB
+	files     *scripting.FileManager
 	sessionID string
 }
 
-func NewListScriptFiles(database *db.DB, sessionID string) *ListScriptFilesTool {
-	return &ListScriptFilesTool{db: database, sessionID: sessionID}
+func NewListScriptFiles(files *scripting.FileManager, sessionID string) *ListScriptFilesTool {
+	return &ListScriptFilesTool{files: files, sessionID: sessionID}
 }
 
 func (t *ListScriptFilesTool) Info() tool.ToolInfo {
@@ -28,7 +28,7 @@ func (t *ListScriptFilesTool) Info() tool.ToolInfo {
 }
 
 func (t *ListScriptFilesTool) Run(ctx context.Context, params tool.ToolCall) (tool.ToolResponse, error) {
-	files, err := t.db.GetScriptFiles(t.sessionID)
+	files, err := t.files.List(t.sessionID)
 	if err != nil {
 		return tool.NewTextErrorResponse(fmt.Sprintf("failed to list script files: %v", err)), nil
 	}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/tool"
-	"github.com/joakimcarlsson/juicebox/internal/session"
+	"github.com/joakimcarlsson/juicebox/internal/scripting"
 )
 
 type GetScriptOutputParams struct {
@@ -16,12 +16,12 @@ type GetScriptOutputParams struct {
 }
 
 type GetScriptOutputTool struct {
-	manager   *session.Manager
+	runner    *scripting.Runner
 	sessionID string
 }
 
-func NewGetScriptOutput(manager *session.Manager, sessionID string) *GetScriptOutputTool {
-	return &GetScriptOutputTool{manager: manager, sessionID: sessionID}
+func NewGetScriptOutput(runner *scripting.Runner, sessionID string) *GetScriptOutputTool {
+	return &GetScriptOutputTool{runner: runner, sessionID: sessionID}
 }
 
 func (t *GetScriptOutputTool) Info() tool.ToolInfo {
@@ -47,7 +47,7 @@ func (t *GetScriptOutputTool) Run(ctx context.Context, params tool.ToolCall) (to
 		limit = 100
 	}
 
-	resp, err := t.manager.GetScriptOutput(t.sessionID, input.Name, input.Since, limit)
+	resp, err := t.runner.GetOutput(t.sessionID, input.Name, input.Since, limit)
 	if err != nil {
 		return tool.NewTextErrorResponse(fmt.Sprintf("failed to get script output: %v", err)), nil
 	}

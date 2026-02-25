@@ -6,7 +6,7 @@ import (
 
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/tool"
-	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/scripting"
 )
 
 type ReadScriptFileParams struct {
@@ -14,12 +14,12 @@ type ReadScriptFileParams struct {
 }
 
 type ReadScriptFileTool struct {
-	db        *db.DB
+	files     *scripting.FileManager
 	sessionID string
 }
 
-func NewReadScriptFile(database *db.DB, sessionID string) *ReadScriptFileTool {
-	return &ReadScriptFileTool{db: database, sessionID: sessionID}
+func NewReadScriptFile(files *scripting.FileManager, sessionID string) *ReadScriptFileTool {
+	return &ReadScriptFileTool{files: files, sessionID: sessionID}
 }
 
 func (t *ReadScriptFileTool) Info() tool.ToolInfo {
@@ -40,7 +40,7 @@ func (t *ReadScriptFileTool) Run(ctx context.Context, params tool.ToolCall) (too
 		return tool.NewTextErrorResponse("name is required"), nil
 	}
 
-	file, err := t.db.GetScriptFile(t.sessionID, input.Name)
+	file, err := t.files.Get(t.sessionID, input.Name)
 	if err != nil || file == nil {
 		return tool.NewTextErrorResponse(fmt.Sprintf("script file %q not found", input.Name)), nil
 	}

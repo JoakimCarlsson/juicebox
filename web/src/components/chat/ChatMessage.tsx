@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
-import { Loader2, Check, ChevronRight, FileCode, FileDiff } from "lucide-react"
+import { Loader2, Check, ChevronRight, FileCode, FileDiff, FilePlus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { MessagePart } from "@/contexts/ChatPanelContext"
 
@@ -81,60 +81,143 @@ export function ToolCallBlock({ part }: { part: Extract<MessagePart, { type: "to
   )
 }
 
+interface EditBlock {
+  filename: string
+  search: string
+  replace: string
+  isNew: boolean
+  complete: boolean
+}
+
 type ContentSegment =
   | { type: "text"; content: string }
-  | { type: "file_write"; name: string; code: string; complete: boolean }
-  | { type: "file_edit"; name: string; body: string; complete: boolean }
+  | { type: "edit_block"; block: EditBlock }
+
+const HEAD_RE = /^<{5,9} SEARCH>?\s*$/
+const DIVIDER_RE = /^={5,9}\s*$/
+const UPDATED_RE = /^>{5,9} REPLACE\s*$/
+
+function parseEditBlocks(content: string): EditBlock[] {
+  const lines = content.split("\n")
+  const blocks: EditBlock[] = []
+  let i = 0
+  let currentFilename = ""
+
+  while (i < lines.length) {
+    const line = lines[i]
+
+    if (HEAD_RE.test(line.trim())) {
+      const filename = findFilename(lines, i)
+      if (filename) currentFilename = filename
+      if (!currentFilename) { i++; continue }
+
+      i++
+      const searchLines: string[] = []
+      while (i < lines.length && !DIVIDER_RE.test(lines[i].trim())) {
+        searchLines.push(lines[i])
+        i++
+      }
+
+      if (i >= lines.length) break
+      i++
+
+      const replaceLines: string[] = []
+      while (i < lines.length && !UPDATED_RE.test(lines[i].trim())) {
+        replaceLines.push(lines[i])
+        i++
+      }
+
+      const complete = i < lines.length && UPDATED_RE.test(lines[i].trim())
+      if (complete) i++
+
+      const search = searchLines.join("\n")
+      const replace = replaceLines.join("\n")
+
+      blocks.push({
+        filename: currentFilename,
+        search,
+        replace,
+        isNew: search.trim() === "",
+        complete,
+      })
+      continue
+    }
+    i++
+  }
+
+  return blocks
+}
+
+function findFilename(lines: string[], headIdx: number): string {
+  for (let j = headIdx - 1; j >= Math.max(0, headIdx - 3); j--) {
+    const line = lines[j].trim()
+    if (line.startsWith("```")) continue
+    const candidate = line.replace(/^#+\s*/, "").replace(/:$/, "").replace(/[`*'"]/g, "").trim()
+    if (candidate && !candidate.includes(" ") && (candidate.includes(".") || candidate.includes("/"))) {
+      return candidate
+    }
+  }
+  return ""
+}
 
 function parseContentSegments(content: string): ContentSegment[] {
+  const blocks = parseEditBlocks(content)
+  if (blocks.length === 0) {
+    return [{ type: "text", content }]
+  }
+
   const segments: ContentSegment[] = []
   let remaining = content
 
-  const tagRe = /<file-(write|edit)\s+src="([^"]*)"?[^>]*>/g
-  let lastIndex = 0
-  let match: RegExpExecArray | null
+  for (const block of blocks) {
+    const searchMarker = "<<<<<<< SEARCH"
+    const idx = remaining.indexOf(searchMarker)
+    if (idx === -1) continue
 
-  while ((match = tagRe.exec(remaining)) !== null) {
-    if (match.index > lastIndex) {
-      segments.push({ type: "text", content: remaining.slice(lastIndex, match.index) })
+    let textBefore = remaining.slice(0, idx)
+    const filenameLineIdx = textBefore.lastIndexOf(block.filename)
+    if (filenameLineIdx !== -1) {
+      textBefore = textBefore.slice(0, filenameLineIdx)
+    }
+    const fenceIdx = textBefore.lastIndexOf("```")
+    if (fenceIdx !== -1 && fenceIdx > (filenameLineIdx ?? textBefore.length)) {
+      textBefore = textBefore.slice(0, fenceIdx)
     }
 
-    const kind = match[1] as "write" | "edit"
-    const name = match[2]
-    const afterTag = remaining.slice(match.index + match[0].length)
-    const closeTag = `</file-${kind}>`
-    const closeIdx = afterTag.indexOf(closeTag)
+    if (textBefore.trim()) {
+      segments.push({ type: "text", content: textBefore })
+    }
 
-    if (closeIdx !== -1) {
-      const body = afterTag.slice(0, closeIdx).replace(/^\n/, "")
-      segments.push(
-        kind === "write"
-          ? { type: "file_write", name, code: body, complete: true }
-          : { type: "file_edit", name, body, complete: true },
-      )
-      lastIndex = match.index + match[0].length + closeIdx + closeTag.length
-      tagRe.lastIndex = lastIndex
+    segments.push({ type: "edit_block", block })
+
+    const replaceEnd = ">>>>>>> REPLACE"
+    const replaceIdx = remaining.indexOf(replaceEnd, idx)
+    if (replaceIdx !== -1) {
+      let cutEnd = replaceIdx + replaceEnd.length
+      if (remaining[cutEnd] === "\n") cutEnd++
+      if (remaining.slice(cutEnd).startsWith("```")) {
+        const fenceEnd = remaining.indexOf("\n", cutEnd)
+        cutEnd = fenceEnd !== -1 ? fenceEnd + 1 : remaining.length
+      }
+      remaining = remaining.slice(cutEnd)
     } else {
-      const body = afterTag.replace(/^\n/, "")
-      segments.push(
-        kind === "write"
-          ? { type: "file_write", name, code: body, complete: false }
-          : { type: "file_edit", name, body, complete: false },
-      )
-      lastIndex = remaining.length
-      break
+      remaining = ""
     }
   }
 
-  if (lastIndex < remaining.length) {
-    segments.push({ type: "text", content: remaining.slice(lastIndex) })
+  if (remaining.trim()) {
+    segments.push({ type: "text", content: remaining })
   }
 
   return segments
 }
 
-function FileWriteCard({ name, code, complete }: { name: string; code: string; complete: boolean }) {
+function EditBlockCard({ block }: { block: EditBlock }) {
   const [expanded, setExpanded] = useState(false)
+
+  const Icon = block.isNew ? FilePlus : FileDiff
+  const iconColor = block.isNew ? "text-green-400" : "text-amber-400"
+  const label = block.isNew ? "new file" : "edit"
 
   return (
     <div className="rounded-md border border-border bg-muted/30 text-xs my-1.5">
@@ -143,64 +226,37 @@ function FileWriteCard({ name, code, complete }: { name: string; code: string; c
         className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left hover:bg-muted/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <FileCode className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-        <span className="font-mono text-foreground">{name}</span>
-        {!complete && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground ml-1" />}
+        <Icon className={cn("h-3.5 w-3.5 shrink-0", iconColor)} />
+        <span className="font-mono text-foreground">{block.filename}</span>
+        <span className="text-muted-foreground ml-1">({label})</span>
+        {!block.complete && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground ml-1" />}
         <ChevronRight className={cn(
           "h-3 w-3 ml-auto text-muted-foreground shrink-0 transition-transform",
           expanded && "rotate-90",
         )} />
       </button>
       {expanded && (
-        <div className="border-t border-border overflow-auto max-h-64">
-          <SyntaxHighlighter
-            style={oneDark}
-            language="typescript"
-            PreTag="div"
-            customStyle={{ margin: 0, borderRadius: 0, fontSize: "0.7rem" }}
-          >
-            {code || " "}
-          </SyntaxHighlighter>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function FileEditCard({ name, body, complete }: { name: string; body: string; complete: boolean }) {
-  const [expanded, setExpanded] = useState(false)
-
-  return (
-    <div className="rounded-md border border-border bg-muted/30 text-xs my-1.5">
-      <button
-        type="button"
-        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left hover:bg-muted/50 transition-colors"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <FileDiff className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-        <span className="font-mono text-foreground">{name}</span>
-        <span className="text-muted-foreground ml-1">(edit)</span>
-        {!complete && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground ml-1" />}
-        <ChevronRight className={cn(
-          "h-3 w-3 ml-auto text-muted-foreground shrink-0 transition-transform",
-          expanded && "rotate-90",
-        )} />
-      </button>
-      {expanded && (
-        <div className="border-t border-border overflow-auto max-h-64 p-2 font-mono text-[10px]">
-          {body.split("\n").map((line, i) => {
-            const isSearch = line === "<<<<<<< SEARCH"
-            const isSep = line === "======="
-            const isReplace = line === ">>>>>>> REPLACE"
-            if (isSearch || isSep || isReplace) {
-              return (
-                <div key={i} className="text-muted-foreground/60 select-none">
-                  {line}
+        <div className="border-t border-border overflow-auto max-h-64 p-2 font-mono text-[10px] leading-relaxed">
+          {block.isNew ? (
+            block.replace.split("\n").map((line, i) => (
+              <div key={i} className="text-green-400">
+                <span className="select-none text-green-400/50 mr-2">+</span>{line}
+              </div>
+            ))
+          ) : (
+            <>
+              {block.search.split("\n").map((line, i) => (
+                <div key={`s${i}`} className="text-red-400 bg-red-500/5">
+                  <span className="select-none text-red-400/50 mr-2">-</span>{line}
                 </div>
-              )
-            }
-            return <div key={i}>{line}</div>
-          })}
+              ))}
+              {block.replace.split("\n").map((line, i) => (
+                <div key={`r${i}`} className="text-green-400 bg-green-500/5">
+                  <span className="select-none text-green-400/50 mr-2">+</span>{line}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -236,10 +292,8 @@ export function TextBlock({ content, isStreaming }: { content: string; isStreami
                 </ReactMarkdown>
               </div>
             ) : null
-          case "file_write":
-            return <FileWriteCard key={i} name={seg.name} code={seg.code} complete={seg.complete} />
-          case "file_edit":
-            return <FileEditCard key={i} name={seg.name} body={seg.body} complete={seg.complete} />
+          case "edit_block":
+            return <EditBlockCard key={i} block={seg.block} />
         }
       })}
       {isStreaming && (

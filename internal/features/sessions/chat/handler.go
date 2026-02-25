@@ -3,11 +3,7 @@ package chat
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"regexp"
-	"strings"
-	"time"
 
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/message"
@@ -19,6 +15,7 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	chattools "github.com/joakimcarlsson/juicebox/internal/features/sessions/chat/tools"
 	sqlitepkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/sqlite"
+	"github.com/joakimcarlsson/juicebox/internal/scripting"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
@@ -29,9 +26,10 @@ type Handler struct {
 	chatStore     *ChatSessionStore
 	sqliteHandler *sqlitepkg.Handler
 	hubManager    *devicehub.Manager
+	runner        *scripting.Runner
 }
 
-func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteHandler *sqlitepkg.Handler, hubManager *devicehub.Manager) *Handler {
+func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLMConfig, chatStore *ChatSessionStore, sqliteHandler *sqlitepkg.Handler, hubManager *devicehub.Manager, runner *scripting.Runner) *Handler {
 	return &Handler{
 		db:            database,
 		manager:       manager,
@@ -39,6 +37,7 @@ func NewHandler(database *db.DB, manager *session.Manager, llmConfig *config.LLM
 		chatStore:     chatStore,
 		sqliteHandler: sqliteHandler,
 		hubManager:    hubManager,
+		runner:        runner,
 	}
 }
 
@@ -84,114 +83,51 @@ type sseErrorEvent struct {
 	Message string `json:"message"`
 }
 
-var (
-	fileWriteOpenRe = regexp.MustCompile(`<file-write\s+src="([^"]+)">\n?`)
-	fileEditOpenRe  = regexp.MustCompile(`<file-edit\s+src="([^"]+)">\n?`)
-	searchReplaceRe = regexp.MustCompile(`(?s)<<<<<<< SEARCH\n(.*?)\n=======\n(.*?)\n>>>>>>> REPLACE`)
-)
+type sseEditResultEvent struct {
+	Success bool   `json:"success,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
 
-type streamParser struct {
-	buf    string
-	cursor int
-
-	insideFileWrite string
-	insideFileEdit  string
-
+type editApplier struct {
 	sessionID string
-	store     *db.DB
-	hub       *devicehub.Hub
+	files     *scripting.FileManager
+	buf       string
+	applied   int
 }
 
-func (p *streamParser) feed(delta string) {
-	p.buf += delta
+func (ea *editApplier) accumulate(delta string) {
+	ea.buf += delta
+}
 
-	for p.cursor < len(p.buf) {
-		if p.insideFileWrite == "" && p.insideFileEdit == "" {
-			remaining := p.buf[p.cursor:]
+func (ea *editApplier) flush() string {
+	blocks := scripting.ParseEditBlocks(ea.buf)
+	if len(blocks) <= ea.applied {
+		return ""
+	}
 
-			wm := fileWriteOpenRe.FindStringIndex(remaining)
-			em := fileEditOpenRe.FindStringIndex(remaining)
+	newBlocks := blocks[ea.applied:]
 
-			if wm != nil {
-				names := fileWriteOpenRe.FindStringSubmatch(remaining)
-				p.insideFileWrite = names[1]
-				p.cursor += wm[1]
-			} else if em != nil {
-				names := fileEditOpenRe.FindStringSubmatch(remaining)
-				p.insideFileEdit = names[1]
-				p.cursor += em[1]
-			} else {
-				break
-			}
-		} else if p.insideFileWrite != "" {
-			const closeTag = "</file-write>"
-			idx := strings.Index(p.buf[p.cursor:], closeTag)
-			if idx == -1 {
-				break
-			}
-			content := p.buf[p.cursor : p.cursor+idx]
-			p.cursor += idx + len(closeTag)
-			p.saveFileWrite(p.insideFileWrite, content)
-			p.insideFileWrite = ""
-		} else if p.insideFileEdit != "" {
-			const closeTag = "</file-edit>"
-			idx := strings.Index(p.buf[p.cursor:], closeTag)
-			if idx == -1 {
-				break
-			}
-			body := p.buf[p.cursor : p.cursor+idx]
-			p.cursor += idx + len(closeTag)
-			p.applyFileEdit(p.insideFileEdit, body)
-			p.insideFileEdit = ""
+	getContent := func(filename string) (string, bool) {
+		f, err := ea.files.Get(ea.sessionID, filename)
+		if err != nil || f == nil {
+			return "", false
 		}
-	}
-}
-
-func (p *streamParser) saveFileWrite(name, content string) {
-	now := time.Now().UnixMilli()
-	fileID := fmt.Sprintf("sf_%d", time.Now().UnixNano())
-	_ = p.store.UpsertScriptFile(db.ScriptFileRow{
-		ID:        fileID,
-		SessionID: p.sessionID,
-		Name:      name,
-		Content:   content,
-		CreatedAt: now,
-		UpdatedAt: now,
-	})
-	payload, _ := json.Marshal(map[string]string{"name": name})
-	if data, err := devicehub.Marshal("file_write", p.sessionID, json.RawMessage(payload)); err == nil {
-		p.hub.Broadcast(data)
-	}
-}
-
-func (p *streamParser) applyFileEdit(name, body string) {
-	file, err := p.store.GetScriptFile(p.sessionID, name)
-	if err != nil || file == nil {
-		return
+		return f.Content, true
 	}
 
-	updated := file.Content
-	for _, sr := range searchReplaceRe.FindAllStringSubmatch(body, -1) {
-		search, replace := sr[1], sr[2]
-		if !strings.Contains(updated, search) {
-			continue
-		}
-		updated = strings.Replace(updated, search, replace, 1)
+	result := scripting.ApplyEdits(newBlocks, getContent)
+
+	for _, applied := range result.Applied {
+		_, _ = ea.files.Upsert(ea.sessionID, applied.Block.Filename, applied.NewContent)
 	}
 
-	now := time.Now().UnixMilli()
-	_ = p.store.UpsertScriptFile(db.ScriptFileRow{
-		ID:        file.ID,
-		SessionID: p.sessionID,
-		Name:      name,
-		Content:   updated,
-		CreatedAt: file.CreatedAt,
-		UpdatedAt: now,
-	})
-	payload, _ := json.Marshal(map[string]string{"name": name})
-	if data, err := devicehub.Marshal("file_write", p.sessionID, json.RawMessage(payload)); err == nil {
-		p.hub.Broadcast(data)
+	ea.applied = len(blocks)
+
+	if len(result.Failed) > 0 {
+		return scripting.BuildEditError(result, getContent)
 	}
+
+	return ""
 }
 
 func (h *Handler) Handle(c *router.Context) {
@@ -236,6 +172,9 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
+	hub := h.hubManager.GetOrCreate(dbSess.DeviceID)
+	fileManager := scripting.NewFileManager(h.db, hub)
+
 	setup := liveSess.Setup
 	sessionTools := []tool.BaseTool{
 		chattools.NewSearchTraffic(h.db, sessionID),
@@ -258,11 +197,11 @@ func (h *Handler) Handle(c *router.Context) {
 				chattools.NewGetCryptoEvents(h.db, sessionID),
 				chattools.NewListKeystoreEntries(h.manager, sessionID),
 				chattools.NewListSharedPreferences(h.manager, sessionID),
-				chattools.NewRunFridaScript(h.manager, h.db, sessionID),
-				chattools.NewGetScriptOutput(h.manager, sessionID),
-				chattools.NewStopFridaScript(h.manager, h.db, sessionID),
-				chattools.NewListScriptFiles(h.db, sessionID),
-				chattools.NewReadScriptFile(h.db, sessionID),
+				chattools.NewRunFridaScript(h.runner, sessionID),
+				chattools.NewGetScriptOutput(h.runner, sessionID),
+				chattools.NewStopFridaScript(h.runner, sessionID),
+				chattools.NewListScriptFiles(fileManager, sessionID),
+				chattools.NewReadScriptFile(fileManager, sessionID),
 			)
 		}
 	}
@@ -286,29 +225,30 @@ func (h *Handler) Handle(c *router.Context) {
 		agent.WithState(state),
 		agent.WithTools(sessionTools...),
 		agent.WithSession(sessionID, h.chatStore.GetOrCreate(sessionID)),
-		agent.WithMaxIterations(5),
 	)
-
-	hub := h.hubManager.GetOrCreate(dbSess.DeviceID)
 
 	c.SSEHandler(router.DefaultSSEConfig(), func(ctx context.Context, send router.SSESendFunc) error {
 		eventCh := a.ChatStream(ctx, req.Message)
 
-		parser := &streamParser{
+		applier := &editApplier{
 			sessionID: sessionID,
-			store:     h.db,
-			hub:       hub,
+			files:     fileManager,
 		}
 
 		for event := range eventCh {
 			switch event.Type {
 			case types.EventContentDelta:
-				parser.feed(event.Content)
+				applier.accumulate(event.Content)
 				if err := send("content", sseContentEvent{Delta: event.Content}); err != nil {
 					return err
 				}
 
 			case types.EventToolUseStart:
+				if editErr := applier.flush(); editErr != "" {
+					_ = send("edit_failed", sseEditResultEvent{Error: editErr})
+				} else if applier.applied > 0 {
+					_ = send("edit_applied", sseEditResultEvent{Success: true})
+				}
 				if event.ToolCall != nil {
 					if err := send("tool_start", sseToolStartEvent{
 						Name: event.ToolCall.Name,
@@ -330,6 +270,12 @@ func (h *Handler) Handle(c *router.Context) {
 				}
 
 			case types.EventComplete:
+				if editErr := applier.flush(); editErr != "" {
+					_ = send("edit_failed", sseEditResultEvent{Error: editErr})
+				} else if applier.applied > 0 {
+					_ = send("edit_applied", sseEditResultEvent{Success: true})
+				}
+
 				evt := sseDoneEvent{}
 				if event.Response != nil {
 					evt.InputTokens = event.Response.Usage.InputTokens

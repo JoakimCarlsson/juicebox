@@ -2,24 +2,19 @@ package scripts
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/joakimcarlsson/go-router/router"
-	"github.com/joakimcarlsson/juicebox/internal/db"
-	"github.com/joakimcarlsson/juicebox/internal/devicehub"
-	"github.com/joakimcarlsson/juicebox/internal/session"
+	"github.com/joakimcarlsson/juicebox/internal/scripting"
 )
 
 type Handler struct {
-	db         *db.DB
-	manager    *session.Manager
-	hubManager *devicehub.Manager
+	files  *scripting.FileManager
+	runner *scripting.Runner
 }
 
-func NewHandler(database *db.DB, manager *session.Manager, hubManager *devicehub.Manager) *Handler {
-	return &Handler{db: database, manager: manager, hubManager: hubManager}
+func NewHandler(files *scripting.FileManager, runner *scripting.Runner) *Handler {
+	return &Handler{files: files, runner: runner}
 }
 
 type upsertRequest struct {
@@ -48,24 +43,9 @@ func (h *Handler) Upsert(c *router.Context) {
 		return
 	}
 
-	now := time.Now().UnixMilli()
-	fileID := fmt.Sprintf("sf_%d", time.Now().UnixNano())
-
-	if err := h.db.UpsertScriptFile(db.ScriptFileRow{
-		ID:        fileID,
-		SessionID: sessionID,
-		Name:      req.Name,
-		Content:   req.Content,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
+	f, err := h.files.Upsert(sessionID, req.Name, req.Content)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
-	}
-
-	f, _ := h.db.GetScriptFile(sessionID, req.Name)
-	if f == nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to read back script file"})
 		return
 	}
 
@@ -86,7 +66,7 @@ func (h *Handler) List(c *router.Context) {
 		return
 	}
 
-	files, err := h.db.GetScriptFiles(sessionID)
+	files, err := h.files.List(sessionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -121,7 +101,7 @@ func (h *Handler) Delete(c *router.Context) {
 		return
 	}
 
-	if err := h.db.DeleteScriptFile(scriptID); err != nil {
+	if err := h.files.Delete(scriptID); err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
@@ -146,68 +126,35 @@ func (h *Handler) Run(c *router.Context) {
 		return
 	}
 
-	file, err := h.db.GetScriptFile(sessionID, req.Name)
-	if err != nil || file == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "script file not found"})
-		return
-	}
-
-	liveSess := h.manager.GetSession(sessionID)
-	if liveSess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "active session not found"})
-		return
-	}
-
-	runID := fmt.Sprintf("sr_%d", time.Now().UnixNano())
-	now := time.Now().UnixMilli()
-
-	_ = h.db.InsertScriptRun(db.ScriptRunRow{
-		ID:           runID,
-		SessionID:    sessionID,
-		ScriptFileID: file.ID,
-		Status:       "running",
-		Timestamp:    now,
-	})
-
-	resp, err := h.manager.RunScript(sessionID, file.Content, req.Name, 5)
+	res, err := h.runner.Run(sessionID, req.Name, 5)
 	if err != nil {
-		_ = h.db.UpdateScriptRun(runID, "", "error")
+		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	if res.Error != "" {
 		c.JSON(http.StatusInternalServerError, map[string]any{
-			"id":        runID,
+			"id":        res.ID,
 			"status":    "error",
-			"error":     err.Error(),
-			"timestamp": now,
+			"error":     res.Error,
+			"timestamp": res.Timestamp,
 		})
 		return
 	}
 
-	if resp.Mode == "oneshot" {
-		outputJSON, _ := json.Marshal(resp.Messages)
-		_ = h.db.UpdateScriptRun(runID, string(outputJSON), "done")
-
-		c.JSON(http.StatusOK, map[string]any{
-			"id":        runID,
-			"fileId":    file.ID,
-			"fileName":  file.Name,
-			"output":    resp.Messages,
-			"status":    "done",
-			"timestamp": now,
-		})
-		return
+	resp := map[string]any{
+		"id":        res.ID,
+		"fileId":    res.FileID,
+		"fileName":  res.FileName,
+		"output":    res.Messages,
+		"status":    res.Status,
+		"timestamp": res.Timestamp,
+	}
+	if res.Mode == "streaming" {
+		resp["name"] = req.Name
 	}
 
-	outputJSON, _ := json.Marshal(resp.Messages)
-	_ = h.db.UpdateScriptRun(runID, string(outputJSON), "running")
-
-	c.JSON(http.StatusOK, map[string]any{
-		"id":        runID,
-		"fileId":    file.ID,
-		"fileName":  file.Name,
-		"output":    resp.Messages,
-		"status":    "running",
-		"name":      req.Name,
-		"timestamp": now,
-	})
+	c.JSON(http.StatusOK, resp)
 }
 
 func (h *Handler) ListRuns(c *router.Context) {
@@ -217,7 +164,7 @@ func (h *Handler) ListRuns(c *router.Context) {
 		return
 	}
 
-	runs, err := h.db.GetScriptRuns(sessionID)
+	runs, err := h.runner.ListRuns(sessionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
