@@ -6,173 +6,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
-	"sync"
 
 	"github.com/joakimcarlsson/go-router/router"
-	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 	_ "modernc.org/sqlite"
 )
 
 type Handler struct {
 	manager *session.Manager
-	mu      sync.Mutex
-	pulled  map[string]string
+	service *Service
 }
 
-func NewHandler(manager *session.Manager) *Handler {
+func NewHandler(manager *session.Manager, service *Service) *Handler {
 	return &Handler{
 		manager: manager,
-		pulled:  make(map[string]string),
+		service: service,
 	}
-}
-
-func (h *Handler) pullKey(sessionID, dbPath string) string {
-	return sessionID + ":" + dbPath
-}
-
-func (h *Handler) ensurePulled(sess *session.Session, sessionID, dbPath string) (string, error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	key := h.pullKey(sessionID, dbPath)
-	if localPath, ok := h.pulled[key]; ok {
-		if _, err := os.Stat(localPath); err == nil {
-			return localPath, nil
-		}
-		delete(h.pulled, key)
-	}
-
-	localPath, err := sess.Setup.PullDatabase(sess.DeviceID, sess.BundleID, dbPath)
-	if err != nil {
-		return "", fmt.Errorf("pull database: %w", err)
-	}
-
-	h.pulled[key] = localPath
-	return localPath, nil
-}
-
-func (h *Handler) OpenDB(sess *session.Session, sessionID, dbPath string) (*sql.DB, error) {
-	localPath, err := h.ensurePulled(sess, sessionID, dbPath)
-	if err != nil {
-		return nil, err
-	}
-
-	db, err := sql.Open("sqlite", localPath+"?mode=ro")
-	if err != nil {
-		return nil, fmt.Errorf("open sqlite: %w", err)
-	}
-
-	return db, nil
-}
-
-func (h *Handler) GetTables(sess *session.Session, sessionID, dbPath string) ([]bridge.DatabaseTable, error) {
-	db, err := h.OpenDB(sess, sessionID, dbPath)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	rows, err := db.Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
-	if err != nil {
-		return nil, fmt.Errorf("query tables: %w", err)
-	}
-	defer rows.Close()
-
-	var tables []bridge.DatabaseTable
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			continue
-		}
-		cols, err := h.getColumns(db, name)
-		if err != nil {
-			cols = nil
-		}
-		tables = append(tables, bridge.DatabaseTable{Name: name, Columns: cols})
-	}
-
-	return tables, nil
-}
-
-func (h *Handler) getColumns(db *sql.DB, tableName string) ([]bridge.DatabaseColumn, error) {
-	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%q)", tableName))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var columns []bridge.DatabaseColumn
-	for rows.Next() {
-		var cid int
-		var name, colType string
-		var notNull, pk int
-		var dfltValue *string
-		if err := rows.Scan(&cid, &name, &colType, &notNull, &dfltValue, &pk); err != nil {
-			continue
-		}
-		columns = append(columns, bridge.DatabaseColumn{
-			Name:    name,
-			Type:    colType,
-			NotNull: notNull != 0,
-			PK:      pk != 0,
-		})
-	}
-
-	return columns, nil
-}
-
-func (h *Handler) ExecQuery(sess *session.Session, sessionID, dbPath, sqlStr string) (*QueryResponse, error) {
-	db, err := h.OpenDB(sess, sessionID, dbPath)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	rows, err := db.Query(sqlStr)
-	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
-	}
-	defer rows.Close()
-
-	cols, err := rows.Columns()
-	if err != nil {
-		return nil, fmt.Errorf("columns: %w", err)
-	}
-
-	var resultRows [][]any
-	for rows.Next() {
-		values := make([]any, len(cols))
-		ptrs := make([]any, len(cols))
-		for i := range values {
-			ptrs[i] = &values[i]
-		}
-		if err := rows.Scan(ptrs...); err != nil {
-			continue
-		}
-		row := make([]any, len(cols))
-		for i, v := range values {
-			switch val := v.(type) {
-			case []byte:
-				row[i] = string(val)
-			default:
-				row[i] = val
-			}
-		}
-		resultRows = append(resultRows, row)
-	}
-
-	if resultRows == nil {
-		resultRows = [][]any{}
-	}
-
-	return &QueryResponse{
-		Columns:  cols,
-		Rows:     resultRows,
-		RowCount: len(resultRows),
-	}, nil
 }
 
 func (h *Handler) Tables(c *router.Context) {
@@ -180,19 +31,19 @@ func (h *Handler) Tables(c *router.Context) {
 	dbPath := c.QueryDefault("dbPath", "")
 
 	if dbPath == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "dbPath is required"})
+		response.Error(c, http.StatusBadRequest, "dbPath is required")
 		return
 	}
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
-	tables, err := h.GetTables(sess, sessionID, dbPath)
+	tables, err := h.service.GetTables(sess, sessionID, dbPath)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -204,17 +55,17 @@ func (h *Handler) Query(c *router.Context) {
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
 	var req QueryRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if req.DbPath == "" || req.SQL == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "dbPath and sql are required"})
+		response.Error(c, http.StatusBadRequest, "dbPath and sql are required")
 		return
 	}
 
@@ -229,21 +80,21 @@ func (h *Handler) Query(c *router.Context) {
 	if isWrite {
 		readOnly := req.ReadOnly == nil || *req.ReadOnly
 		if readOnly {
-			c.JSON(http.StatusBadRequest, map[string]string{"error": "write operations require readOnly: false"})
+			response.Error(c, http.StatusBadRequest, "write operations require readOnly: false")
 			return
 		}
 		resp, err := h.execWrite(sess, sessionID, req.DbPath, req.SQL)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			response.Error(c, http.StatusInternalServerError, err.Error())
 			return
 		}
 		c.JSON(http.StatusOK, resp)
 		return
 	}
 
-	resp, err := h.ExecQuery(sess, sessionID, req.DbPath, req.SQL)
+	resp, err := h.service.ExecQuery(sess, sessionID, req.DbPath, req.SQL)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -251,7 +102,7 @@ func (h *Handler) Query(c *router.Context) {
 }
 
 func (h *Handler) execWrite(sess *session.Session, sessionID, dbPath, sqlStr string) (*QueryResponse, error) {
-	localPath, err := h.ensurePulled(sess, sessionID, dbPath)
+	localPath, err := h.service.EnsurePulled(sess, sessionID, dbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -283,19 +134,19 @@ func (h *Handler) Export(c *router.Context) {
 	sqlStr := c.QueryDefault("sql", "")
 
 	if dbPath == "" || sqlStr == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "dbPath and sql are required"})
+		response.Error(c, http.StatusBadRequest, "dbPath and sql are required")
 		return
 	}
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
-	resp, err := h.ExecQuery(sess, sessionID, dbPath, sqlStr)
+	resp, err := h.service.ExecQuery(sess, sessionID, dbPath, sqlStr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 

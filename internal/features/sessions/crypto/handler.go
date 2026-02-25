@@ -6,6 +6,7 @@ import (
 
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
@@ -19,24 +20,24 @@ func NewHandler(database *db.DB, manager *session.Manager) *Handler {
 }
 
 func (h *Handler) Handle(c *router.Context) {
-	sessionId := c.Param("sessionId")
-	if sessionId == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "missing sessionId"})
+	sessionID := c.Param("sessionId")
+	if sessionID == "" {
+		response.Error(c, http.StatusBadRequest, "missing sessionId")
 		return
 	}
 
 	limit := c.QueryIntDefault("limit", 500)
 	offset := c.QueryIntDefault("offset", 0)
 
-	rows, err := h.db.ListCryptoEvents(sessionId, limit, offset)
+	rows, err := h.db.ListCryptoEvents(sessionID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	total, err := h.db.CountCryptoEvents(sessionId)
+	total, err := h.db.CountCryptoEvents(sessionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -65,13 +66,13 @@ func (h *Handler) Enable(c *router.Context) {
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
 	raw, err := h.manager.AgentInvoke(sessionID, "crypto", "enable", []any{})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -85,19 +86,19 @@ func (h *Handler) SharedPrefs(c *router.Context) {
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
 	raw, err := h.manager.AgentInvoke(sessionID, "sharedprefs", "enumerate", []any{})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	var files []json.RawMessage
 	if err := json.Unmarshal(raw, &files); err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to parse shared preferences"})
+		response.Error(c, http.StatusInternalServerError, "failed to parse shared preferences")
 		return
 	}
 
@@ -112,19 +113,19 @@ func (h *Handler) Keystore(c *router.Context) {
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
 	raw, err := h.manager.AgentInvoke(sessionID, "keystore", "enumerate", []any{})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	var entries []json.RawMessage
 	if err := json.Unmarshal(raw, &entries); err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to parse keystore entries"})
+		response.Error(c, http.StatusInternalServerError, "failed to parse keystore entries")
 		return
 	}
 

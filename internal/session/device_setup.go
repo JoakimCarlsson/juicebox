@@ -9,13 +9,13 @@ import (
 )
 
 type DeviceSetup interface {
-	PrepareInterception(deviceId, certPath string, localProxyPort int) error
-	CleanupInterception(deviceId string) error
-	StartLogStream(deviceId string, pid int, sink func(*logcat.Entry), logger *slog.Logger) (io.Closer, error)
-	ListFiles(deviceId, bundleId, path string) ([]bridge.FileEntry, error)
-	ReadFile(deviceId, bundleId, path string) (*bridge.FileContent, error)
-	FindFiles(deviceId, bundleId, pattern, base string) ([]string, error)
-	PullDatabase(deviceId, bundleId, path string) (string, error)
-	ListProcesses(deviceId string) ([]bridge.Process, error)
+	PrepareInterception(deviceID, certPath string, localProxyPort int) error
+	CleanupInterception(deviceID string) error
+	StartLogStream(deviceID string, pid int, sink func(*logcat.Entry), logger *slog.Logger) (io.Closer, error)
+	ListFiles(deviceID, bundleID, path string) ([]bridge.FileEntry, error)
+	ReadFile(deviceID, bundleID, path string) (*bridge.FileContent, error)
+	FindFiles(deviceID, bundleID, pattern, base string) ([]string, error)
+	PullDatabase(deviceID, bundleID, path string) (string, error)
+	ListProcesses(deviceID string) ([]bridge.Process, error)
 	Capabilities() []string
 }

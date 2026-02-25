@@ -6,6 +6,7 @@ import (
 
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 )
 
 type Handler struct {
@@ -16,25 +17,21 @@ func NewHandler(database *db.DB) *Handler {
 	return &Handler{db: database}
 }
 
-type renameRequest struct {
-	Name string `json:"name"`
-}
-
 func (h *Handler) Handle(c *router.Context) {
-	sessionId := c.Param("sessionId")
-	if sessionId == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "missing sessionId"})
+	sessionID := c.Param("sessionId")
+	if sessionID == "" {
+		response.Error(c, http.StatusBadRequest, "missing sessionId")
 		return
 	}
 
 	var req renameRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	if err := h.db.RenameSession(sessionId, req.Name); err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	if err := h.db.RenameSession(sessionID, req.Name); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 

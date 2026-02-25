@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
@@ -16,11 +17,6 @@ func NewHandler(manager *session.Manager) *Handler {
 	return &Handler{manager: manager}
 }
 
-type listResponse struct {
-	Classes []string `json:"classes"`
-	Total   int      `json:"total"`
-}
-
 func (h *Handler) List(c *router.Context) {
 	sessionID := c.Param("sessionId")
 	query := c.QueryDefault("query", "")
@@ -29,19 +25,19 @@ func (h *Handler) List(c *router.Context) {
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
 	raw, err := h.manager.AgentInvoke(sessionID, "classes", "list", []any{query})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	var all []string
 	if err := json.Unmarshal(raw, &all); err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to parse class list"})
+		response.Error(c, http.StatusInternalServerError, "failed to parse class list")
 		return
 	}
 
@@ -65,19 +61,19 @@ func (h *Handler) Detail(c *router.Context) {
 	className := c.QueryDefault("className", "")
 
 	if className == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "className is required"})
+		response.Error(c, http.StatusBadRequest, "className is required")
 		return
 	}
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
 	raw, err := h.manager.AgentInvoke(sessionID, "classes", "detail", []any{className})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -87,29 +83,23 @@ func (h *Handler) Detail(c *router.Context) {
 	c.Writer.Write(result) //nolint:errcheck
 }
 
-type invokeRequest struct {
-	ClassName  string   `json:"className"`
-	MethodName string   `json:"methodName"`
-	Args       []string `json:"args"`
-}
-
 func (h *Handler) Invoke(c *router.Context) {
 	sessionID := c.Param("sessionId")
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
 	var req invokeRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ClassName == "" || req.MethodName == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "className and methodName are required"})
+		response.Error(c, http.StatusBadRequest, "className and methodName are required")
 		return
 	}
 
@@ -120,7 +110,7 @@ func (h *Handler) Invoke(c *router.Context) {
 
 	raw, err := h.manager.AgentInvoke(sessionID, "classes", "invokeMethod", []any{req.ClassName, req.MethodName, args})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -129,34 +119,29 @@ func (h *Handler) Invoke(c *router.Context) {
 	c.Writer.Write(raw) //nolint:errcheck
 }
 
-type readFieldRequest struct {
-	ClassName string `json:"className"`
-	FieldName string `json:"fieldName"`
-}
-
 func (h *Handler) ReadField(c *router.Context) {
 	sessionID := c.Param("sessionId")
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
 	var req readFieldRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		response.Error(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ClassName == "" || req.FieldName == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "className and fieldName are required"})
+		response.Error(c, http.StatusBadRequest, "className and fieldName are required")
 		return
 	}
 
 	raw, err := h.manager.AgentInvoke(sessionID, "classes", "readField", []any{req.ClassName, req.FieldName})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 

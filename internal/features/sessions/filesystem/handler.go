@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
@@ -23,7 +24,7 @@ func (h *Handler) List(c *router.Context) {
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
@@ -33,7 +34,7 @@ func (h *Handler) List(c *router.Context) {
 
 	entries, err := sess.Setup.ListFiles(sess.DeviceID, sess.BundleID, path)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -45,26 +46,26 @@ func (h *Handler) Read(c *router.Context) {
 	path := c.QueryDefault("path", "")
 
 	if path == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "path is required"})
+		response.Error(c, http.StatusBadRequest, "path is required")
 		return
 	}
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
 	content, err := sess.Setup.ReadFile(sess.DeviceID, sess.BundleID, path)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	if content.Encoding == "base64" {
 		data, err := base64.StdEncoding.DecodeString(content.Content)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to decode file"})
+			response.Error(c, http.StatusInternalServerError, "failed to decode file")
 			return
 		}
 		filename := filepath.Base(path)
@@ -84,13 +85,13 @@ func (h *Handler) Find(c *router.Context) {
 	basePath := c.QueryDefault("basePath", "")
 
 	if pattern == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "pattern is required"})
+		response.Error(c, http.StatusBadRequest, "pattern is required")
 		return
 	}
 
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
-		c.JSON(http.StatusNotFound, map[string]string{"error": "session not found"})
+		response.Error(c, http.StatusNotFound, "session not found")
 		return
 	}
 
@@ -100,7 +101,7 @@ func (h *Handler) Find(c *router.Context) {
 
 	paths, err := sess.Setup.FindFiles(sess.DeviceID, sess.BundleID, pattern, basePath)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 

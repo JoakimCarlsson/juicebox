@@ -11,35 +11,35 @@ import (
 
 type IOSSetup struct{}
 
-func (i *IOSSetup) PrepareInterception(deviceId, certPath string, localProxyPort int) error {
+func (i *IOSSetup) PrepareInterception(deviceID, certPath string, localProxyPort int) error {
 	return errors.ErrUnsupported
 }
 
-func (i *IOSSetup) CleanupInterception(deviceId string) error {
+func (i *IOSSetup) CleanupInterception(deviceID string) error {
 	return errors.ErrUnsupported
 }
 
-func (i *IOSSetup) StartLogStream(deviceId string, pid int, sink func(*logcat.Entry), logger *slog.Logger) (io.Closer, error) {
+func (i *IOSSetup) StartLogStream(deviceID string, pid int, sink func(*logcat.Entry), logger *slog.Logger) (io.Closer, error) {
 	return nil, nil
 }
 
-func (i *IOSSetup) ListFiles(deviceId, bundleId, path string) ([]bridge.FileEntry, error) {
+func (i *IOSSetup) ListFiles(deviceID, bundleID, path string) ([]bridge.FileEntry, error) {
 	return nil, errors.ErrUnsupported
 }
 
-func (i *IOSSetup) ReadFile(deviceId, bundleId, path string) (*bridge.FileContent, error) {
+func (i *IOSSetup) ReadFile(deviceID, bundleID, path string) (*bridge.FileContent, error) {
 	return nil, errors.ErrUnsupported
 }
 
-func (i *IOSSetup) FindFiles(deviceId, bundleId, pattern, base string) ([]string, error) {
+func (i *IOSSetup) FindFiles(deviceID, bundleID, pattern, base string) ([]string, error) {
 	return nil, errors.ErrUnsupported
 }
 
-func (i *IOSSetup) PullDatabase(deviceId, bundleId, path string) (string, error) {
+func (i *IOSSetup) PullDatabase(deviceID, bundleID, path string) (string, error) {
 	return "", errors.ErrUnsupported
 }
 
-func (i *IOSSetup) ListProcesses(deviceId string) ([]bridge.Process, error) {
+func (i *IOSSetup) ListProcesses(deviceID string) ([]bridge.Process, error) {
 	return nil, errors.ErrUnsupported
 }
 

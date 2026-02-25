@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
@@ -16,14 +17,14 @@ func NewHandler(manager *session.Manager) *Handler {
 }
 
 func (h *Handler) Handle(c *router.Context) {
-	sessionId := c.Param("sessionId")
-	if sessionId == "" {
-		c.JSON(http.StatusBadRequest, map[string]string{"error": "missing sessionId"})
+	sessionID := c.Param("sessionId")
+	if sessionID == "" {
+		response.Error(c, http.StatusBadRequest, "missing sessionId")
 		return
 	}
 
-	if err := h.manager.Detach(sessionId); err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	if err := h.manager.Detach(sessionID); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
