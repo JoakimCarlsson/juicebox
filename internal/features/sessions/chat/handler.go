@@ -225,6 +225,7 @@ func (h *Handler) Handle(c *router.Context) {
 		agent.WithState(state),
 		agent.WithTools(sessionTools...),
 		agent.WithSession(sessionID, h.chatStore.GetOrCreate(sessionID)),
+		agent.WithMaxIterations(50),
 	)
 
 	c.SSEHandler(router.DefaultSSEConfig(), func(ctx context.Context, send router.SSESendFunc) error {
