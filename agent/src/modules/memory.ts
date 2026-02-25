@@ -120,20 +120,10 @@ function scanRange(
   });
 }
 
-async function scan(rawPattern: unknown): Promise<{ started: boolean }> {
-  const pattern = String(rawPattern ?? "");
-  if (!pattern) return { started: false };
-
-  if (_scanning) {
-    _cancelled = true;
-    await new Promise((r) => setTimeout(r, 50));
-  }
-
-  _cancelled = false;
-  _scanning = true;
-
-  const hexPattern = normalizePattern(pattern);
-  const ranges = Process.enumerateRanges("r--");
+async function runScan(
+  hexPattern: string,
+  ranges: RangeDetails[],
+): Promise<void> {
   const total = ranges.length;
   let matchCount = 0;
 
@@ -170,6 +160,21 @@ async function scan(rawPattern: unknown): Promise<{ started: boolean }> {
       count: matchCount,
     },
   });
+}
+
+function scan(rawPattern: unknown): { started: boolean } {
+  const pattern = String(rawPattern ?? "");
+  if (!pattern) return { started: false };
+
+  _cancelled = true;
+
+  const hexPattern = normalizePattern(pattern);
+  const ranges = Process.enumerateRanges("r--");
+
+  _cancelled = false;
+  _scanning = true;
+
+  runScan(hexPattern, ranges);
 
   return { started: true };
 }
