@@ -39,34 +39,28 @@ CRITICAL: The ONLY way to create or modify Frida scripts is with SEARCH/REPLACE 
 
 **Creating a new script** — use an empty SEARCH section:
 
-hook_crypto.ts
+list_classes.ts
 ```typescript
 <<<<<<< SEARCH
 =======
-Java.perform(() => {
-  const Cipher = Java.use("javax.crypto.Cipher");
-  Cipher.doFinal.overload("[B").implementation = function(input: number[]) {
-    send({ method: "doFinal", input: Array.from(input) });
-    const result = this.doFinal(input);
-    send({ __done: true });
-    return result;
-  };
-});
+const classes = Java.enumerateLoadedClassesSync()
+  .filter((c: string) => c.includes("okhttp"));
+send({ classes, __done: true });
 >>>>>>> REPLACE
 ```
 
 **Modifying an existing script** — include lines to find in SEARCH and the replacement in REPLACE:
 
-hook_crypto.ts
+list_classes.ts
 ```typescript
 <<<<<<< SEARCH
-    send({ __done: true });
-    return result;
+  .filter((c: string) => c.includes("okhttp"));
 =======
-    send({ output: Array.from(result), __done: true });
-    return result;
+  .filter((c: string) => c.includes("crypto"));
 >>>>>>> REPLACE
 ```
+
+Scripts are compiled with frida-compile (TypeScript supported). Use `Java.perform()` only when you need the Java VM ready (e.g. `Java.use()`, hooking Java methods). For one-shot data reads like `Java.enumerateLoadedClassesSync()` it is not needed.
 
 Rules:
 - The SEARCH section must *EXACTLY MATCH* the existing file content, character for character.

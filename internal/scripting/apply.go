@@ -17,17 +17,22 @@ type ApplyResult struct {
 
 func ApplyEdits(blocks []EditBlock, getContent func(filename string) (string, bool)) ApplyResult {
 	var result ApplyResult
+	overlay := make(map[string]string)
 
 	for _, block := range blocks {
-		content, exists := getContent(block.Filename)
-
 		if block.IsNewFile() {
+			overlay[block.Filename] = block.Replace
 			result.Applied = append(result.Applied, EditResult{
 				Block:      block,
 				Success:    true,
 				NewContent: block.Replace,
 			})
 			continue
+		}
+
+		content, exists := overlay[block.Filename]
+		if !exists {
+			content, exists = getContent(block.Filename)
 		}
 
 		if !exists {
@@ -40,6 +45,7 @@ func ApplyEdits(blocks []EditBlock, getContent func(filename string) (string, bo
 
 		newContent := applyOneEdit(content, block.Search, block.Replace)
 		if newContent != "" {
+			overlay[block.Filename] = newContent
 			result.Applied = append(result.Applied, EditResult{
 				Block:      block,
 				Success:    true,

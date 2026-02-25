@@ -1,6 +1,9 @@
 package scripting
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseEditBlocks_SearchReplace(t *testing.T) {
 	input := "hook_crypto.ts\n```typescript\n<<<<<<< SEARCH\n=======\nJava.perform(() => {});\n>>>>>>> REPLACE\n```\n"
@@ -95,6 +98,38 @@ func TestParseEditBlocks_IncrementalStability(t *testing.T) {
 	}
 	if blocks2[1].Filename != "spy.ts" {
 		t.Errorf("block 1 filename = %q", blocks2[1].Filename)
+	}
+}
+
+func TestApplyEdits_MultipleBlocksSameFile(t *testing.T) {
+	original := "func foo(a, b) {\n  return a + b;\n}\nfunc bar(x) {\n  return x;\n}\n"
+
+	blocks := []EditBlock{
+		{Filename: "test.ts", Search: "func foo(a, b) {\n", Replace: "func foo(a: any, b: any) {\n"},
+		{Filename: "test.ts", Search: "func bar(x) {\n", Replace: "func bar(x: any) {\n"},
+	}
+
+	getContent := func(filename string) (string, bool) {
+		if filename == "test.ts" {
+			return original, true
+		}
+		return "", false
+	}
+
+	result := ApplyEdits(blocks, getContent)
+	if len(result.Failed) != 0 {
+		t.Fatalf("expected 0 failures, got %d", len(result.Failed))
+	}
+	if len(result.Applied) != 2 {
+		t.Fatalf("expected 2 applied, got %d", len(result.Applied))
+	}
+
+	final := result.Applied[len(result.Applied)-1].NewContent
+	if !strings.Contains(final, "a: any, b: any") {
+		t.Error("first edit missing from final content")
+	}
+	if !strings.Contains(final, "x: any") {
+		t.Error("second edit missing from final content")
 	}
 }
 
