@@ -1,11 +1,13 @@
 import { useBottomPanel, type PanelTab } from '@/contexts/BottomPanelContext'
 import { useEventLog, type EventLogEntry } from '@/contexts/EventLogContext'
 import { useScriptOutput } from '@/contexts/ScriptOutputContext'
-import type { LogEntry } from '@/types/session'
+import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import type { ClipboardEvent, LogEntry } from '@/types/session'
+import { enableClipboardMonitor } from '@/features/sessions/api'
 import { Button } from '@/components/ui/button'
-import { Terminal, AlertTriangle, Trash2, CheckCircle2, ScrollText } from 'lucide-react'
+import { Terminal, AlertTriangle, Trash2, CheckCircle2, ScrollText, Clipboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const tabs: { value: PanelTab; label: string; icon: React.ReactNode }[] = [
   {
@@ -22,6 +24,11 @@ const tabs: { value: PanelTab; label: string; icon: React.ReactNode }[] = [
     value: 'output',
     label: 'Output',
     icon: <ScrollText className="mr-1.5 h-3 w-3" />,
+  },
+  {
+    value: 'clipboard',
+    label: 'Clipboard',
+    icon: <Clipboard className="mr-1.5 h-3 w-3" />,
   },
 ]
 
@@ -51,7 +58,13 @@ export function BottomPanel() {
   const { activeTab, setActiveTab } = useBottomPanel()
   const { entries, clear } = useEventLog()
   const scriptOutput = useScriptOutput()
+  const { messages } = useSessionMessages()
   const problemsCount = getProblemsCount(entries)
+
+  const clipboardCount = useMemo(
+    () => messages.filter((m) => m.type === 'clipboard').length,
+    [messages]
+  )
 
   const handleClear = () => {
     if (activeTab === 'output') {
@@ -88,6 +101,11 @@ export function BottomPanel() {
                   {scriptOutput.entries.length}
                 </span>
               )}
+              {tab.value === 'clipboard' && clipboardCount > 0 && (
+                <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium leading-none text-primary-foreground">
+                  {clipboardCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -100,6 +118,7 @@ export function BottomPanel() {
         {activeTab === 'console' && <ConsoleTab />}
         {activeTab === 'problems' && <ProblemsTab />}
         {activeTab === 'output' && <OutputTab />}
+        {activeTab === 'clipboard' && <ClipboardTab />}
       </div>
     </div>
   )
@@ -264,6 +283,112 @@ function OutputTab() {
             </pre>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+function ClipboardTab() {
+  const { sessionId, messages } = useSessionMessages()
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const autoScrollRef = useRef(true)
+  const enabledRef = useRef(false)
+
+  useEffect(() => {
+    if (!sessionId || enabledRef.current) return
+    enabledRef.current = true
+    enableClipboardMonitor(sessionId).catch(() => {})
+  }, [sessionId])
+
+  const events = useMemo(
+    () =>
+      messages
+        .filter(
+          (m): m is { type: 'clipboard'; payload: ClipboardEvent } =>
+            m.type === 'clipboard' && !!m.payload
+        )
+        .map((m) => m.payload as unknown as ClipboardEvent),
+    [messages]
+  )
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    function handleScroll() {
+      if (!el) return
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 32
+      autoScrollRef.current = atBottom
+    }
+
+    el.addEventListener('scroll', handleScroll)
+    return () => el.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    if (autoScrollRef.current && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [events])
+
+  if (!sessionId) {
+    return (
+      <div className="p-3 font-mono text-xs text-muted-foreground">
+        Attach to an app to monitor clipboard.
+      </div>
+    )
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="flex items-center justify-center gap-2 h-full text-muted-foreground">
+        <Clipboard className="h-5 w-5 opacity-30" />
+        <span className="text-xs">Waiting for clipboard events...</span>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={scrollRef} className="h-full overflow-auto">
+      <div className="font-mono text-xs">
+        {events.map((evt) => {
+          const isRead = evt.direction === 'read'
+          const isExpanded = expandedId === evt.id
+          return (
+            <div
+              key={evt.id}
+              className={cn(
+                'flex flex-col px-3 py-0.5 border-l-2 cursor-pointer hover:bg-muted/30',
+                isRead ? 'border-l-green-500' : 'border-l-blue-500'
+              )}
+              onClick={() => setExpandedId(isExpanded ? null : evt.id)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 text-muted-foreground">{formatTime(evt.timestamp)}</span>
+                <span
+                  className={cn(
+                    'shrink-0 text-[10px] font-medium w-10',
+                    isRead
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-blue-600 dark:text-blue-400'
+                  )}
+                >
+                  {isRead ? 'READ' : 'WRITE'}
+                </span>
+                {evt.mimeType && evt.mimeType !== 'text/plain' && (
+                  <span className="shrink-0 text-muted-foreground/60">{evt.mimeType}</span>
+                )}
+                <span className="flex-1 truncate text-foreground">{evt.content ?? '(empty)'}</span>
+              </div>
+              {isExpanded && evt.callerStack && (
+                <pre className="ml-[5.5rem] mt-0.5 mb-1 text-[10px] text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  {evt.callerStack}
+                </pre>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )

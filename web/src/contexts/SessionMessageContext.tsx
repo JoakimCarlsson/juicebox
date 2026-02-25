@@ -6,9 +6,11 @@ import {
   fetchSessionLogs,
   fetchSessionCrashes,
   fetchSessionCrypto,
+  fetchClipboardEvents,
 } from '@/features/sessions/api'
 
 interface SessionMessageContextValue {
+  sessionId: string
   messages: AgentMessage[]
   connected: boolean
 }
@@ -56,7 +58,8 @@ export function SessionMessageProvider({ sessionId, children }: SessionMessagePr
       fetchSessionLogs(sessionId).catch(() => null),
       fetchSessionCrashes(sessionId).catch(() => null),
       fetchSessionCrypto(sessionId).catch(() => null),
-    ]).then(([msgResp, logResp, crashResp, cryptoResp]) => {
+      fetchClipboardEvents(sessionId).catch(() => null),
+    ]).then(([msgResp, logResp, crashResp, cryptoResp, clipboardResp]) => {
       const historical: AgentMessage[] = []
 
       if (msgResp?.messages) {
@@ -91,6 +94,15 @@ export function SessionMessageProvider({ sessionId, children }: SessionMessagePr
           if (!seenIds.current.has(e.id)) {
             seenIds.current.add(e.id)
             historical.push({ type: 'crypto', payload: e })
+          }
+        }
+      }
+
+      if (clipboardResp?.events) {
+        for (const e of clipboardResp.events) {
+          if (!seenIds.current.has(e.id)) {
+            seenIds.current.add(e.id)
+            historical.push({ type: 'clipboard', payload: e })
           }
         }
       }
@@ -134,7 +146,7 @@ export function SessionMessageProvider({ sessionId, children }: SessionMessagePr
   }, [subscribe, sessionId])
 
   return (
-    <SessionMessageContext.Provider value={{ messages, connected }}>
+    <SessionMessageContext.Provider value={{ sessionId, messages, connected }}>
       {children}
     </SessionMessageContext.Provider>
   )
