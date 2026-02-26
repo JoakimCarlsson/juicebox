@@ -23,7 +23,10 @@ func TestFetchWebpage_Info(t *testing.T) {
 
 func TestFetchWebpage_EmptyURL(t *testing.T) {
 	f := tools.NewFetchWebpage()
-	resp, err := f.Run(context.Background(), makeCall("fetch_webpage", `{"url":""}`))
+	resp, err := f.Run(
+		context.Background(),
+		makeCall("fetch_webpage", `{"url":""}`),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -33,15 +36,23 @@ func TestFetchWebpage_EmptyURL(t *testing.T) {
 }
 
 func TestFetchWebpage_BasicHTML(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, `<html><head><title>Test Page</title></head><body><h1>Hello</h1><p>World</p></body></html>`)
-	}))
+	srv := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			fmt.Fprint(
+				w,
+				`<html><head><title>Test Page</title></head><body><h1>Hello</h1><p>World</p></body></html>`,
+			)
+		}),
+	)
 	defer srv.Close()
 
 	f := tools.NewFetchWebpage()
 	input := fmt.Sprintf(`{"url":"%s"}`, srv.URL)
-	resp, err := f.Run(context.Background(), tool.ToolCall{ID: "t1", Name: "fetch_webpage", Input: input})
+	resp, err := f.Run(
+		context.Background(),
+		tool.ToolCall{ID: "t1", Name: "fetch_webpage", Input: input},
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -73,14 +84,19 @@ func TestFetchWebpage_BasicHTML(t *testing.T) {
 }
 
 func TestFetchWebpage_Non200(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
+	srv := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}),
+	)
 	defer srv.Close()
 
 	f := tools.NewFetchWebpage()
 	input := fmt.Sprintf(`{"url":"%s"}`, srv.URL)
-	resp, err := f.Run(context.Background(), tool.ToolCall{ID: "t1", Name: "fetch_webpage", Input: input})
+	resp, err := f.Run(
+		context.Background(),
+		tool.ToolCall{ID: "t1", Name: "fetch_webpage", Input: input},
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -93,15 +109,23 @@ func TestFetchWebpage_Non200(t *testing.T) {
 }
 
 func TestFetchWebpage_StripsScriptTags(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, `<html><body><script>alert('xss')</script><p>safe content</p></body></html>`)
-	}))
+	srv := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			fmt.Fprint(
+				w,
+				`<html><body><script>alert('xss')</script><p>safe content</p></body></html>`,
+			)
+		}),
+	)
 	defer srv.Close()
 
 	f := tools.NewFetchWebpage()
 	input := fmt.Sprintf(`{"url":"%s"}`, srv.URL)
-	resp, err := f.Run(context.Background(), tool.ToolCall{ID: "t1", Name: "fetch_webpage", Input: input})
+	resp, err := f.Run(
+		context.Background(),
+		tool.ToolCall{ID: "t1", Name: "fetch_webpage", Input: input},
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -120,15 +144,23 @@ func TestFetchWebpage_StripsScriptTags(t *testing.T) {
 }
 
 func TestFetchWebpage_PreservesLinks(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, `<html><body><a href="https://example.com">Example</a></body></html>`)
-	}))
+	srv := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			fmt.Fprint(
+				w,
+				`<html><body><a href="https://example.com">Example</a></body></html>`,
+			)
+		}),
+	)
 	defer srv.Close()
 
 	f := tools.NewFetchWebpage()
 	input := fmt.Sprintf(`{"url":"%s"}`, srv.URL)
-	resp, err := f.Run(context.Background(), tool.ToolCall{ID: "t1", Name: "fetch_webpage", Input: input})
+	resp, err := f.Run(
+		context.Background(),
+		tool.ToolCall{ID: "t1", Name: "fetch_webpage", Input: input},
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

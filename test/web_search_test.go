@@ -35,10 +35,12 @@ const fakeSearchHTML = `<html><body>
 </body></html>`
 
 func fakeSearchServer(html string) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, html)
-	}))
+	return httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			fmt.Fprint(w, html)
+		}),
+	)
 }
 
 func TestWebSearch_Info(t *testing.T) {
@@ -51,7 +53,10 @@ func TestWebSearch_Info(t *testing.T) {
 
 func TestWebSearch_EmptyQuery(t *testing.T) {
 	s := tools.NewWebSearch()
-	resp, err := s.Run(context.Background(), makeCall("web_search", `{"query":""}`))
+	resp, err := s.Run(
+		context.Background(),
+		makeCall("web_search", `{"query":""}`),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -135,10 +140,16 @@ func TestWebSearch_ParsesResults(t *testing.T) {
 		t.Errorf("expected title 'First Result', got %q", results[0].Title)
 	}
 	if results[0].URL != "https://example.com/one" {
-		t.Errorf("expected URL 'https://example.com/one', got %q", results[0].URL)
+		t.Errorf(
+			"expected URL 'https://example.com/one', got %q",
+			results[0].URL,
+		)
 	}
 	if results[0].Snippet != "This is the first snippet" {
-		t.Errorf("expected snippet 'This is the first snippet', got %q", results[0].Snippet)
+		t.Errorf(
+			"expected snippet 'This is the first snippet', got %q",
+			results[0].Snippet,
+		)
 	}
 }
 
@@ -166,7 +177,9 @@ func TestWebSearch_LimitResults(t *testing.T) {
 }
 
 func TestWebSearch_NoResults(t *testing.T) {
-	srv := fakeSearchServer(`<html><body><div class="no-results">No results</div></body></html>`)
+	srv := fakeSearchServer(
+		`<html><body><div class="no-results">No results</div></body></html>`,
+	)
 	defer srv.Close()
 
 	s := tools.NewWebSearchWithEndpoints("", srv.URL)

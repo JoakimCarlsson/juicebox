@@ -23,7 +23,10 @@ func TestRunShell_Info(t *testing.T) {
 
 func TestRunShell_EchoStdout(t *testing.T) {
 	s := tools.NewRunShell()
-	resp, err := s.Run(context.Background(), makeCall("run_shell", `{"command":"echo hello"}`))
+	resp, err := s.Run(
+		context.Background(),
+		makeCall("run_shell", `{"command":"echo hello"}`),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -49,7 +52,10 @@ func TestRunShell_EchoStdout(t *testing.T) {
 
 func TestRunShell_Stderr(t *testing.T) {
 	s := tools.NewRunShell()
-	resp, err := s.Run(context.Background(), makeCall("run_shell", `{"command":"echo err >&2"}`))
+	resp, err := s.Run(
+		context.Background(),
+		makeCall("run_shell", `{"command":"echo err >&2"}`),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -69,7 +75,10 @@ func TestRunShell_Stderr(t *testing.T) {
 
 func TestRunShell_NonZeroExitCode(t *testing.T) {
 	s := tools.NewRunShell()
-	resp, err := s.Run(context.Background(), makeCall("run_shell", `{"command":"exit 42"}`))
+	resp, err := s.Run(
+		context.Background(),
+		makeCall("run_shell", `{"command":"exit 42"}`),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -90,7 +99,10 @@ func TestRunShell_NonZeroExitCode(t *testing.T) {
 
 func TestRunShell_Timeout(t *testing.T) {
 	s := tools.NewRunShell()
-	resp, err := s.Run(context.Background(), makeCall("run_shell", `{"command":"sleep 10","timeout_seconds":1}`))
+	resp, err := s.Run(
+		context.Background(),
+		makeCall("run_shell", `{"command":"sleep 10","timeout_seconds":1}`),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -107,7 +119,10 @@ func TestRunShell_Timeout(t *testing.T) {
 
 func TestRunShell_EmptyCommand(t *testing.T) {
 	s := tools.NewRunShell()
-	resp, err := s.Run(context.Background(), makeCall("run_shell", `{"command":""}`))
+	resp, err := s.Run(
+		context.Background(),
+		makeCall("run_shell", `{"command":""}`),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -118,7 +133,10 @@ func TestRunShell_EmptyCommand(t *testing.T) {
 
 func TestRunShell_StdoutAndStderr(t *testing.T) {
 	s := tools.NewRunShell()
-	resp, err := s.Run(context.Background(), makeCall("run_shell", `{"command":"echo out && echo err >&2"}`))
+	resp, err := s.Run(
+		context.Background(),
+		makeCall("run_shell", `{"command":"echo out && echo err >&2"}`),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

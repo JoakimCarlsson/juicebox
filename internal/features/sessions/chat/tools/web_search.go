@@ -21,10 +21,16 @@ const (
 )
 
 var (
-	resultBlockRe = regexp.MustCompile(`class="result results_links results_links_deep web-result\s*"`)
-	titleReLnk    = regexp.MustCompile(`class="result__a"\s+href="([^"]+)"[^>]*>([^<]+)`)
-	snippetReLnk  = regexp.MustCompile(`(?s)class="result__snippet"[^>]*>(.*?)</a>`)
-	htmlTagRe     = regexp.MustCompile(`<[^>]+>`)
+	resultBlockRe = regexp.MustCompile(
+		`class="result results_links results_links_deep web-result\s*"`,
+	)
+	titleReLnk = regexp.MustCompile(
+		`class="result__a"\s+href="([^"]+)"[^>]*>([^<]+)`,
+	)
+	snippetReLnk = regexp.MustCompile(
+		`(?s)class="result__snippet"[^>]*>(.*?)</a>`,
+	)
+	htmlTagRe = regexp.MustCompile(`<[^>]+>`)
 )
 
 type WebSearchParams struct {
