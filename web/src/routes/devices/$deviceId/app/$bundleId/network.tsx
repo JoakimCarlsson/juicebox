@@ -1,9 +1,15 @@
 import { createFileRoute, useSearch } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Trash2, Wifi, Pause, FastForward } from 'lucide-react'
+import { Search, Trash2, Wifi, Pause, FastForward, Download } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { useSessionMessages } from '@/contexts/SessionMessageContext'
 import { useIntercept } from '@/contexts/InterceptContext'
@@ -38,6 +44,18 @@ function NetworkPage() {
   const [clearIndex, setClearIndex] = useState(0)
 
   const clear = useCallback(() => setClearIndex(messages.length), [messages.length])
+
+  const exportCapture = useCallback(
+    (format: 'har' | 'burp') => {
+      const a = document.createElement('a')
+      a.href = `/api/v1/sessions/${sessionId}/export?format=${format}`
+      a.download = ''
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    },
+    [sessionId]
+  )
 
   const httpMessages = useMemo(() => {
     return messages
@@ -143,6 +161,22 @@ function NetworkPage() {
           <Trash2 className="mr-1.5 h-3 w-3" />
           Clear
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8" disabled={allMessages.length === 0}>
+              <Download className="mr-1.5 h-3 w-3" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => exportCapture('har')}>
+              Export as HAR
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportCapture('burp')}>
+              Export as Burp XML
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <span className="text-xs text-muted-foreground ml-auto tabular-nums">
           {allMessages.length} request{allMessages.length !== 1 ? 's' : ''}
         </span>
