@@ -1,3 +1,4 @@
+import frida from "frida";
 import { resolve } from "node:path";
 import { exec } from "./utils.ts";
 
@@ -35,8 +36,27 @@ export async function isFridaServerRunning(deviceId: string): Promise<boolean> {
   return stdout.includes("frida-server");
 }
 
+async function waitForFridaReady(
+  deviceId: string,
+  maxAttempts = 10,
+): Promise<void> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const d = await frida.getDevice(deviceId);
+      await d.enumerateProcesses();
+      return;
+    } catch {
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+  throw new Error("frida-server not accepting connections");
+}
+
 export async function ensureFridaServer(deviceId: string): Promise<void> {
-  if (await isFridaServerRunning(deviceId)) return;
+  if (await isFridaServerRunning(deviceId)) {
+    await waitForFridaReady(deviceId);
+    return;
+  }
 
   console.log(`frida-server not running on ${deviceId}, installing...`);
 
@@ -115,12 +135,6 @@ export async function ensureFridaServer(deviceId: string): Promise<void> {
     stderr: "null",
   }).spawn();
 
-  for (let i = 0; i < 10; i++) {
-    await new Promise((r) => setTimeout(r, 500));
-    if (await isFridaServerRunning(deviceId)) {
-      console.log("frida-server is running");
-      return;
-    }
-  }
-  throw new Error("frida-server failed to start");
+  await waitForFridaReady(deviceId, 20);
+  console.log("frida-server is running and accepting connections");
 }
