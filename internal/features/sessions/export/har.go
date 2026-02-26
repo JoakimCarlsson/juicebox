@@ -93,8 +93,10 @@ func buildHAR(rows []db.HttpMessageRow) ([]byte, error) {
 		}
 
 		entry := harEntry{
-			StartedDateTime: time.UnixMilli(r.Timestamp).UTC().Format(time.RFC3339Nano),
-			Time:            float64(r.Duration),
+			StartedDateTime: time.UnixMilli(r.Timestamp).
+				UTC().
+				Format(time.RFC3339Nano),
+			Time: float64(r.Duration),
 			Request: harRequest{
 				Method:      r.Method,
 				URL:         r.URL,
@@ -109,7 +111,12 @@ func buildHAR(rows []db.HttpMessageRow) ([]byte, error) {
 				StatusText:  statusText(r.StatusCode),
 				HTTPVersion: "HTTP/1.1",
 				Headers:     mapToNV(respHeaders),
-				Content:     buildRespContent(r.ResponseBody, r.ResponseBodyEncoding, r.ResponseBodySize, respHeaders),
+				Content: buildRespContent(
+					r.ResponseBody,
+					r.ResponseBodyEncoding,
+					r.ResponseBodySize,
+					respHeaders,
+				),
 				HeadersSize: -1,
 				BodySize:    r.ResponseBodySize,
 			},
@@ -145,7 +152,12 @@ func buildHAR(rows []db.HttpMessageRow) ([]byte, error) {
 	return json.MarshalIndent(root, "", "  ")
 }
 
-func buildRespContent(body *string, encoding string, size int, headers map[string]string) harRespContent {
+func buildRespContent(
+	body *string,
+	encoding string,
+	size int,
+	headers map[string]string,
+) harRespContent {
 	ct := headers["content-type"]
 	if ct == "" {
 		ct = headers["Content-Type"]

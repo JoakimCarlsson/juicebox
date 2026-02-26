@@ -169,9 +169,7 @@ function NetworkPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => exportCapture('har')}>
-              Export as HAR
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportCapture('har')}>Export as HAR</DropdownMenuItem>
             <DropdownMenuItem onClick={() => exportCapture('burp')}>
               Export as Burp XML
             </DropdownMenuItem>

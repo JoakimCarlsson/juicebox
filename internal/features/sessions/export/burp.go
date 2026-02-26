@@ -21,20 +21,20 @@ type burpItems struct {
 }
 
 type burpItem struct {
-	Time           string       `xml:"time"`
-	URL            string       `xml:"url"`
-	Host           burpHost     `xml:"host"`
-	Port           string       `xml:"port"`
-	Protocol       string       `xml:"protocol"`
-	Method         string       `xml:"method"`
-	Path           string       `xml:"path"`
-	Extension      string       `xml:"extension"`
-	Request        burpBase64   `xml:"request"`
-	Status         int          `xml:"status"`
-	ResponseLength int          `xml:"responselength"`
-	MimeType       string       `xml:"mimetype"`
-	Response       burpBase64   `xml:"response"`
-	Comment        string       `xml:"comment"`
+	Time           string     `xml:"time"`
+	URL            string     `xml:"url"`
+	Host           burpHost   `xml:"host"`
+	Port           string     `xml:"port"`
+	Protocol       string     `xml:"protocol"`
+	Method         string     `xml:"method"`
+	Path           string     `xml:"path"`
+	Extension      string     `xml:"extension"`
+	Request        burpBase64 `xml:"request"`
+	Status         int        `xml:"status"`
+	ResponseLength int        `xml:"responselength"`
+	MimeType       string     `xml:"mimetype"`
+	Response       burpBase64 `xml:"response"`
+	Comment        string     `xml:"comment"`
 }
 
 type burpHost struct {
@@ -70,8 +70,19 @@ func buildBurpXML(rows []db.HttpMessageRow) ([]byte, error) {
 		reqHeaders := parseHeaders(r.RequestHeaders)
 		respHeaders := parseHeaders(r.ResponseHeaders)
 
-		rawReq := buildRawRequest(r.Method, u, reqHeaders, r.RequestBody, r.RequestBodyEncoding)
-		rawResp := buildRawResponse(r.StatusCode, respHeaders, r.ResponseBody, r.ResponseBodyEncoding)
+		rawReq := buildRawRequest(
+			r.Method,
+			u,
+			reqHeaders,
+			r.RequestBody,
+			r.RequestBodyEncoding,
+		)
+		rawResp := buildRawResponse(
+			r.StatusCode,
+			respHeaders,
+			r.ResponseBody,
+			r.ResponseBodyEncoding,
+		)
 
 		ext := ""
 		if p := u.Path; p != "" {
@@ -88,19 +99,27 @@ func buildBurpXML(rows []db.HttpMessageRow) ([]byte, error) {
 		}
 
 		items = append(items, burpItem{
-			Time:           time.UnixMilli(r.Timestamp).UTC().Format("Mon Jan 02 15:04:05 MST 2006"),
-			URL:            r.URL,
-			Host:           burpHost{IP: "", Host: host},
-			Port:           port,
-			Protocol:       protocol,
-			Method:         r.Method,
-			Path:           u.RequestURI(),
-			Extension:      ext,
-			Request:        burpBase64{Base64: "true", Data: base64.StdEncoding.EncodeToString(rawReq)},
+			Time: time.UnixMilli(r.Timestamp).
+				UTC().
+				Format("Mon Jan 02 15:04:05 MST 2006"),
+			URL:       r.URL,
+			Host:      burpHost{IP: "", Host: host},
+			Port:      port,
+			Protocol:  protocol,
+			Method:    r.Method,
+			Path:      u.RequestURI(),
+			Extension: ext,
+			Request: burpBase64{
+				Base64: "true",
+				Data:   base64.StdEncoding.EncodeToString(rawReq),
+			},
 			Status:         r.StatusCode,
 			ResponseLength: len(rawResp),
 			MimeType:       mimeType,
-			Response:       burpBase64{Base64: "true", Data: base64.StdEncoding.EncodeToString(rawResp)},
+			Response: burpBase64{
+				Base64: "true",
+				Data:   base64.StdEncoding.EncodeToString(rawResp),
+			},
 		})
 	}
 
@@ -118,7 +137,13 @@ func buildBurpXML(rows []db.HttpMessageRow) ([]byte, error) {
 	return append([]byte(xml.Header), out...), nil
 }
 
-func buildRawRequest(method string, u *url.URL, headers map[string]string, body *string, bodyEncoding string) []byte {
+func buildRawRequest(
+	method string,
+	u *url.URL,
+	headers map[string]string,
+	body *string,
+	bodyEncoding string,
+) []byte {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("%s %s HTTP/1.1\r\n", method, u.RequestURI()))
 	b.WriteString(fmt.Sprintf("Host: %s\r\n", u.Host))
@@ -145,9 +170,16 @@ func buildRawRequest(method string, u *url.URL, headers map[string]string, body 
 	return []byte(b.String())
 }
 
-func buildRawResponse(statusCode int, headers map[string]string, body *string, bodyEncoding string) []byte {
+func buildRawResponse(
+	statusCode int,
+	headers map[string]string,
+	body *string,
+	bodyEncoding string,
+) []byte {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("HTTP/1.1 %d %s\r\n", statusCode, statusText(statusCode)))
+	b.WriteString(
+		fmt.Sprintf("HTTP/1.1 %d %s\r\n", statusCode, statusText(statusCode)),
+	)
 
 	keys := sortedKeys(headers)
 	for _, k := range keys {

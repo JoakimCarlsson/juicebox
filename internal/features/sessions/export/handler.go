@@ -44,7 +44,8 @@ func (h *Handler) Handle(c *router.Context) {
 		}
 		c.Writer.Header().Set("Content-Type", "application/json")
 		c.Writer.Header().Set("Content-Disposition",
-			fmt.Sprintf(`attachment; filename="juicebox-%s-%s.har"`, sessionID[:8], ts))
+			fmt.Sprintf(`attachment; filename="juicebox-%s-%s.har"`, sessionID[:8], ts),
+		)
 		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.Write(data) //nolint:errcheck
 
@@ -56,11 +57,16 @@ func (h *Handler) Handle(c *router.Context) {
 		}
 		c.Writer.Header().Set("Content-Type", "application/xml")
 		c.Writer.Header().Set("Content-Disposition",
-			fmt.Sprintf(`attachment; filename="juicebox-%s-%s.xml"`, sessionID[:8], ts))
+			fmt.Sprintf(`attachment; filename="juicebox-%s-%s.xml"`, sessionID[:8], ts),
+		)
 		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.Write(data) //nolint:errcheck
 
 	default:
-		response.Error(c, http.StatusBadRequest, "format must be 'har' or 'burp'")
+		response.Error(
+			c,
+			http.StatusBadRequest,
+			"format must be 'har' or 'burp'",
+		)
 	}
 }
