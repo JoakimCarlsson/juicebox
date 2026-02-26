@@ -203,6 +203,9 @@ func (h *Handler) Handle(c *router.Context) {
 		chattools.NewListDatabases(setup, dbSess.DeviceID, dbSess.BundleID),
 		chattools.NewGetSchema(h.sqliteService, h.manager, sessionID),
 		chattools.NewSqliteQuery(h.sqliteQueryFn(), h.manager, sessionID),
+		chattools.NewRunShell(),
+		chattools.NewFetchWebpage(),
+		chattools.NewWebSearch(),
 	)
 
 	state := map[string]any{
