@@ -133,7 +133,9 @@ func TestFetchWebpage_StripsScriptTags(t *testing.T) {
 	var result struct {
 		Content string `json:"content"`
 	}
-	json.Unmarshal([]byte(resp.Content), &result)
+	if err := json.Unmarshal([]byte(resp.Content), &result); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
 
 	if strings.Contains(result.Content, "alert") {
 		t.Error("expected script content to be stripped from markdown output")
@@ -168,7 +170,9 @@ func TestFetchWebpage_PreservesLinks(t *testing.T) {
 	var result struct {
 		Content string `json:"content"`
 	}
-	json.Unmarshal([]byte(resp.Content), &result)
+	if err := json.Unmarshal([]byte(resp.Content), &result); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
 
 	if !strings.Contains(result.Content, "https://example.com") {
 		t.Errorf("expected link URL to be preserved, got %q", result.Content)

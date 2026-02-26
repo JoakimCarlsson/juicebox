@@ -110,7 +110,9 @@ func TestRunShell_Timeout(t *testing.T) {
 		var result struct {
 			ExitCode int `json:"exit_code"`
 		}
-		json.Unmarshal([]byte(resp.Content), &result)
+		if err := json.Unmarshal([]byte(resp.Content), &result); err != nil {
+			t.Fatalf("failed to parse response: %v", err)
+		}
 		if result.ExitCode == 0 {
 			t.Fatal("expected timeout to cause non-zero exit or error")
 		}

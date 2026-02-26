@@ -170,7 +170,9 @@ func TestWebSearch_LimitResults(t *testing.T) {
 	var results []struct {
 		Title string `json:"title"`
 	}
-	json.Unmarshal([]byte(resp.Content), &results)
+	if err := json.Unmarshal([]byte(resp.Content), &results); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
 	if len(results) != 2 {
 		t.Errorf("expected 2 results, got %d", len(results))
 	}
@@ -227,7 +229,9 @@ func TestWebSearch_HTMLEntities(t *testing.T) {
 		URL     string `json:"url"`
 		Snippet string `json:"snippet"`
 	}
-	json.Unmarshal([]byte(resp.Content), &results)
+	if err := json.Unmarshal([]byte(resp.Content), &results); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
 	}
@@ -275,7 +279,9 @@ func TestWebSearch_SkipsAds(t *testing.T) {
 		Title string `json:"title"`
 		URL   string `json:"url"`
 	}
-	json.Unmarshal([]byte(resp.Content), &results)
+	if err := json.Unmarshal([]byte(resp.Content), &results); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result (ad skipped), got %d", len(results))
 	}
