@@ -31,7 +31,20 @@ export async function handleAttach(
 
   const device = await frida.getDevice(deviceId);
 
-  const pid = await device.spawn(identifier);
+  let pid!: number;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      pid = await device.spawn(identifier);
+      break;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("Need Gadget") && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
+      }
+      throw err;
+    }
+  }
   const session = await device.attach(pid);
   const agentSource = await Deno.readTextFile(AGENT_PATH);
   const script = await session.createScript(agentSource);
