@@ -88,7 +88,7 @@ function MemoryPage() {
     setScanning(true)
     try {
       await startMemoryScan(sessionId, pattern.trim())
-    } catch (_) {
+    } catch {
       setScanning(false)
     }
   }, [sessionId, pattern, messages.length])
@@ -97,7 +97,7 @@ function MemoryPage() {
     if (!sessionId) return
     try {
       await stopMemoryScan(sessionId)
-    } catch (_) {}
+    } catch {}
     setScanning(false)
   }, [sessionId])
 

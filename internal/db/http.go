@@ -85,6 +85,36 @@ func (d *DB) ListHttpMessages(
 	return result, rows.Err()
 }
 
+func (d *DB) AllHttpMessages(sessionID string) ([]HttpMessageRow, error) {
+	rows, err := d.conn.Query(
+		`SELECT id, session_id, method, url,
+		 request_headers, request_body, request_body_encoding, request_body_size,
+		 status_code, response_headers, response_body, response_body_encoding,
+		 response_body_size, duration, timestamp
+		 FROM http_messages WHERE session_id = ? ORDER BY timestamp ASC`,
+		sessionID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("db.AllHttpMessages: %w", err)
+	}
+	defer rows.Close()
+
+	var result []HttpMessageRow
+	for rows.Next() {
+		var m HttpMessageRow
+		if err := rows.Scan(
+			&m.ID, &m.SessionID, &m.Method, &m.URL,
+			&m.RequestHeaders, &m.RequestBody, &m.RequestBodyEncoding, &m.RequestBodySize,
+			&m.StatusCode, &m.ResponseHeaders, &m.ResponseBody, &m.ResponseBodyEncoding,
+			&m.ResponseBodySize, &m.Duration, &m.Timestamp,
+		); err != nil {
+			return nil, err
+		}
+		result = append(result, m)
+	}
+	return result, rows.Err()
+}
+
 func (d *DB) CountHttpMessages(sessionID string) (int, error) {
 	var count int
 	err := d.conn.QueryRow(`SELECT COUNT(*) FROM http_messages WHERE session_id = ?`, sessionID).

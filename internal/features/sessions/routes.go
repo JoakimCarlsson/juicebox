@@ -12,6 +12,7 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/crashes"
 	cryptopkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/crypto"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/detach"
+	exportpkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/export"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/filesystem"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/intercept"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/list"
@@ -61,6 +62,7 @@ func RegisterRoutes(
 	cryptoHandler := cryptopkg.NewHandler(database, manager)
 	clipboardHandler := clipboardpkg.NewHandler(database, manager)
 	memoryHandler := memorypkg.NewHandler(manager)
+	exportHandler := exportpkg.NewHandler(database)
 
 	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
@@ -90,6 +92,8 @@ func RegisterRoutes(
 	r.GET("/sessions/{sessionId}/sqlite/tables", sqliteHandler.Tables)
 	r.POST("/sessions/{sessionId}/sqlite/query", sqliteHandler.Query)
 	r.GET("/sessions/{sessionId}/sqlite/export", sqliteHandler.Export)
+
+	r.GET("/sessions/{sessionId}/export", exportHandler.Handle)
 
 	r.GET("/sessions/{sessionId}/crashes", crashesHandler.Handle)
 	r.GET("/sessions/{sessionId}/crypto", cryptoHandler.Handle)
