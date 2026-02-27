@@ -29,15 +29,19 @@ async function spawnAndInject(
   evasionConfig?: Record<string, boolean>,
   noResume?: boolean,
 ): Promise<{ sessionId: string; pid: number }> {
+  const RETRYABLE = ["Need Gadget", "InvocationTargetException"];
   let pid!: number;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 5; attempt++) {
     try {
       pid = await device.spawn(identifier);
       break;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("Need Gadget") && attempt < 2) {
-        await new Promise((r) => setTimeout(r, 1000));
+      if (RETRYABLE.some((r) => msg.includes(r)) && attempt < 4) {
+        console.log(
+          `spawn attempt ${attempt + 1} failed (${msg}), retrying in 2s...`,
+        );
+        await new Promise((r) => setTimeout(r, 2000));
         continue;
       }
       throw err;

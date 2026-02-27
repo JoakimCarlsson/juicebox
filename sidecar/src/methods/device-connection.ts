@@ -15,12 +15,13 @@ export async function handleConnectDevice(
     return ok(req.id, { deviceId, platform: existing.platform });
   }
 
-  const device = await frida.getDevice(deviceId);
+  let device = await frida.getDevice(deviceId);
   const sysParams = await device.querySystemParameters();
   const platform = normalizePlatform(sysParams.platform as string);
 
   if (platform === "android") {
     await ensureFridaServer(deviceId);
+    device = await frida.getDevice(deviceId);
   }
 
   devices.set(deviceId, { id: deviceId, device, platform });

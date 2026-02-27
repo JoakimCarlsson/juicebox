@@ -91,7 +91,7 @@ export async function handleListFiles(
     "-s",
     deviceId,
     "shell",
-    `run-as ${bundleId} ls -la "${path}" 2>/dev/null || ls -la "${path}" 2>&1`,
+    `run-as ${bundleId} ls -la "${path}" 2>/dev/null || su -c 'ls -la "${path}"' 2>/dev/null || ls -la "${path}" 2>&1`,
   ]);
 
   if (!stdout && stderr) {
@@ -116,7 +116,7 @@ export async function handleReadFile(
     "-s",
     deviceId,
     "shell",
-    `run-as ${bundleId} stat -c %s "${path}" 2>/dev/null || stat -c %s "${path}" 2>/dev/null || echo 0`,
+    `run-as ${bundleId} stat -c %s "${path}" 2>/dev/null || su -c 'stat -c %s "${path}"' 2>/dev/null || stat -c %s "${path}" 2>/dev/null || echo 0`,
   ]);
   const fileSize = parseInt(sizeResult.stdout.trim(), 10) || 0;
   const MAX_SIZE = 5 * 1024 * 1024;
@@ -133,7 +133,7 @@ export async function handleReadFile(
     "-s",
     deviceId,
     "shell",
-    `run-as ${bundleId} base64 "${path}" 2>/dev/null || base64 "${path}" 2>&1`,
+    `run-as ${bundleId} base64 "${path}" 2>/dev/null || su -c 'base64 "${path}"' 2>/dev/null || base64 "${path}" 2>&1`,
   ]);
 
   if (!stdout && stderr) {
@@ -188,7 +188,7 @@ export async function handleFindFiles(
     "-s",
     deviceId,
     "shell",
-    `run-as ${bundleId} find "${basePath}" -name "${pattern}" 2>/dev/null || find "${basePath}" -name "${pattern}" 2>/dev/null`,
+    `run-as ${bundleId} find "${basePath}" -name "${pattern}" 2>/dev/null || su -c 'find "${basePath}" -name "${pattern}"' 2>/dev/null || find "${basePath}" -name "${pattern}" 2>/dev/null`,
   ]);
 
   const paths = stdout.split("\n").map((p) => p.trim()).filter((p) =>
@@ -219,7 +219,7 @@ export async function handlePullDatabase(
     "-s",
     deviceId,
     "shell",
-    `run-as ${bundleId} cat "${dbPath}" > "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}" || cat "${dbPath}" > "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}" || cp "${dbPath}" "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}"`,
+    `run-as ${bundleId} cat "${dbPath}" > "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}" || su -c 'cat "${dbPath}" > "${remoteTmp}" && chmod 644 "${remoteTmp}"' 2>/dev/null || cat "${dbPath}" > "${remoteTmp}" 2>/dev/null && chmod 644 "${remoteTmp}"`,
   ]);
 
   const checkTmp = await exec([
@@ -253,7 +253,7 @@ export async function handlePullDatabase(
       "-s",
       deviceId,
       "shell",
-      `run-as ${bundleId} cat "${srcPath}" > "${rTmp}" 2>/dev/null && chmod 644 "${rTmp}" && echo OK || cat "${srcPath}" > "${rTmp}" 2>/dev/null && chmod 644 "${rTmp}" && echo OK || echo SKIP`,
+      `run-as ${bundleId} cat "${srcPath}" > "${rTmp}" 2>/dev/null && chmod 644 "${rTmp}" && echo OK || su -c 'cat "${srcPath}" > "${rTmp}" && chmod 644 "${rTmp}"' 2>/dev/null && echo OK || echo SKIP`,
     ]);
     if (scCp.stdout.trim().includes("OK")) {
       await exec(["adb", "-s", deviceId, "pull", rTmp, lTmp]);

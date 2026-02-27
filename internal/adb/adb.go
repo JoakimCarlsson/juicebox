@@ -76,6 +76,15 @@ func InstallCACert(deviceID string, pemPath string) error {
 
 	script := fmt.Sprintf(`set -e
 
+do_mount() {
+  "$@" 2>/dev/null && return 0
+  mount -o remount,rw / 2>/dev/null
+  touch /etc/fstab 2>/dev/null
+  "$@" && return 0
+  busybox "$@" && return 0
+  return 1
+}
+
 mkdir -p /data/local/tmp/htk-ca-copy
 chmod 700 /data/local/tmp/htk-ca-copy
 rm -rf /data/local/tmp/htk-ca-copy/*
@@ -86,7 +95,7 @@ else
     cp /system/etc/security/cacerts/* /data/local/tmp/htk-ca-copy/
 fi
 
-mount -t tmpfs tmpfs /system/etc/security/cacerts
+do_mount mount -t tmpfs tmpfs /system/etc/security/cacerts
 
 mv /data/local/tmp/htk-ca-copy/* /system/etc/security/cacerts/
 mv %s /system/etc/security/cacerts/
@@ -99,7 +108,7 @@ chcon u:object_r:system_file:s0 /system/etc/security/cacerts/*
 echo 'System cacerts setup completed'
 
 if [ -d "/apex/com.android.conscrypt/cacerts" ]; then
-    mount --bind /system/etc/security/cacerts /apex/com.android.conscrypt/cacerts
+    do_mount mount --bind /system/etc/security/cacerts /apex/com.android.conscrypt/cacerts
 
     ZYGOTE_PID=$(pidof zygote || true)
     ZYGOTE64_PID=$(pidof zygote64 || true)
@@ -147,12 +156,26 @@ echo 'System cert successfully injected'
 		return fmt.Errorf("push script: %w", err)
 	}
 
-	cmd := exec.Command("adb", "-s", deviceID, "shell", "sh", scriptPath)
+	cmd := exec.Command(
+		"adb", "-s", deviceID, "shell", "sh", scriptPath,
+	)
 	out, err := cmd.CombinedOutput()
 	output := string(out)
 
-	if err != nil {
-		return fmt.Errorf("cert injection script failed: %s: %w", output, err)
+	if err != nil && !strings.Contains(output, "System cert successfully injected") {
+		suCmd := exec.Command(
+			"adb", "-s", deviceID, "shell",
+			"su", "-c", fmt.Sprintf("sh %s", scriptPath),
+		)
+		suOut, suErr := suCmd.CombinedOutput()
+		suOutput := string(suOut)
+		if suErr != nil {
+			return fmt.Errorf(
+				"cert injection script failed: %s: %w",
+				suOutput, suErr,
+			)
+		}
+		output = suOutput
 	}
 
 	if !strings.Contains(output, "System cert successfully injected") {
