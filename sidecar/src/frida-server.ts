@@ -25,6 +25,16 @@ export async function getFridaVersion(): Promise<string> {
   return pkg.version;
 }
 
+export async function stopFridaServer(deviceId: string): Promise<void> {
+  try {
+    await exec(["adb", "-s", deviceId, "shell", "su -c 'killall frida-server' 2>/dev/null || killall frida-server 2>/dev/null"]);
+  } catch {}
+  for (let i = 0; i < 5; i++) {
+    if (!(await isFridaServerRunning(deviceId))) return;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}
+
 export async function isFridaServerRunning(deviceId: string): Promise<boolean> {
   const { stdout } = await exec([
     "adb",

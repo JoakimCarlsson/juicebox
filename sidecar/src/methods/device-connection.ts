@@ -2,7 +2,7 @@ import frida from "frida";
 import type { JsonRpcRequest, JsonRpcResponse } from "../types.ts";
 import { devices, fail, ok, sessions } from "../state.ts";
 import { normalizePlatform } from "../utils.ts";
-import { ensureFridaServer } from "../frida-server.ts";
+import { ensureFridaServer, stopFridaServer } from "../frida-server.ts";
 
 export async function handleConnectDevice(
   req: JsonRpcRequest,
@@ -62,7 +62,11 @@ export async function handleDisconnectDevice(
   }
 
   devices.delete(deviceId);
-  console.log(`device ${deviceId} disconnected`);
 
+  if (deviceState.platform === "android") {
+    await stopFridaServer(deviceId);
+  }
+
+  console.log(`device ${deviceId} disconnected`);
   return ok(req.id, { success: true });
 }
