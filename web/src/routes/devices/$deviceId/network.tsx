@@ -14,6 +14,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
 import { useIntercept } from '@/contexts/InterceptContext'
 import { useAttachedApps } from '@/contexts/AttachedAppsContext'
+import { NoAppAttachedState } from '@/components/devices/NoAppAttachedState'
 import type { HttpMessage } from '@/types/session'
 import { RequestList } from '@/components/network/RequestList'
 import { RequestDetail } from '@/components/network/RequestDetail'
@@ -26,7 +27,15 @@ export const Route = createFileRoute('/devices/$deviceId/network')({
 
 function NetworkPage() {
   const { selectedApp } = useAttachedApps()
-  const sessionId = selectedApp?.sessionId ?? ''
+
+  if (!selectedApp) {
+    return <NoAppAttachedState feature="Network" />
+  }
+
+  return <NetworkPageInner sessionId={selectedApp.sessionId ?? ''} />
+}
+
+function NetworkPageInner({ sessionId }: { sessionId: string }) {
   const { messages, clearByType } = useDeviceMessages()
   const {
     enabled: interceptEnabled,

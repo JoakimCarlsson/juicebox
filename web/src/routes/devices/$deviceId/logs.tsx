@@ -4,6 +4,8 @@ import { Search, Trash2, FileText, ArrowDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
+import { NoAppAttachedState } from '@/components/devices/NoAppAttachedState'
 import type { LogcatEntry } from '@/types/session'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +26,16 @@ const ALL_LEVELS = ['V', 'D', 'I', 'W', 'E', 'F'] as const
 const MAX_ENTRIES = 10000
 
 function LogsPage() {
+  const { selectedApp } = useAttachedApps()
+
+  if (!selectedApp) {
+    return <NoAppAttachedState feature="Logs" />
+  }
+
+  return <LogsPageInner />
+}
+
+function LogsPageInner() {
   const { messages, clearByType } = useDeviceMessages()
   const [search, setSearch] = useState('')
   const [activeLevels, setActiveLevels] = useState<Set<string>>(new Set(['D', 'I', 'W', 'E', 'F']))
