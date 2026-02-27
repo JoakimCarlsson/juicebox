@@ -10,7 +10,7 @@ import (
 )
 
 type ReadScriptFileParams struct {
-	Name string `json:"name" description:"Filename of the script to read (e.g. hook_crypto.ts)"`
+	Name string `json:"name" description:"Filename of the script to read, including folder path (e.g. com.example.app/hook_crypto.ts or global/logger.ts)"`
 }
 
 type ReadScriptFileTool struct {
@@ -28,7 +28,7 @@ func NewReadScriptFile(
 func (t *ReadScriptFileTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"read_script_file",
-		"Read the contents of a saved Frida script file by filename.",
+		"Read the contents of a saved Frida script file by filename. Scripts are stored per-device and organized in folders by bundle ID.",
 		ReadScriptFileParams{},
 	)
 }

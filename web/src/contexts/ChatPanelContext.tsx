@@ -34,9 +34,15 @@ function nextId() {
   return `msg-${++messageCounter}`
 }
 
-export function ChatPanelProvider({ children }: { children: React.ReactNode }) {
+export function ChatPanelProvider({
+  deviceId,
+  children,
+}: {
+  deviceId: string
+  children: React.ReactNode
+}) {
   const { selectedApp } = useAttachedApps()
-  const sessionId = selectedApp?.sessionId ?? ''
+  const bundleId = selectedApp?.bundleId
   const [isOpen, setIsOpen] = useState(true)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
@@ -46,17 +52,17 @@ export function ChatPanelProvider({ children }: { children: React.ReactNode }) {
   const lastExpandedSize = useRef(30)
 
   useEffect(() => {
-    if (!sessionId) return
-    fetchChatStatus(sessionId)
+    if (!deviceId) return
+    fetchChatStatus(deviceId)
       .then((status) => {
         setConfigured(status.configured)
       })
       .catch(() => setConfigured(false))
-  }, [sessionId])
+  }, [deviceId])
 
   useEffect(() => {
-    if (!sessionId || configured !== true) return
-    fetchChatHistory(sessionId)
+    if (!deviceId || configured !== true) return
+    fetchChatHistory(deviceId)
       .then((history) => {
         if (history.messages.length > 0) {
           setMessages(
@@ -90,7 +96,7 @@ export function ChatPanelProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => {})
-  }, [sessionId, configured])
+  }, [deviceId, configured])
 
   const toggle = useCallback(() => {
     const panel = panelRef.current
@@ -113,7 +119,7 @@ export function ChatPanelProvider({ children }: { children: React.ReactNode }) {
 
   const sendMessage = useCallback(
     (text: string) => {
-      if (!sessionId || isStreaming || !text.trim()) return
+      if (!deviceId || isStreaming || !text.trim()) return
 
       const userMsg: ChatMessage = {
         id: nextId(),
@@ -132,7 +138,7 @@ export function ChatPanelProvider({ children }: { children: React.ReactNode }) {
       setMessages((prev) => [...prev, userMsg, assistantMsg])
       setIsStreaming(true)
 
-      const controller = streamChat(sessionId, text.trim(), (event: SSEEvent) => {
+      const controller = streamChat(deviceId, text.trim(), bundleId, (event: SSEEvent) => {
         switch (event.type) {
           case 'content': {
             setMessages((prev) =>
@@ -215,7 +221,7 @@ export function ChatPanelProvider({ children }: { children: React.ReactNode }) {
 
       abortRef.current = controller
     },
-    [sessionId, isStreaming]
+    [deviceId, bundleId, isStreaming]
   )
 
   const clearChat = useCallback(() => {

@@ -25,7 +25,7 @@ func NewListScriptFiles(
 func (t *ListScriptFilesTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"list_script_files",
-		"List all saved Frida script files for this session. Returns filenames and last updated timestamps.",
+		"List all saved Frida script files for this device. Returns filenames (including folder paths like bundleId/script.ts) and last updated timestamps.",
 		ListScriptFilesParams{},
 	)
 }
@@ -43,7 +43,7 @@ func (t *ListScriptFilesTool) Run(
 
 	if len(files) == 0 {
 		return tool.NewTextResponse(
-			"No script files found for this session.",
+			"No script files found for this device.",
 		), nil
 	}
 

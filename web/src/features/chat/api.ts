@@ -30,29 +30,30 @@ export type SSEEvent =
   | { type: 'done'; data: { input_tokens: number; output_tokens: number } }
   | { type: 'error'; data: { message: string } }
 
-export async function fetchChatStatus(sessionId: string): Promise<ChatStatusResponse> {
-  const res = await fetch(`/api/v1/sessions/${sessionId}/chat/status`)
+export async function fetchChatStatus(deviceId: string): Promise<ChatStatusResponse> {
+  const res = await fetch(`/api/v1/devices/${deviceId}/chat/status`)
   if (!res.ok) throw new Error('Failed to fetch chat status')
   return res.json()
 }
 
-export async function fetchChatHistory(sessionId: string): Promise<ChatHistoryResponse> {
-  const res = await fetch(`/api/v1/sessions/${sessionId}/chat/history`)
+export async function fetchChatHistory(deviceId: string): Promise<ChatHistoryResponse> {
+  const res = await fetch(`/api/v1/devices/${deviceId}/chat/history`)
   if (!res.ok) throw new Error('Failed to fetch chat history')
   return res.json()
 }
 
 export function streamChat(
-  sessionId: string,
+  deviceId: string,
   message: string,
+  bundleId: string | undefined,
   onEvent: (event: SSEEvent) => void
 ): AbortController {
   const controller = new AbortController()
 
-  fetch(`/api/v1/sessions/${sessionId}/chat`, {
+  fetch(`/api/v1/devices/${deviceId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, ...(bundleId ? { bundleId } : {}) }),
     signal: controller.signal,
   })
     .then(async (res) => {

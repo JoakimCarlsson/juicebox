@@ -93,6 +93,45 @@ func (d *DB) GetScriptFiles(deviceID string) ([]ScriptFileRow, error) {
 	return result, rows.Err()
 }
 
+func (d *DB) GetScriptFilesForApp(
+	deviceID, bundleID string,
+) ([]ScriptFileRow, error) {
+	rows, err := d.conn.Query(
+		`SELECT id, device_id, name, content, created_at, updated_at FROM script_files
+		 WHERE device_id = ? AND (name LIKE ? || '/%' OR name NOT LIKE '%/%' OR name LIKE 'global/%')
+		 ORDER BY updated_at DESC`,
+		deviceID,
+		bundleID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("db.GetScriptFilesForApp: %w", err)
+	}
+	defer rows.Close()
+
+	var result []ScriptFileRow
+	for rows.Next() {
+		var f ScriptFileRow
+		if err := rows.Scan(&f.ID, &f.DeviceID, &f.Name, &f.Content, &f.CreatedAt, &f.UpdatedAt); err != nil {
+			return nil, err
+		}
+		result = append(result, f)
+	}
+	return result, rows.Err()
+}
+
+func (d *DB) HasScriptFilesForApp(deviceID, bundleID string) (bool, error) {
+	var count int
+	err := d.conn.QueryRow(
+		`SELECT COUNT(*) FROM script_files WHERE device_id = ? AND name LIKE ? || '/%'`,
+		deviceID,
+		bundleID,
+	).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("db.HasScriptFilesForApp: %w", err)
+	}
+	return count > 0, nil
+}
+
 func (d *DB) DeleteScriptFile(id string) error {
 	_, err := d.conn.Exec(`DELETE FROM script_files WHERE id = ?`, id)
 	if err != nil {

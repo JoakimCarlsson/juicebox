@@ -10,7 +10,7 @@ import (
 )
 
 type RunFridaScriptParams struct {
-	Name string `json:"name" description:"Name of the script file to compile and run (e.g. hook_crypto.ts)"`
+	Name string `json:"name" description:"Name of the script file to compile and run, including folder path (e.g. com.example.app/hook_crypto.ts)"`
 }
 
 type RunFridaScriptTool struct {

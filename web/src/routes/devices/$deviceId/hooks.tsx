@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Editor, { type Monaco } from '@monaco-editor/react'
 import {
   Play,
@@ -45,6 +46,7 @@ import {
   runScriptByName,
 } from '@/features/devices/scripts-api'
 import type { ScriptFile } from '@/features/devices/scripts-api'
+import { appsQueryOptions } from '@/features/devices/queries'
 
 export const Route = createFileRoute('/devices/$deviceId/hooks')({
   component: HooksPage,
@@ -334,12 +336,14 @@ function FileTree({
   onSelectFile,
   deviceId,
   onFilesChanged,
+  appBundleIds,
 }: {
   files: ScriptFile[]
   selectedId: string | undefined
   onSelectFile: (name: string) => void
   deviceId: string
   onFilesChanged: () => void
+  appBundleIds: string[]
 }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set())
@@ -351,10 +355,21 @@ function FileTree({
     { id: string; parentPath: string; name: string }[]
   >([])
 
+  const allVirtualFolders = useMemo(() => {
+    const appFolders = appBundleIds
+      .filter((bid) => {
+        const hasReal = files.some((f) => f.name.startsWith(bid + '/'))
+        const hasManual = virtualFolders.some((vf) => vf.parentPath === '' && vf.name === bid)
+        return !hasReal && !hasManual
+      })
+      .map((bid) => ({ id: `app:${bid}`, parentPath: '', name: bid }))
+    return [...virtualFolders, ...appFolders]
+  }, [appBundleIds, files, virtualFolders])
+
   const tree = useMemo(() => {
     const base = buildTree(files)
 
-    for (const vf of virtualFolders) {
+    for (const vf of allVirtualFolders) {
       const node: TreeNode = {
         id: vf.id,
         name: vf.name,
@@ -363,7 +378,9 @@ function FileTree({
       }
       const insertInto = (nodes: TreeNode[], parentPath: string): boolean => {
         if (!parentPath) {
-          nodes.push(node)
+          if (!nodes.some((n) => n.fullPath === node.fullPath && n.children)) {
+            nodes.push(node)
+          }
           return true
         }
         for (const n of nodes) {
@@ -379,7 +396,7 @@ function FileTree({
     }
 
     return base
-  }, [files, virtualFolders])
+  }, [files, allVirtualFolders])
 
   const [prevTree, setPrevTree] = useState<TreeNode[]>([])
   if (tree !== prevTree) {
@@ -687,6 +704,8 @@ function HooksPage() {
   const { selectedApp } = useAttachedApps()
   const sessionId = selectedApp?.sessionId ?? ''
   const { subscribe } = useDeviceSocket()
+  const { data: apps } = useQuery(appsQueryOptions(deviceId))
+  const appBundleIds = useMemo(() => (apps ?? []).map((a) => a.identifier), [apps])
   const scriptOutput = useScriptOutput()
   const bottomPanel = useBottomPanel()
 
@@ -862,6 +881,7 @@ function HooksPage() {
           onSelectFile={openFile}
           deviceId={deviceId}
           onFilesChanged={handleFilesChanged}
+          appBundleIds={appBundleIds}
         />
       </ResizablePanel>
 

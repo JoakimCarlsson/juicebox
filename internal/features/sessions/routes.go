@@ -67,9 +67,9 @@ func RegisterRoutes(
 	r.GET("/devices/{deviceId}/sessions", listHandler.Handle)
 	r.GET("/sessions/{sessionId}/messages", messagesHandler.Handle)
 	r.GET("/sessions/{sessionId}/logs", logsHandler.Handle)
-	r.POST("/sessions/{sessionId}/chat", chatHandler.Handle)
-	r.GET("/sessions/{sessionId}/chat/status", chatHandler.Status)
-	r.GET("/sessions/{sessionId}/chat/history", chatHandler.History)
+	r.POST("/devices/{deviceId}/chat", chatHandler.Handle)
+	r.GET("/devices/{deviceId}/chat/status", chatHandler.Status)
+	r.GET("/devices/{deviceId}/chat/history", chatHandler.History)
 	r.GET("/sessions/{sessionId}/intercept", interceptHandler.GetState)
 	r.PUT("/sessions/{sessionId}/intercept", interceptHandler.UpdateState)
 	r.GET(

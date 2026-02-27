@@ -52,7 +52,7 @@ func (c *LLMConfig) NewClient() (llm.LLM, error) {
 
 	switch provider {
 	case "openai":
-		m := resolveModel(c.Model, model.OpenAIModels, model.GPT41Mini)
+		m := resolveModel(c.Model, model.OpenAIModels, model.GPT52Codex)
 		opts = append(
 			opts,
 			llm.WithModel(m),

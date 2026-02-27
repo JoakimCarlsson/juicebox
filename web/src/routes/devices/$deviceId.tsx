@@ -64,7 +64,7 @@ function DeviceLayout() {
             <BottomPanelProvider>
               <DeviceMessageProvider>
                 <InterceptProvider>
-                  <ChatPanelProvider>
+                  <ChatPanelProvider deviceId={deviceId}>
                     <DeviceShell deviceId={deviceId} deviceName={deviceName} />
                   </ChatPanelProvider>
                 </InterceptProvider>

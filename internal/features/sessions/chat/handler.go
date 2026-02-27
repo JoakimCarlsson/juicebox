@@ -72,10 +72,10 @@ func (h *Handler) sqliteQueryFn() func(setup session.DeviceSetup, deviceID, bund
 }
 
 type editApplier struct {
-	sessionID string
-	files     *scripting.FileManager
-	buf       string
-	applied   int
+	deviceID string
+	files    *scripting.FileManager
+	buf      string
+	applied  int
 }
 
 func (ea *editApplier) accumulate(delta string) {
@@ -91,7 +91,7 @@ func (ea *editApplier) flush() string {
 	newBlocks := blocks[ea.applied:]
 
 	getContent := func(filename string) (string, bool) {
-		f, err := ea.files.Get(ea.sessionID, filename)
+		f, err := ea.files.Get(ea.deviceID, filename)
 		if err != nil || f == nil {
 			return "", false
 		}
@@ -102,7 +102,7 @@ func (ea *editApplier) flush() string {
 
 	for _, applied := range result.Applied {
 		_, _ = ea.files.Upsert(
-			ea.sessionID,
+			ea.deviceID,
 			applied.Block.Filename,
 			applied.NewContent,
 		)
@@ -118,9 +118,9 @@ func (ea *editApplier) flush() string {
 }
 
 func (h *Handler) Handle(c *router.Context) {
-	sessionID := c.Param("sessionId")
-	if sessionID == "" {
-		response.Error(c, http.StatusBadRequest, "missing sessionId")
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
 		return
 	}
 
@@ -143,22 +143,22 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
-	dbSess, err := h.db.GetSession(sessionID)
-	if err != nil || dbSess == nil {
-		response.Error(c, http.StatusNotFound, "session not found")
-		return
-	}
-
-	liveSess := h.manager.GetSession(sessionID)
-	if liveSess == nil {
-		response.Error(c, http.StatusNotFound, "active session not found")
-		return
-	}
-
-	dc := h.manager.GetDeviceConnection(liveSess.DeviceID)
+	dc := h.manager.GetDeviceConnection(deviceID)
 	if dc == nil {
 		response.Error(c, http.StatusNotFound, "device not connected")
 		return
+	}
+
+	var activeSess *session.Session
+	var activeSessionID string
+	if req.BundleID != "" {
+		for _, sess := range dc.Sessions {
+			if sess.BundleID == req.BundleID {
+				activeSess = sess
+				activeSessionID = sess.ID
+				break
+			}
+		}
 	}
 
 	llmClient, err := h.llmConfig.NewClient()
@@ -171,76 +171,102 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
-	hub := h.hubManager.GetOrCreate(dbSess.DeviceID)
+	hub := h.hubManager.GetOrCreate(deviceID)
 	fileManager := scripting.NewFileManager(h.db, hub)
 
 	setup := dc.Setup
-	sessionTools := []tool.BaseTool{
-		chattools.NewSearchTraffic(h.db, sessionID),
+	chatTools := []tool.BaseTool{
 		chattools.NewGetRequestDetail(h.db),
-		chattools.NewListProcesses(setup, dbSess.DeviceID),
-		chattools.NewListPendingRequests(h.manager, sessionID),
-		chattools.NewModifyAndForward(h.manager, sessionID),
-		chattools.NewForwardRequest(h.manager, sessionID),
-		chattools.NewDropRequest(h.manager, sessionID),
-	}
-	for _, cap := range setup.Capabilities() {
-		switch cap {
-		case "logstream":
-			sessionTools = append(
-				sessionTools,
-				chattools.NewRunLogcatQuery(h.db, sessionID),
-			)
-		case "frida":
-			sessionTools = append(
-				sessionTools,
-				chattools.NewListClasses(h.manager, sessionID),
-				chattools.NewGetClassDetail(h.manager, sessionID),
-				chattools.NewGetCrashes(h.db, sessionID),
-				chattools.NewGetCryptoEvents(h.db, sessionID),
-				chattools.NewGetClipboardEvents(h.db, sessionID),
-				chattools.NewListKeystoreEntries(h.manager, sessionID),
-				chattools.NewListSharedPreferences(h.manager, sessionID),
-				chattools.NewRunFridaScript(
-					h.runner,
-					sessionID,
-					dbSess.DeviceID,
-				),
-				chattools.NewGetScriptOutput(h.runner, sessionID),
-				chattools.NewStopFridaScript(
-					h.runner,
-					sessionID,
-					dbSess.DeviceID,
-				),
-				chattools.NewListScriptFiles(fileManager, dbSess.DeviceID),
-				chattools.NewReadScriptFile(fileManager, dbSess.DeviceID),
-				chattools.NewScanMemory(h.manager, sessionID),
-			)
-		}
-	}
-	sessionTools = append(sessionTools,
-		chattools.NewLs(setup, dbSess.DeviceID, dbSess.BundleID),
-		chattools.NewReadFile(setup, dbSess.DeviceID, dbSess.BundleID),
-		chattools.NewFindFiles(setup, dbSess.DeviceID, dbSess.BundleID),
-		chattools.NewListDatabases(setup, dbSess.DeviceID, dbSess.BundleID),
-		chattools.NewGetSchema(h.sqliteService, h.manager, sessionID),
-		chattools.NewSqliteQuery(h.sqliteQueryFn(), h.manager, sessionID),
+		chattools.NewListProcesses(setup, deviceID),
+		chattools.NewListScriptFiles(fileManager, deviceID),
+		chattools.NewReadScriptFile(fileManager, deviceID),
 		chattools.NewRunShell(),
 		chattools.NewFetchWebpage(),
 		chattools.NewWebSearch(),
-	)
+	}
+
+	if activeSessionID != "" {
+		chatTools = append(chatTools,
+			chattools.NewSearchTraffic(h.db, activeSessionID),
+			chattools.NewListPendingRequests(h.manager, activeSessionID),
+			chattools.NewModifyAndForward(h.manager, activeSessionID),
+			chattools.NewForwardRequest(h.manager, activeSessionID),
+			chattools.NewDropRequest(h.manager, activeSessionID),
+		)
+		for _, cap := range setup.Capabilities() {
+			switch cap {
+			case "logstream":
+				chatTools = append(
+					chatTools,
+					chattools.NewRunLogcatQuery(h.db, activeSessionID),
+				)
+			case "frida":
+				chatTools = append(
+					chatTools,
+					chattools.NewListClasses(h.manager, activeSessionID),
+					chattools.NewGetClassDetail(h.manager, activeSessionID),
+					chattools.NewGetCrashes(h.db, activeSessionID),
+					chattools.NewGetCryptoEvents(h.db, activeSessionID),
+					chattools.NewGetClipboardEvents(h.db, activeSessionID),
+					chattools.NewListKeystoreEntries(
+						h.manager,
+						activeSessionID,
+					),
+					chattools.NewListSharedPreferences(
+						h.manager,
+						activeSessionID,
+					),
+					chattools.NewRunFridaScript(
+						h.runner,
+						activeSessionID,
+						deviceID,
+					),
+					chattools.NewGetScriptOutput(h.runner, activeSessionID),
+					chattools.NewStopFridaScript(
+						h.runner,
+						activeSessionID,
+						deviceID,
+					),
+					chattools.NewScanMemory(h.manager, activeSessionID),
+				)
+			}
+		}
+		chatTools = append(
+			chatTools,
+			chattools.NewLs(setup, deviceID, activeSess.BundleID),
+			chattools.NewReadFile(setup, deviceID, activeSess.BundleID),
+			chattools.NewFindFiles(setup, deviceID, activeSess.BundleID),
+			chattools.NewListDatabases(setup, deviceID, activeSess.BundleID),
+			chattools.NewGetSchema(h.sqliteService, h.manager, activeSessionID),
+			chattools.NewSqliteQuery(
+				h.sqliteQueryFn(),
+				h.manager,
+				activeSessionID,
+			),
+		)
+	} else {
+		for _, cap := range setup.Capabilities() {
+			switch cap {
+			case "logstream":
+				chatTools = append(
+					chatTools,
+					chattools.NewRunLogcatQuery(h.db, ""),
+				)
+			}
+		}
+	}
 
 	state := map[string]any{
-		"BundleID":  dbSess.BundleID,
-		"DeviceID":  dbSess.DeviceID,
-		"SessionID": sessionID,
+		"BundleID":  req.BundleID,
+		"DeviceID":  deviceID,
+		"SessionID": activeSessionID,
 	}
 
 	a := agent.New(llmClient,
 		agent.WithSystemPrompt(SystemPromptTemplate),
 		agent.WithState(state),
-		agent.WithTools(sessionTools...),
-		agent.WithSession(sessionID, h.chatStore.GetOrCreate(sessionID)),
+		agent.WithTools(chatTools...),
+		agent.WithSession(deviceID, h.chatStore.GetOrCreate(deviceID)),
 		agent.WithMaxIterations(50),
 	)
 
@@ -250,8 +276,8 @@ func (h *Handler) Handle(c *router.Context) {
 			eventCh := a.ChatStream(ctx, req.Message)
 
 			applier := &editApplier{
-				sessionID: sessionID,
-				files:     fileManager,
+				deviceID: deviceID,
+				files:    fileManager,
 			}
 
 			for event := range eventCh {
@@ -329,22 +355,22 @@ func (h *Handler) Status(c *router.Context) {
 }
 
 func (h *Handler) History(c *router.Context) {
-	sessionID := c.Param("sessionId")
-	if sessionID == "" {
-		response.Error(c, http.StatusBadRequest, "missing sessionId")
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
 		return
 	}
 
-	store := h.chatStore.GetOrCreate(sessionID)
+	store := h.chatStore.GetOrCreate(deviceID)
 	ctx := c.Request.Context()
 
-	exists, err := store.Exists(ctx, sessionID)
+	exists, err := store.Exists(ctx, deviceID)
 	if err != nil || !exists {
 		c.JSON(http.StatusOK, map[string]any{"messages": []any{}})
 		return
 	}
 
-	sess, err := store.Load(ctx, sessionID)
+	sess, err := store.Load(ctx, deviceID)
 	if err != nil || sess == nil {
 		c.JSON(http.StatusOK, map[string]any{"messages": []any{}})
 		return

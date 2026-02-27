@@ -385,7 +385,20 @@ func (m *Manager) AttachApp(deviceID, bundleID string) (*SpawnResult, error) {
 	dc.Sessions[sess.ID] = sess
 	dc.mu.Unlock()
 
-	scripts, err := m.database.GetScriptFiles(deviceID)
+	hasAppScripts, _ := m.database.HasScriptFilesForApp(deviceID, bundleID)
+	if !hasAppScripts {
+		now := time.Now().UnixMilli()
+		_ = m.database.UpsertScriptFile(db.ScriptFileRow{
+			ID:        fmt.Sprintf("sf_%d", time.Now().UnixNano()),
+			DeviceID:  deviceID,
+			Name:      bundleID + "/.gitkeep",
+			Content:   "",
+			CreatedAt: now,
+			UpdatedAt: now,
+		})
+	}
+
+	scripts, err := m.database.GetScriptFilesForApp(deviceID, bundleID)
 	if err != nil {
 		logger.Warn("failed to load device scripts", "error", err)
 	}
