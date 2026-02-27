@@ -12,8 +12,8 @@ import (
 
 type SchemaProvider interface {
 	GetTables(
-		sess *session.Session,
-		sessionID, dbPath string,
+		setup session.DeviceSetup,
+		deviceID, bundleID, sessionID, dbPath string,
 	) ([]bridge.DatabaseTable, error)
 }
 
@@ -67,7 +67,18 @@ func (t *GetSchemaTool) Run(
 		return tool.NewTextErrorResponse("session not found"), nil
 	}
 
-	tables, err := t.provider.GetTables(sess, t.sessionID, input.DbPath)
+	dc := t.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil {
+		return tool.NewTextErrorResponse("device not connected"), nil
+	}
+
+	tables, err := t.provider.GetTables(
+		dc.Setup,
+		sess.DeviceID,
+		sess.BundleID,
+		t.sessionID,
+		input.DbPath,
+	)
 	if err != nil {
 		return tool.NewTextErrorResponse(
 			fmt.Sprintf("get_schema failed: %v", err),

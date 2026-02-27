@@ -1,6 +1,15 @@
 import type { JsonRpcRequest, JsonRpcResponse } from "./types.ts";
 import { fail, ok, sessions } from "./state.ts";
-import { handleAttach, handleDetach } from "./methods/session.ts";
+import {
+  handleAttach,
+  handleDetach,
+  handleDetachApp,
+  handleSpawnApp,
+} from "./methods/session.ts";
+import {
+  handleConnectDevice,
+  handleDisconnectDevice,
+} from "./methods/device-connection.ts";
 import {
   handleGetScriptOutput,
   handleRunScript,
@@ -49,6 +58,18 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
 
       case "getAppIcon":
         return await handleGetAppIcon(req);
+
+      case "connectDevice":
+        return await handleConnectDevice(req);
+
+      case "disconnectDevice":
+        return await handleDisconnectDevice(req);
+
+      case "spawnApp":
+        return await handleSpawnApp(req);
+
+      case "detachApp":
+        return await handleDetachApp(req);
 
       case "attach":
         return await handleAttach(req);

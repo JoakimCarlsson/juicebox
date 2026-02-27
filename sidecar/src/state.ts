@@ -1,6 +1,7 @@
-import type { JsonRpcResponse, SessionState } from "./types.ts";
+import type { DeviceState, JsonRpcResponse, SessionState } from "./types.ts";
 
 export const sessions = new Map<string, SessionState>();
+export const devices = new Map<string, DeviceState>();
 let sessionCounter = 0;
 
 export function generateSessionId(): string {

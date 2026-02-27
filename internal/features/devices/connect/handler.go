@@ -1,4 +1,4 @@
-package detach
+package connect
 
 import (
 	"net/http"
@@ -17,16 +17,17 @@ func NewHandler(manager *session.Manager) *Handler {
 }
 
 func (h *Handler) Handle(c *router.Context) {
-	sessionID := c.Param("sessionId")
-	if sessionID == "" {
-		response.Error(c, http.StatusBadRequest, "missing sessionId")
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
 		return
 	}
 
-	if err := h.manager.DetachApp(sessionID); err != nil {
+	result, err := h.manager.ConnectDevice(deviceID)
+	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, map[string]string{"status": "detached"})
+	c.JSON(http.StatusOK, result)
 }

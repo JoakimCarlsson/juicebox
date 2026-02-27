@@ -5,10 +5,13 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/apps"
+	"github.com/joakimcarlsson/juicebox/internal/features/devices/connect"
+	"github.com/joakimcarlsson/juicebox/internal/features/devices/disconnect"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/icon"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/info"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/list"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/processes"
+	"github.com/joakimcarlsson/juicebox/internal/features/devices/spawn"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/stream"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
@@ -25,6 +28,9 @@ func RegisterRoutes(
 	iconHandler := icon.NewHandler(client)
 	processesHandler := processes.NewHandler(client)
 	streamHandler := stream.NewHandler(hubManager, sessionManager)
+	connectHandler := connect.NewHandler(sessionManager)
+	disconnectHandler := disconnect.NewHandler(sessionManager)
+	spawnHandler := spawn.NewHandler(sessionManager)
 
 	r.Group("/devices", func(d *router.Router) {
 		d.GET("", listHandler.Handle)
@@ -32,6 +38,9 @@ func RegisterRoutes(
 		d.GET("/{deviceId}/processes", processesHandler.Handle)
 		d.GET("/{deviceId}/info", infoHandler.Handle)
 		d.GET("/{deviceId}/icon/{bundleId}", iconHandler.Handle)
+		d.POST("/{deviceId}/connect", connectHandler.Handle)
+		d.DELETE("/{deviceId}/disconnect", disconnectHandler.Handle)
+		d.POST("/{deviceId}/spawn", spawnHandler.Handle)
 	})
 	r.GET("/ws/devices/{deviceId}", streamHandler.Handle)
 }

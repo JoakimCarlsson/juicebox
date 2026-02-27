@@ -6,7 +6,14 @@ import type {
   JsonRpcResponse,
   SessionState,
 } from "../types.ts";
-import { broadcast, fail, generateSessionId, ok, sessions } from "../state.ts";
+import {
+  broadcast,
+  devices,
+  fail,
+  generateSessionId,
+  ok,
+  sessions,
+} from "../state.ts";
 import { normalizePlatform } from "../utils.ts";
 import { ensureFridaServer } from "../frida-server.ts";
 
@@ -15,22 +22,12 @@ const AGENT_PATH = resolve(
   "../../../agent/dist/agent.js",
 );
 
-export async function handleAttach(
-  req: JsonRpcRequest,
-): Promise<JsonRpcResponse> {
-  const deviceId = req.params?.deviceId as string;
-  const identifier = req.params?.identifier as string;
-  if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
-  if (!identifier) return fail(req.id, -32602, "missing param: identifier");
-
-  const tempDevice = await frida.getDevice(deviceId);
-  const sysParams = await tempDevice.querySystemParameters();
-  if (normalizePlatform(sysParams.platform as string) === "android") {
-    await ensureFridaServer(deviceId);
-  }
-
-  const device = await frida.getDevice(deviceId);
-
+async function spawnAndInject(
+  device: frida.Device,
+  deviceId: string,
+  identifier: string,
+  evasionConfig?: Record<string, boolean>,
+): Promise<{ sessionId: string; pid: number }> {
   let pid!: number;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -45,6 +42,7 @@ export async function handleAttach(
       throw err;
     }
   }
+
   const session = await device.attach(pid);
   const agentSource = await Deno.readTextFile(AGENT_PATH);
   const script = await session.createScript(agentSource);
@@ -129,10 +127,6 @@ export async function handleAttach(
     );
   }
 
-  const evasionConfig = req.params?.evasion as
-    | Record<string, boolean>
-    | undefined;
-
   if (evasionConfig) {
     if (evasionConfig.frida_bypass !== false) {
       try {
@@ -141,7 +135,6 @@ export async function handleAttach(
         logAgentError("frida bypass failed", err);
       }
     }
-
     if (evasionConfig.root_bypass !== false) {
       try {
         await script.exports.invoke("evasion", "bypassRoot", []);
@@ -149,7 +142,6 @@ export async function handleAttach(
         logAgentError("root bypass failed", err);
       }
     }
-
     if (evasionConfig.emulator_bypass !== false) {
       try {
         await script.exports.invoke("evasion", "bypassEmulator", []);
@@ -172,9 +164,104 @@ export async function handleAttach(
   }
 
   await device.resume(pid);
-  console.log(`attached to ${identifier} (pid ${pid}), session ${sessionId}`);
+  console.log(`spawned ${identifier} (pid ${pid}), session ${sessionId}`);
 
-  return ok(req.id, { sessionId, pid });
+  return { sessionId, pid };
+}
+
+function detachSession(sessionId: string): void {
+  const state = sessions.get(sessionId);
+  if (!state) return;
+
+  for (const [, us] of state.userScripts) {
+    try {
+      us.script.unload();
+    } catch {}
+  }
+  state.userScripts.clear();
+
+  try {
+    state.script.unload();
+  } catch {}
+  try {
+    state.session.detach();
+  } catch {}
+
+  for (const sub of state.subscribers) {
+    try {
+      sub.close();
+    } catch {}
+  }
+
+  sessions.delete(sessionId);
+}
+
+export async function handleSpawnApp(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
+  const deviceId = req.params?.deviceId as string;
+  const bundleId = req.params?.bundleId as string;
+  if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
+  if (!bundleId) return fail(req.id, -32602, "missing param: bundleId");
+
+  const deviceState = devices.get(deviceId);
+  if (!deviceState) return fail(req.id, -32602, "device not connected");
+
+  const evasionConfig = req.params?.evasion as
+    | Record<string, boolean>
+    | undefined;
+
+  const result = await spawnAndInject(
+    deviceState.device,
+    deviceId,
+    bundleId,
+    evasionConfig,
+  );
+
+  return ok(req.id, result);
+}
+
+export async function handleDetachApp(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
+  const sessionId = req.params?.sessionId as string;
+  if (!sessionId) return fail(req.id, -32602, "missing param: sessionId");
+
+  const state = sessions.get(sessionId);
+  if (!state) return fail(req.id, -32602, "session not found");
+
+  detachSession(sessionId);
+  console.log(`detached app session ${sessionId}`);
+
+  return ok(req.id, { success: true });
+}
+
+export async function handleAttach(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
+  const deviceId = req.params?.deviceId as string;
+  const identifier = req.params?.identifier as string;
+  if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
+  if (!identifier) return fail(req.id, -32602, "missing param: identifier");
+
+  const tempDevice = await frida.getDevice(deviceId);
+  const sysParams = await tempDevice.querySystemParameters();
+  if (normalizePlatform(sysParams.platform as string) === "android") {
+    await ensureFridaServer(deviceId);
+  }
+
+  const device = await frida.getDevice(deviceId);
+  const evasionConfig = req.params?.evasion as
+    | Record<string, boolean>
+    | undefined;
+
+  const result = await spawnAndInject(
+    device,
+    deviceId,
+    identifier,
+    evasionConfig,
+  );
+  return ok(req.id, result);
 }
 
 export async function handleDetach(
@@ -186,27 +273,7 @@ export async function handleDetach(
   const state = sessions.get(sessionId);
   if (!state) return fail(req.id, -32602, "session not found");
 
-  for (const [, us] of state.userScripts) {
-    try {
-      await us.script.unload();
-    } catch {}
-  }
-  state.userScripts.clear();
-
-  try {
-    await state.script.unload();
-  } catch {}
-  try {
-    await state.session.detach();
-  } catch {}
-
-  for (const sub of state.subscribers) {
-    try {
-      sub.close();
-    } catch {}
-  }
-
-  sessions.delete(sessionId);
+  detachSession(sessionId);
   console.log(`detached session ${sessionId}`);
 
   return ok(req.id, { success: true });

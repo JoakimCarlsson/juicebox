@@ -5,7 +5,6 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
-	"github.com/joakimcarlsson/juicebox/internal/features/sessions/attach"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/chat"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/classes"
 	clipboardpkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/clipboard"
@@ -38,7 +37,6 @@ func RegisterRoutes(
 	fileManager := scripting.NewFileManager(database, nil)
 	scriptsHandler := scripts.NewHandler(fileManager, runner)
 
-	attachHandler := attach.NewHandler(manager)
 	detachHandler := detach.NewHandler(manager)
 	listHandler := list.NewHandler(database, manager)
 	messagesHandler := messages.NewHandler(database)
@@ -64,7 +62,6 @@ func RegisterRoutes(
 	memoryHandler := memorypkg.NewHandler(manager)
 	exportHandler := exportpkg.NewHandler(database)
 
-	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
 	r.PATCH("/sessions/{sessionId}", renameHandler.Handle)
 	r.GET("/devices/{deviceId}/sessions", listHandler.Handle)

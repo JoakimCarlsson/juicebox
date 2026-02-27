@@ -34,13 +34,19 @@ func (t *ListPendingRequestsTool) Run(
 	params tool.ToolCall,
 ) (tool.ToolResponse, error) {
 	sess := t.manager.GetSession(t.sessionID)
-	if sess == nil || sess.Intercept == nil {
+	if sess == nil {
+		return tool.NewTextErrorResponse(
+			"session not found or intercept not available",
+		), nil
+	}
+	dc := t.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil || dc.Intercept == nil {
 		return tool.NewTextErrorResponse(
 			"session not found or intercept not available",
 		), nil
 	}
 
-	pending := sess.Intercept.ListPending()
+	pending := dc.Intercept.ListPending()
 	if len(pending) == 0 {
 		return tool.NewTextResponse("No pending intercepted requests."), nil
 	}

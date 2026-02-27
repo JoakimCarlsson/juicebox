@@ -89,9 +89,13 @@ func (h *Handler) handleIncoming(msg []byte) {
 			return
 		}
 		sess := h.sessionManager.GetSession(envelope.SessionID)
-		if sess == nil || sess.Intercept == nil {
+		if sess == nil {
 			return
 		}
-		_ = sess.Intercept.Resolve(decision)
+		dc := h.sessionManager.GetDeviceConnection(sess.DeviceID)
+		if dc == nil || dc.Intercept == nil {
+			return
+		}
+		_ = dc.Intercept.Resolve(decision)
 	}
 }

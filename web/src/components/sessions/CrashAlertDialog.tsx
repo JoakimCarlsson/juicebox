@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
-import { attachApp } from '@/features/sessions/api'
+import { spawnApp } from '@/features/devices/api'
 import type { CrashEvent, DeviceEnvelope } from '@/types/session'
 import { cn } from '@/lib/utils'
 
@@ -63,10 +63,10 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
     return unsub
   }, [subscribe, sessionId])
 
-  const handleReattach = useCallback(async () => {
+  const handleRespawn = useCallback(async () => {
     setReattaching(true)
     try {
-      const resp = await attachApp(deviceId, bundleId, sessionId)
+      const resp = await spawnApp(deviceId, bundleId)
       setState({ kind: 'closed' })
       navigate({
         to: '/devices/$deviceId/app/$bundleId/home',
@@ -77,7 +77,7 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
     } catch {
       setReattaching(false)
     }
-  }, [deviceId, bundleId, sessionId, navigate])
+  }, [deviceId, bundleId, navigate])
 
   const handleViewCrashes = useCallback(() => {
     setState({ kind: 'closed' })
@@ -191,8 +191,7 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
 
         {showReattach && (
           <p className="text-xs text-muted-foreground">
-            The app process has terminated. You can reattach to restore the session with all its
-            history.
+            The app process has terminated. You can respawn the app to start a new session.
           </p>
         )}
 
@@ -204,9 +203,9 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
             </Button>
           )}
           {showReattach && (
-            <Button size="sm" onClick={handleReattach} disabled={reattaching}>
+            <Button size="sm" onClick={handleRespawn} disabled={reattaching}>
               <RotateCcw className={cn('mr-1.5 h-3.5 w-3.5', reattaching && 'animate-spin')} />
-              {reattaching ? 'Reattaching...' : 'Reattach'}
+              {reattaching ? 'Respawning...' : 'Respawn'}
             </Button>
           )}
           {!showReattach && (

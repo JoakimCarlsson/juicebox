@@ -50,9 +50,16 @@ func NewHandler(
 	}
 }
 
-func (h *Handler) sqliteQueryFn() func(sess *session.Session, sessionID, dbPath, sqlStr string) (*chattools.QueryResult, error) {
-	return func(sess *session.Session, sessionID, dbPath, sqlStr string) (*chattools.QueryResult, error) {
-		resp, err := h.sqliteService.ExecQuery(sess, sessionID, dbPath, sqlStr)
+func (h *Handler) sqliteQueryFn() func(setup session.DeviceSetup, deviceID, bundleID, sessionID, dbPath, sqlStr string) (*chattools.QueryResult, error) {
+	return func(setup session.DeviceSetup, deviceID, bundleID, sessionID, dbPath, sqlStr string) (*chattools.QueryResult, error) {
+		resp, err := h.sqliteService.ExecQuery(
+			setup,
+			deviceID,
+			bundleID,
+			sessionID,
+			dbPath,
+			sqlStr,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -148,6 +155,12 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
+	dc := h.manager.GetDeviceConnection(liveSess.DeviceID)
+	if dc == nil {
+		response.Error(c, http.StatusNotFound, "device not connected")
+		return
+	}
+
 	llmClient, err := h.llmConfig.NewClient()
 	if err != nil {
 		response.Error(
@@ -161,7 +174,7 @@ func (h *Handler) Handle(c *router.Context) {
 	hub := h.hubManager.GetOrCreate(dbSess.DeviceID)
 	fileManager := scripting.NewFileManager(h.db, hub)
 
-	setup := liveSess.Setup
+	setup := dc.Setup
 	sessionTools := []tool.BaseTool{
 		chattools.NewSearchTraffic(h.db, sessionID),
 		chattools.NewGetRequestDetail(h.db),

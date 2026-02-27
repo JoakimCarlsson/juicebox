@@ -41,71 +41,83 @@ const DevicesDeviceIdIndexRoute = DevicesDeviceIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DevicesDeviceIdRoute,
 } as any)
-const DevicesDeviceIdProcessesRoute = DevicesDeviceIdProcessesRouteImport.update({
-  id: '/processes',
-  path: '/processes',
-  getParentRoute: () => DevicesDeviceIdRoute,
-} as any)
+const DevicesDeviceIdProcessesRoute =
+  DevicesDeviceIdProcessesRouteImport.update({
+    id: '/processes',
+    path: '/processes',
+    getParentRoute: () => DevicesDeviceIdRoute,
+  } as any)
 const DevicesDeviceIdAppsRoute = DevicesDeviceIdAppsRouteImport.update({
   id: '/apps',
   path: '/apps',
   getParentRoute: () => DevicesDeviceIdRoute,
 } as any)
-const DevicesDeviceIdAppBundleIdRoute = DevicesDeviceIdAppBundleIdRouteImport.update({
-  id: '/app/$bundleId',
-  path: '/app/$bundleId',
-  getParentRoute: () => DevicesDeviceIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdIndexRoute = DevicesDeviceIdAppBundleIdIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdNetworkRoute = DevicesDeviceIdAppBundleIdNetworkRouteImport.update({
-  id: '/network',
-  path: '/network',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdMemoryRoute = DevicesDeviceIdAppBundleIdMemoryRouteImport.update({
-  id: '/memory',
-  path: '/memory',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdLogsRoute = DevicesDeviceIdAppBundleIdLogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdHooksRoute = DevicesDeviceIdAppBundleIdHooksRouteImport.update({
-  id: '/hooks',
-  path: '/hooks',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdHomeRoute = DevicesDeviceIdAppBundleIdHomeRouteImport.update({
-  id: '/home',
-  path: '/home',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdFilesRoute = DevicesDeviceIdAppBundleIdFilesRouteImport.update({
-  id: '/files',
-  path: '/files',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdCryptoRoute = DevicesDeviceIdAppBundleIdCryptoRouteImport.update({
-  id: '/crypto',
-  path: '/crypto',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdCrashesRoute = DevicesDeviceIdAppBundleIdCrashesRouteImport.update({
-  id: '/crashes',
-  path: '/crashes',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdClassesRoute = DevicesDeviceIdAppBundleIdClassesRouteImport.update({
-  id: '/classes',
-  path: '/classes',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
+const DevicesDeviceIdAppBundleIdRoute =
+  DevicesDeviceIdAppBundleIdRouteImport.update({
+    id: '/app/$bundleId',
+    path: '/app/$bundleId',
+    getParentRoute: () => DevicesDeviceIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdIndexRoute =
+  DevicesDeviceIdAppBundleIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdNetworkRoute =
+  DevicesDeviceIdAppBundleIdNetworkRouteImport.update({
+    id: '/network',
+    path: '/network',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdMemoryRoute =
+  DevicesDeviceIdAppBundleIdMemoryRouteImport.update({
+    id: '/memory',
+    path: '/memory',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdLogsRoute =
+  DevicesDeviceIdAppBundleIdLogsRouteImport.update({
+    id: '/logs',
+    path: '/logs',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdHooksRoute =
+  DevicesDeviceIdAppBundleIdHooksRouteImport.update({
+    id: '/hooks',
+    path: '/hooks',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdHomeRoute =
+  DevicesDeviceIdAppBundleIdHomeRouteImport.update({
+    id: '/home',
+    path: '/home',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdFilesRoute =
+  DevicesDeviceIdAppBundleIdFilesRouteImport.update({
+    id: '/files',
+    path: '/files',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdCryptoRoute =
+  DevicesDeviceIdAppBundleIdCryptoRouteImport.update({
+    id: '/crypto',
+    path: '/crypto',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdCrashesRoute =
+  DevicesDeviceIdAppBundleIdCrashesRouteImport.update({
+    id: '/crashes',
+    path: '/crashes',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
+const DevicesDeviceIdAppBundleIdClassesRoute =
+  DevicesDeviceIdAppBundleIdClassesRouteImport.update({
+    id: '/classes',
+    path: '/classes',
+    getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -350,21 +362,29 @@ interface DevicesDeviceIdAppBundleIdRouteChildren {
   DevicesDeviceIdAppBundleIdIndexRoute: typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
 
-const DevicesDeviceIdAppBundleIdRouteChildren: DevicesDeviceIdAppBundleIdRouteChildren = {
-  DevicesDeviceIdAppBundleIdClassesRoute: DevicesDeviceIdAppBundleIdClassesRoute,
-  DevicesDeviceIdAppBundleIdCrashesRoute: DevicesDeviceIdAppBundleIdCrashesRoute,
-  DevicesDeviceIdAppBundleIdCryptoRoute: DevicesDeviceIdAppBundleIdCryptoRoute,
-  DevicesDeviceIdAppBundleIdFilesRoute: DevicesDeviceIdAppBundleIdFilesRoute,
-  DevicesDeviceIdAppBundleIdHomeRoute: DevicesDeviceIdAppBundleIdHomeRoute,
-  DevicesDeviceIdAppBundleIdHooksRoute: DevicesDeviceIdAppBundleIdHooksRoute,
-  DevicesDeviceIdAppBundleIdLogsRoute: DevicesDeviceIdAppBundleIdLogsRoute,
-  DevicesDeviceIdAppBundleIdMemoryRoute: DevicesDeviceIdAppBundleIdMemoryRoute,
-  DevicesDeviceIdAppBundleIdNetworkRoute: DevicesDeviceIdAppBundleIdNetworkRoute,
-  DevicesDeviceIdAppBundleIdIndexRoute: DevicesDeviceIdAppBundleIdIndexRoute,
-}
+const DevicesDeviceIdAppBundleIdRouteChildren: DevicesDeviceIdAppBundleIdRouteChildren =
+  {
+    DevicesDeviceIdAppBundleIdClassesRoute:
+      DevicesDeviceIdAppBundleIdClassesRoute,
+    DevicesDeviceIdAppBundleIdCrashesRoute:
+      DevicesDeviceIdAppBundleIdCrashesRoute,
+    DevicesDeviceIdAppBundleIdCryptoRoute:
+      DevicesDeviceIdAppBundleIdCryptoRoute,
+    DevicesDeviceIdAppBundleIdFilesRoute: DevicesDeviceIdAppBundleIdFilesRoute,
+    DevicesDeviceIdAppBundleIdHomeRoute: DevicesDeviceIdAppBundleIdHomeRoute,
+    DevicesDeviceIdAppBundleIdHooksRoute: DevicesDeviceIdAppBundleIdHooksRoute,
+    DevicesDeviceIdAppBundleIdLogsRoute: DevicesDeviceIdAppBundleIdLogsRoute,
+    DevicesDeviceIdAppBundleIdMemoryRoute:
+      DevicesDeviceIdAppBundleIdMemoryRoute,
+    DevicesDeviceIdAppBundleIdNetworkRoute:
+      DevicesDeviceIdAppBundleIdNetworkRoute,
+    DevicesDeviceIdAppBundleIdIndexRoute: DevicesDeviceIdAppBundleIdIndexRoute,
+  }
 
 const DevicesDeviceIdAppBundleIdRouteWithChildren =
-  DevicesDeviceIdAppBundleIdRoute._addFileChildren(DevicesDeviceIdAppBundleIdRouteChildren)
+  DevicesDeviceIdAppBundleIdRoute._addFileChildren(
+    DevicesDeviceIdAppBundleIdRouteChildren,
+  )
 
 interface DevicesDeviceIdRouteChildren {
   DevicesDeviceIdAppsRoute: typeof DevicesDeviceIdAppsRoute
@@ -381,7 +401,7 @@ const DevicesDeviceIdRouteChildren: DevicesDeviceIdRouteChildren = {
 }
 
 const DevicesDeviceIdRouteWithChildren = DevicesDeviceIdRoute._addFileChildren(
-  DevicesDeviceIdRouteChildren
+  DevicesDeviceIdRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {

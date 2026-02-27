@@ -41,7 +41,19 @@ func (h *Handler) Tables(c *router.Context) {
 		return
 	}
 
-	tables, err := h.service.GetTables(sess, sessionID, dbPath)
+	dc := h.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil {
+		response.Error(c, http.StatusNotFound, "device not connected")
+		return
+	}
+
+	tables, err := h.service.GetTables(
+		dc.Setup,
+		sess.DeviceID,
+		sess.BundleID,
+		sessionID,
+		dbPath,
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -56,6 +68,12 @@ func (h *Handler) Query(c *router.Context) {
 	sess := h.manager.GetSession(sessionID)
 	if sess == nil {
 		response.Error(c, http.StatusNotFound, "session not found")
+		return
+	}
+
+	dc := h.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil {
+		response.Error(c, http.StatusNotFound, "device not connected")
 		return
 	}
 
@@ -87,7 +105,14 @@ func (h *Handler) Query(c *router.Context) {
 			)
 			return
 		}
-		resp, err := h.execWrite(sess, sessionID, req.DbPath, req.SQL)
+		resp, err := h.execWrite(
+			dc.Setup,
+			sess.DeviceID,
+			sess.BundleID,
+			sessionID,
+			req.DbPath,
+			req.SQL,
+		)
 		if err != nil {
 			response.Error(c, http.StatusInternalServerError, err.Error())
 			return
@@ -96,7 +121,14 @@ func (h *Handler) Query(c *router.Context) {
 		return
 	}
 
-	resp, err := h.service.ExecQuery(sess, sessionID, req.DbPath, req.SQL)
+	resp, err := h.service.ExecQuery(
+		dc.Setup,
+		sess.DeviceID,
+		sess.BundleID,
+		sessionID,
+		req.DbPath,
+		req.SQL,
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -106,10 +138,16 @@ func (h *Handler) Query(c *router.Context) {
 }
 
 func (h *Handler) execWrite(
-	sess *session.Session,
-	sessionID, dbPath, sqlStr string,
+	setup session.DeviceSetup,
+	deviceID, bundleID, sessionID, dbPath, sqlStr string,
 ) (*QueryResponse, error) {
-	localPath, err := h.service.EnsurePulled(sess, sessionID, dbPath)
+	localPath, err := h.service.EnsurePulled(
+		setup,
+		deviceID,
+		bundleID,
+		sessionID,
+		dbPath,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +189,20 @@ func (h *Handler) Export(c *router.Context) {
 		return
 	}
 
-	resp, err := h.service.ExecQuery(sess, sessionID, dbPath, sqlStr)
+	dc := h.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil {
+		response.Error(c, http.StatusNotFound, "device not connected")
+		return
+	}
+
+	resp, err := h.service.ExecQuery(
+		dc.Setup,
+		sess.DeviceID,
+		sess.BundleID,
+		sessionID,
+		dbPath,
+		sqlStr,
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

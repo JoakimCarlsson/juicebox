@@ -193,6 +193,52 @@ func (c *Client) Detach(sessionID string) error {
 	return err
 }
 
+func (c *Client) ConnectDevice(
+	deviceID string,
+) (*ConnectDeviceResponse, error) {
+	raw, err := c.call("connectDevice", map[string]string{"deviceId": deviceID})
+	if err != nil {
+		return nil, err
+	}
+	var resp ConnectDeviceResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.ConnectDevice: %w", err)
+	}
+	return &resp, nil
+}
+
+func (c *Client) SpawnApp(
+	deviceID, bundleID string,
+	evasion *EvasionConfig,
+) (*SpawnAppResponse, error) {
+	params := map[string]any{"deviceId": deviceID, "bundleId": bundleID}
+	if evasion != nil {
+		params["evasion"] = evasion
+	}
+	raw, err := c.call("spawnApp", params)
+	if err != nil {
+		return nil, err
+	}
+	var resp SpawnAppResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.SpawnApp: %w", err)
+	}
+	return &resp, nil
+}
+
+func (c *Client) DetachApp(sessionID string) error {
+	_, err := c.call("detachApp", map[string]string{"sessionId": sessionID})
+	return err
+}
+
+func (c *Client) DisconnectDevice(deviceID string) error {
+	_, err := c.call(
+		"disconnectDevice",
+		map[string]string{"deviceId": deviceID},
+	)
+	return err
+}
+
 func (c *Client) ListFiles(
 	deviceID, bundleID, path string,
 ) ([]FileEntry, error) {

@@ -88,8 +88,9 @@ func (h *Handler) Handle(c *router.Context) {
 }
 
 func capabilitiesFor(mgr *session.Manager, row db.SessionRow) []string {
-	if sess := mgr.GetSession(row.ID); sess != nil && sess.Setup != nil {
-		return sess.Setup.Capabilities()
+	dc := mgr.GetDeviceConnection(row.DeviceID)
+	if dc != nil {
+		return dc.Setup.Capabilities()
 	}
 	var caps []string
 	if err := json.Unmarshal([]byte(row.Capabilities), &caps); err == nil &&

@@ -25,3 +25,16 @@ export interface DeviceInfo {
   arch: string
   access: string
 }
+
+export interface ConnectDeviceResponse {
+  deviceId: string
+  platform: string
+  capabilities: string[]
+  proxyPort: number
+}
+
+export interface SpawnResponse {
+  sessionId: string
+  pid: number
+  capabilities: string[]
+}
