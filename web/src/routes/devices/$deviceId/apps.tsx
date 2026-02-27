@@ -31,10 +31,7 @@ function AppsPage() {
     )
   }, [apps, search])
 
-  const attachedSet = useMemo(
-    () => new Set(attachedApps.map((a) => a.bundleId)),
-    [attachedApps]
-  )
+  const attachedSet = useMemo(() => new Set(attachedApps.map((a) => a.bundleId)), [attachedApps])
 
   const handleAttach = useCallback(
     async (app: App) => {

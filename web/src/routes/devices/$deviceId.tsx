@@ -116,7 +116,10 @@ function DeviceShell({ deviceId, deviceName }: { deviceId: string; deviceName: s
       <div className="border-b border-border px-4 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <Link to="/" className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-muted transition-colors">
+            <Link
+              to="/"
+              className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-muted transition-colors"
+            >
               <ChevronLeft className="h-4 w-4" />
             </Link>
             <span className="text-sm font-semibold text-foreground">{deviceName}</span>

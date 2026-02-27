@@ -181,9 +181,7 @@ function LogsPage() {
                         <td className="px-2 py-0.5 text-muted-foreground whitespace-nowrap">
                           {entry.timestamp}
                         </td>
-                        <td className={cn('px-2 py-0.5 font-bold', config.color)}>
-                          {entry.level}
-                        </td>
+                        <td className={cn('px-2 py-0.5 font-bold', config.color)}>{entry.level}</td>
                         <td className="px-2 py-0.5 text-muted-foreground">{entry.tid}</td>
                         <td className="px-2 py-0.5 truncate max-w-[200px]">{entry.tag}</td>
                         <td className="px-2 py-0.5 break-all">{entry.message}</td>

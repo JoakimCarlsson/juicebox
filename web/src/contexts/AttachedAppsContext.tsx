@@ -49,7 +49,9 @@ export function AttachedAppsProvider({ children }: { children: React.ReactNode }
   }, [])
 
   return (
-    <AttachedAppsContext.Provider value={{ apps, selectedApp, addApp, removeApp, selectApp, wasUserDetach }}>
+    <AttachedAppsContext.Provider
+      value={{ apps, selectedApp, addApp, removeApp, selectApp, wasUserDetach }}
+    >
       {children}
     </AttachedAppsContext.Provider>
   )

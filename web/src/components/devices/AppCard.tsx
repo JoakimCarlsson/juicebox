@@ -40,7 +40,14 @@ interface AppCardProps {
   onDetach: (app: App) => void
 }
 
-export function AppCard({ app, deviceId, isAttached, isAttaching, onAttach, onDetach }: AppCardProps) {
+export function AppCard({
+  app,
+  deviceId,
+  isAttached,
+  isAttaching,
+  onAttach,
+  onDetach,
+}: AppCardProps) {
   const [imgError, setImgError] = useState(false)
   const initial = app.name.charAt(0).toUpperCase()
   const isRunning = app.pid > 0
@@ -52,9 +59,7 @@ export function AppCard({ app, deviceId, isAttached, isAttaching, onAttach, onDe
       className={cn(
         'group relative flex cursor-pointer flex-col items-center gap-2 rounded-lg border bg-card p-4',
         'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
-        isAttached
-          ? 'border-primary/50 ring-1 ring-primary/20'
-          : 'border-border',
+        isAttached ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border',
         isAttaching && 'opacity-70 pointer-events-none'
       )}
     >
@@ -111,10 +116,7 @@ export function AppCard({ app, deviceId, isAttached, isAttaching, onAttach, onDe
           </Badge>
         )}
         {isAttached && (
-          <Badge
-            variant="secondary"
-            className="bg-primary/15 text-primary text-xs"
-          >
+          <Badge variant="secondary" className="bg-primary/15 text-primary text-xs">
             Attached
           </Badge>
         )}

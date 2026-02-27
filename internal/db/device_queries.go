@@ -48,7 +48,9 @@ func (d *DB) ListLogsByDevice(
 		 JOIN sessions s ON l.session_id = s.id
 		 WHERE s.device_id = ?
 		 ORDER BY l.rowid ASC LIMIT ? OFFSET ?`,
-		deviceID, limit, offset,
+		deviceID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListLogsByDevice: %w", err)
@@ -77,7 +79,9 @@ func (d *DB) ListCrashesByDevice(
 		 JOIN sessions s ON c.session_id = s.id
 		 WHERE s.device_id = ?
 		 ORDER BY c.timestamp DESC LIMIT ? OFFSET ?`,
-		deviceID, limit, offset,
+		deviceID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListCrashesByDevice: %w", err)
@@ -96,7 +100,9 @@ func (d *DB) ListCryptoEventsByDevice(
 		 JOIN sessions s ON ce.session_id = s.id
 		 WHERE s.device_id = ?
 		 ORDER BY ce.timestamp ASC LIMIT ? OFFSET ?`,
-		deviceID, limit, offset,
+		deviceID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListCryptoEventsByDevice: %w", err)
@@ -115,7 +121,9 @@ func (d *DB) ListClipboardEventsByDevice(
 		 JOIN sessions s ON cb.session_id = s.id
 		 WHERE s.device_id = ?
 		 ORDER BY cb.timestamp ASC LIMIT ? OFFSET ?`,
-		deviceID, limit, offset,
+		deviceID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListClipboardEventsByDevice: %w", err)

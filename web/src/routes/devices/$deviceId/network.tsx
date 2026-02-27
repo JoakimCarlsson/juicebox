@@ -157,12 +157,7 @@ function NetworkPage() {
         {sessionId && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8"
-                disabled={allMessages.length === 0}
-              >
+              <Button variant="ghost" size="sm" className="h-8" disabled={allMessages.length === 0}>
                 <Download className="mr-1.5 h-3 w-3" />
                 Export
               </Button>
