@@ -27,7 +27,13 @@ export async function getFridaVersion(): Promise<string> {
 
 export async function stopFridaServer(deviceId: string): Promise<void> {
   try {
-    await exec(["adb", "-s", deviceId, "shell", "su -c 'killall frida-server' 2>/dev/null || killall frida-server 2>/dev/null"]);
+    await exec([
+      "adb",
+      "-s",
+      deviceId,
+      "shell",
+      "su -c 'killall frida-server' 2>/dev/null || killall frida-server 2>/dev/null",
+    ]);
   } catch {}
   for (let i = 0; i < 5; i++) {
     if (!(await isFridaServerRunning(deviceId))) return;
@@ -151,13 +157,22 @@ export async function ensureFridaServer(deviceId: string): Promise<void> {
   } else {
     console.log("adb root unavailable, using su (Magisk)...");
     await exec([
-      "adb", "-s", deviceId, "shell",
-      "su", "-c", "setenforce 0",
+      "adb",
+      "-s",
+      deviceId,
+      "shell",
+      "su",
+      "-c",
+      "setenforce 0",
     ]);
     new Deno.Command("adb", {
       args: [
-        "-s", deviceId, "shell",
-        "su", "-c", `${DEVICE_SERVER_PATH} -D &`,
+        "-s",
+        deviceId,
+        "shell",
+        "su",
+        "-c",
+        `${DEVICE_SERVER_PATH} -D &`,
       ],
       stdout: "null",
       stderr: "null",

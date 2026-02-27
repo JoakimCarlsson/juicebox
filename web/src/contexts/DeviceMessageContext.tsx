@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
 import { useParams } from '@tanstack/react-router'
 import {
@@ -7,12 +7,26 @@ import {
   fetchDeviceCrashes,
   fetchDeviceCrypto,
   fetchDeviceClipboard,
+  clearDeviceMessages,
+  clearDeviceLogs,
+  clearDeviceCrashes,
+  clearDeviceCrypto,
+  clearDeviceClipboard,
 } from '@/features/devices/data-api'
 import type { AgentMessage, DeviceEnvelope } from '@/types/session'
+
+const clearApiFns: Record<string, (id: string) => Promise<void>> = {
+  http: clearDeviceMessages,
+  logcat: clearDeviceLogs,
+  crash: clearDeviceCrashes,
+  crypto: clearDeviceCrypto,
+  clipboard: clearDeviceClipboard,
+}
 
 interface DeviceMessageContextValue {
   messages: AgentMessage[]
   connected: boolean
+  clearByType: (type: string) => Promise<void>
 }
 
 const DeviceMessageContext = createContext<DeviceMessageContextValue | null>(null)
@@ -125,8 +139,25 @@ export function DeviceMessageProvider({ children }: { children: React.ReactNode 
     return unsub
   }, [subscribe])
 
+  const clearByType = useCallback(
+    async (type: string) => {
+      if (!deviceId) return
+      const fn = clearApiFns[type]
+      if (fn) await fn(deviceId)
+      setMessages((prev) => {
+        const removed = prev.filter((m) => m.type === type)
+        for (const m of removed) {
+          const id = (m.payload as { id?: string } | undefined)?.id
+          if (id) seenIds.current.delete(id)
+        }
+        return prev.filter((m) => m.type !== type)
+      })
+    },
+    [deviceId]
+  )
+
   return (
-    <DeviceMessageContext.Provider value={{ messages, connected }}>
+    <DeviceMessageContext.Provider value={{ messages, connected, clearByType }}>
       {children}
     </DeviceMessageContext.Provider>
   )

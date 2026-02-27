@@ -27,7 +27,7 @@ export const Route = createFileRoute('/devices/$deviceId/network')({
 function NetworkPage() {
   const { selectedApp } = useAttachedApps()
   const sessionId = selectedApp?.sessionId ?? ''
-  const { messages } = useDeviceMessages()
+  const { messages, clearByType } = useDeviceMessages()
   const {
     enabled: interceptEnabled,
     pendingRequests,
@@ -37,9 +37,15 @@ function NetworkPage() {
   } = useIntercept()
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [clearIndex, setClearIndex] = useState(0)
-
-  const clear = useCallback(() => setClearIndex(messages.length), [messages.length])
+  const [clearing, setClearing] = useState(false)
+  const clear = useCallback(async () => {
+    setClearing(true)
+    try {
+      await clearByType('http')
+    } finally {
+      setClearing(false)
+    }
+  }, [clearByType])
 
   const exportCapture = useCallback(
     (format: 'har' | 'burp') => {
@@ -56,10 +62,9 @@ function NetworkPage() {
 
   const httpMessages = useMemo(() => {
     return messages
-      .slice(clearIndex)
       .filter((m): m is { type: 'http'; payload: HttpMessage } => m.type === 'http' && !!m.payload)
       .map((m) => m.payload as unknown as HttpMessage)
-  }, [messages, clearIndex])
+  }, [messages])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return httpMessages
@@ -150,9 +155,9 @@ function NetworkPage() {
             </>
           )}
         </div>
-        <Button variant="ghost" size="sm" className="h-8" onClick={clear}>
+        <Button variant="ghost" size="sm" className="h-8" onClick={clear} disabled={clearing}>
           <Trash2 className="mr-1.5 h-3 w-3" />
-          Clear
+          {clearing ? 'Clearing...' : 'Clear'}
         </Button>
         {sessionId && (
           <DropdownMenu>

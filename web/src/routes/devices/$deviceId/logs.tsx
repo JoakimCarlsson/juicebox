@@ -24,22 +24,28 @@ const ALL_LEVELS = ['V', 'D', 'I', 'W', 'E', 'F'] as const
 const MAX_ENTRIES = 10000
 
 function LogsPage() {
-  const { messages } = useDeviceMessages()
+  const { messages, clearByType } = useDeviceMessages()
   const [search, setSearch] = useState('')
-  const [clearIndex, setClearIndex] = useState(0)
   const [activeLevels, setActiveLevels] = useState<Set<string>>(new Set(['D', 'I', 'W', 'E', 'F']))
+  const [clearing, setClearing] = useState(false)
 
-  const clear = useCallback(() => setClearIndex(messages.length), [messages.length])
+  const clear = useCallback(async () => {
+    setClearing(true)
+    try {
+      await clearByType('logcat')
+    } finally {
+      setClearing(false)
+    }
+  }, [clearByType])
 
   const logcatMessages = useMemo(() => {
     const all = messages
-      .slice(clearIndex)
       .filter(
         (m): m is { type: 'logcat'; payload: LogcatEntry } => m.type === 'logcat' && !!m.payload
       )
       .map((m) => m.payload as unknown as LogcatEntry)
     return all.length > MAX_ENTRIES ? all.slice(all.length - MAX_ENTRIES) : all
-  }, [messages, clearIndex])
+  }, [messages])
 
   const filtered = useMemo(() => {
     return logcatMessages.filter((entry) => {
@@ -126,9 +132,9 @@ function LogsPage() {
           />
         </div>
 
-        <Button variant="ghost" size="sm" className="h-8" onClick={clear}>
+        <Button variant="ghost" size="sm" className="h-8" onClick={clear} disabled={clearing}>
           <Trash2 className="mr-1.5 h-3 w-3" />
-          Clear
+          {clearing ? 'Clearing...' : 'Clear'}
         </Button>
 
         <span className="text-xs text-muted-foreground ml-auto">

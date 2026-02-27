@@ -17,6 +17,47 @@ func NewHandler(database *db.DB) *Handler {
 	return &Handler{db: database}
 }
 
+func (h *Handler) clearByDevice(c *router.Context, clearFn func(string) error) {
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
+		return
+	}
+	if err := clearFn(deviceID); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.Writer.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) ClearMessages(c *router.Context) {
+	h.clearByDevice(c, h.db.ClearHttpMessagesByDevice)
+}
+
+func (h *Handler) ClearLogs(
+	c *router.Context,
+) {
+	h.clearByDevice(c, h.db.ClearLogsByDevice)
+}
+
+func (h *Handler) ClearCrashes(
+	c *router.Context,
+) {
+	h.clearByDevice(c, h.db.ClearCrashesByDevice)
+}
+
+func (h *Handler) ClearCrypto(
+	c *router.Context,
+) {
+	h.clearByDevice(c, h.db.ClearCryptoByDevice)
+}
+
+func (h *Handler) ClearClipboard(
+	c *router.Context,
+) {
+	h.clearByDevice(c, h.db.ClearClipboardByDevice)
+}
+
 func (h *Handler) Messages(c *router.Context) {
 	deviceID := c.Param("deviceId")
 	if deviceID == "" {

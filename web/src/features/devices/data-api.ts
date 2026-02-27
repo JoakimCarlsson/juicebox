@@ -33,3 +33,14 @@ export async function fetchDeviceClipboard(deviceId: string, limit = 500, offset
   if (!res.ok) throw new Error('Failed to fetch device clipboard')
   return res.json()
 }
+
+async function clearData(deviceId: string, type: string) {
+  const res = await fetch(`/api/v1/devices/${deviceId}/data/${type}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`Failed to clear ${type}`)
+}
+
+export const clearDeviceMessages = (id: string) => clearData(id, 'messages')
+export const clearDeviceLogs = (id: string) => clearData(id, 'logs')
+export const clearDeviceCrashes = (id: string) => clearData(id, 'crashes')
+export const clearDeviceCrypto = (id: string) => clearData(id, 'crypto')
+export const clearDeviceClipboard = (id: string) => clearData(id, 'clipboard')

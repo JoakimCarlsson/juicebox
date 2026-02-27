@@ -1,6 +1,48 @@
 package db
 
-import "fmt"
+import (
+	"fmt"
+)
+
+func (d *DB) ClearHttpMessagesByDevice(deviceID string) error {
+	_, err := d.conn.Exec(
+		`DELETE FROM http_messages WHERE session_id IN (SELECT id FROM sessions WHERE device_id = ?)`,
+		deviceID,
+	)
+	return err
+}
+
+func (d *DB) ClearLogsByDevice(deviceID string) error {
+	_, err := d.conn.Exec(
+		`DELETE FROM logcat_entries WHERE session_id IN (SELECT id FROM sessions WHERE device_id = ?)`,
+		deviceID,
+	)
+	return err
+}
+
+func (d *DB) ClearCrashesByDevice(deviceID string) error {
+	_, err := d.conn.Exec(
+		`DELETE FROM crashes WHERE session_id IN (SELECT id FROM sessions WHERE device_id = ?)`,
+		deviceID,
+	)
+	return err
+}
+
+func (d *DB) ClearCryptoByDevice(deviceID string) error {
+	_, err := d.conn.Exec(
+		`DELETE FROM crypto_events WHERE session_id IN (SELECT id FROM sessions WHERE device_id = ?)`,
+		deviceID,
+	)
+	return err
+}
+
+func (d *DB) ClearClipboardByDevice(deviceID string) error {
+	_, err := d.conn.Exec(
+		`DELETE FROM clipboard_events WHERE session_id IN (SELECT id FROM sessions WHERE device_id = ?)`,
+		deviceID,
+	)
+	return err
+}
 
 func (d *DB) ListHttpMessagesByDevice(
 	deviceID string,

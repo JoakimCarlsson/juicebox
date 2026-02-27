@@ -162,7 +162,8 @@ echo 'System cert successfully injected'
 	out, err := cmd.CombinedOutput()
 	output := string(out)
 
-	if err != nil && !strings.Contains(output, "System cert successfully injected") {
+	if err != nil &&
+		!strings.Contains(output, "System cert successfully injected") {
 		suCmd := exec.Command(
 			"adb", "-s", deviceID, "shell",
 			"su", "-c", fmt.Sprintf("sh %s", scriptPath),
