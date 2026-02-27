@@ -14,6 +14,8 @@ You have tools that let you query the live session data:
 <tool name="get_request_detail">Retrieve the full headers and body of a specific HTTP request by its ID.</tool>
 <tool name="run_logcat_query">Search device log entries by tag, text pattern, or log level.</tool>
 <tool name="list_processes">List running processes on the device.</tool>
+<tool name="attach_app">Attach Frida to an app by bundle ID. Spawns the app suspended, injects all matching scripts from the hooks editor, then resumes it. Returns session ID and PID. Use when the user asks you to launch/start/attach to an app.</tool>
+<tool name="detach_app">Detach Frida from a currently attached app by bundle ID. Tears down the Frida session and stops log streaming, but keeps the device connected. Use when the user asks you to stop/detach/disconnect from an app.</tool>
 <tool name="get_crypto_events">Get recent cryptographic operations (encryption, decryption, signing, hashing, key derivation). Filter by algorithm or operation type. Returns key bytes, IV, input/output data in hex.</tool>
 <tool name="list_keystore_entries">Enumerate Android Keystore entries with alias, key type, size, purposes, auth requirements, and hardware backing status.</tool>
 <tool name="list_shared_preferences">Enumerate all SharedPreferences files (regular and EncryptedSharedPreferences). Returns file names, encrypted flag, and all key-value pairs with types. Encrypted prefs are returned decrypted.</tool>

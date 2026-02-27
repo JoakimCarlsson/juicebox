@@ -431,6 +431,14 @@ func (m *Manager) AttachApp(deviceID, bundleID string) (*SpawnResult, error) {
 		logger.Info("attached to app", "bundle", bundleID, "pid", sess.PID)
 	}
 
+	if data, err := devicehub.Marshal("app_attached", sess.ID, map[string]any{
+		"bundleId":  bundleID,
+		"sessionId": sess.ID,
+		"pid":       sess.PID,
+	}); err == nil {
+		dc.Hub.Broadcast(data)
+	}
+
 	go m.bridgeSubscribeForward(sess, dc)
 
 	logStreamLogger := slog.With(
@@ -525,6 +533,16 @@ func (m *Manager) DetachApp(sessionID string) error {
 		sessionID,
 	)
 	m.cleanupSession(sess, logger)
+
+	if dc != nil {
+		if data, err := devicehub.Marshal("app_detached", sessionID, map[string]any{
+			"bundleId":  sess.BundleID,
+			"sessionId": sessionID,
+		}); err == nil {
+			dc.Hub.Broadcast(data)
+		}
+	}
+
 	logger.Info("detached app session")
 	return nil
 }
@@ -553,6 +571,23 @@ func (m *Manager) GetDeviceConnection(deviceID string) *DeviceConnection {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.devices[deviceID]
+}
+
+func (m *Manager) FindSessionByBundle(deviceID, bundleID string) *Session {
+	m.mu.RLock()
+	dc := m.devices[deviceID]
+	m.mu.RUnlock()
+	if dc == nil {
+		return nil
+	}
+	dc.mu.RLock()
+	defer dc.mu.RUnlock()
+	for _, sess := range dc.Sessions {
+		if sess.BundleID == bundleID {
+			return sess
+		}
+	}
+	return nil
 }
 
 func (m *Manager) RunScript(

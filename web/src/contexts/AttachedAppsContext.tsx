@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useDeviceSocket } from './DeviceSocketContext'
 
 interface AttachedApp {
   bundleId: string
@@ -20,6 +21,7 @@ export function AttachedAppsProvider({ children }: { children: React.ReactNode }
   const [apps, setApps] = useState<AttachedApp[]>([])
   const [selectedBundleId, setSelectedBundleId] = useState<string | null>(null)
   const userDetached = useRef(new Set<string>())
+  const { subscribe } = useDeviceSocket()
 
   const selectedApp = apps.find((a) => a.bundleId === selectedBundleId) ?? apps[0] ?? null
 
@@ -47,6 +49,25 @@ export function AttachedAppsProvider({ children }: { children: React.ReactNode }
   const wasUserDetach = useCallback((bundleId: string) => {
     return userDetached.current.has(bundleId)
   }, [])
+
+  useEffect(() => {
+    const unsub1 = subscribe('app_attached', (envelope) => {
+      const payload = envelope.payload as { bundleId?: string; sessionId?: string } | undefined
+      if (payload?.bundleId && payload?.sessionId) {
+        addApp(payload.bundleId, payload.sessionId)
+      }
+    })
+    const unsub2 = subscribe('app_detached', (envelope) => {
+      const payload = envelope.payload as { bundleId?: string } | undefined
+      if (payload?.bundleId) {
+        removeApp(payload.bundleId)
+      }
+    })
+    return () => {
+      unsub1()
+      unsub2()
+    }
+  }, [subscribe, addApp, removeApp])
 
   return (
     <AttachedAppsContext.Provider

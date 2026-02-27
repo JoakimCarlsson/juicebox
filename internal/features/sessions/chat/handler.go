@@ -178,6 +178,8 @@ func (h *Handler) Handle(c *router.Context) {
 	chatTools := []tool.BaseTool{
 		chattools.NewGetRequestDetail(h.db),
 		chattools.NewListProcesses(setup, deviceID),
+		chattools.NewAttachApp(h.manager, deviceID),
+		chattools.NewDetachApp(h.manager, deviceID),
 		chattools.NewListScriptFiles(fileManager, deviceID),
 		chattools.NewReadScriptFile(fileManager, deviceID),
 		chattools.NewRunShell(),
