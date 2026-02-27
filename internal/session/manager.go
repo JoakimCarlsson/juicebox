@@ -783,6 +783,30 @@ func (m *Manager) bridgeSubscribeForward(sess *Session, dc *DeviceConnection) {
 	if err := scanner.Err(); err != nil {
 		logger.Error("bridge subscribe stream error", "error", err)
 	}
+
+	m.mu.Lock()
+	_, stillActive := m.sessions[sess.ID]
+	if stillActive {
+		delete(m.sessions, sess.ID)
+	}
+	m.mu.Unlock()
+
+	if stillActive {
+		dc.mu.Lock()
+		delete(dc.Sessions, sess.ID)
+		dc.mu.Unlock()
+
+		if data, err := devicehub.Marshal("app_detached", sess.ID, map[string]any{
+			"bundleId":  sess.BundleID,
+			"sessionId": sess.ID,
+			"crashed":   true,
+		}); err == nil {
+			dc.Hub.Broadcast(data)
+		}
+
+		m.cleanupSession(sess, logger)
+		logger.Info("session cleaned up after stream ended", "bundle", sess.BundleID)
+	}
 }
 
 func httpMessageToRow(
