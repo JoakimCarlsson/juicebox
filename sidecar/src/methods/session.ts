@@ -27,6 +27,7 @@ async function spawnAndInject(
   deviceId: string,
   identifier: string,
   evasionConfig?: Record<string, boolean>,
+  noResume?: boolean,
 ): Promise<{ sessionId: string; pid: number }> {
   let pid!: number;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -163,8 +164,14 @@ async function spawnAndInject(
     logAgentError("crash handler setup failed", err);
   }
 
-  await device.resume(pid);
-  console.log(`spawned ${identifier} (pid ${pid}), session ${sessionId}`);
+  if (!noResume) {
+    await device.resume(pid);
+    console.log(`spawned ${identifier} (pid ${pid}), session ${sessionId}`);
+  } else {
+    console.log(
+      `spawned ${identifier} (pid ${pid}), session ${sessionId} [suspended, waiting for resume]`,
+    );
+  }
 
   return { sessionId, pid };
 }
@@ -210,12 +217,14 @@ export async function handleSpawnApp(
   const evasionConfig = req.params?.evasion as
     | Record<string, boolean>
     | undefined;
+  const noResume = req.params?.noResume as boolean | undefined;
 
   const result = await spawnAndInject(
     deviceState.device,
     deviceId,
     bundleId,
     evasionConfig,
+    noResume,
   );
 
   return ok(req.id, result);
@@ -254,14 +263,36 @@ export async function handleAttach(
   const evasionConfig = req.params?.evasion as
     | Record<string, boolean>
     | undefined;
+  const noResume = req.params?.noResume as boolean | undefined;
 
   const result = await spawnAndInject(
     device,
     deviceId,
     identifier,
     evasionConfig,
+    noResume,
   );
   return ok(req.id, result);
+}
+
+export async function handleResumeApp(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
+  const deviceId = req.params?.deviceId as string;
+  const pid = req.params?.pid as number;
+  if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
+  if (!pid) return fail(req.id, -32602, "missing param: pid");
+
+  const deviceState = devices.get(deviceId);
+  if (!deviceState) {
+    const device = await frida.getDevice(deviceId);
+    await device.resume(pid);
+  } else {
+    await deviceState.device.resume(pid);
+  }
+
+  console.log(`resumed pid ${pid} on device ${deviceId}`);
+  return ok(req.id, { success: true });
 }
 
 export async function handleDetach(

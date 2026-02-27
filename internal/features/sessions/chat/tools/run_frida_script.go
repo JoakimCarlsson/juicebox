@@ -16,13 +16,19 @@ type RunFridaScriptParams struct {
 type RunFridaScriptTool struct {
 	runner    *scripting.Runner
 	sessionID string
+	deviceID  string
 }
 
 func NewRunFridaScript(
 	runner *scripting.Runner,
 	sessionID string,
+	deviceID string,
 ) *RunFridaScriptTool {
-	return &RunFridaScriptTool{runner: runner, sessionID: sessionID}
+	return &RunFridaScriptTool{
+		runner:    runner,
+		sessionID: sessionID,
+		deviceID:  deviceID,
+	}
 }
 
 func (t *RunFridaScriptTool) Info() tool.ToolInfo {
@@ -48,7 +54,7 @@ func (t *RunFridaScriptTool) Run(
 		return tool.NewTextErrorResponse("name is required"), nil
 	}
 
-	res, err := t.runner.Run(t.sessionID, input.Name, 3)
+	res, err := t.runner.Run(t.sessionID, t.deviceID, input.Name, 3)
 	if err != nil {
 		return tool.NewTextErrorResponse(
 			fmt.Sprintf("script execution failed: %v", err),

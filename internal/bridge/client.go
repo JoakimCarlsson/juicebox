@@ -170,10 +170,14 @@ func (c *Client) Attach(
 	deviceID string,
 	identifier string,
 	evasion *EvasionConfig,
+	noResume bool,
 ) (*AttachResponse, error) {
 	params := map[string]any{"deviceId": deviceID, "identifier": identifier}
 	if evasion != nil {
 		params["evasion"] = evasion
+	}
+	if noResume {
+		params["noResume"] = true
 	}
 	raw, err := c.call("attach", params)
 	if err != nil {
@@ -186,6 +190,14 @@ func (c *Client) Attach(
 	}
 
 	return &resp, nil
+}
+
+func (c *Client) ResumeApp(deviceID string, pid int) error {
+	_, err := c.call("resumeApp", map[string]any{
+		"deviceId": deviceID,
+		"pid":      pid,
+	})
+	return err
 }
 
 func (c *Client) Detach(sessionID string) error {

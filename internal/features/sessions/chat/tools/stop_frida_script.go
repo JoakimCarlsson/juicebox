@@ -17,13 +17,19 @@ type StopFridaScriptParams struct {
 type StopFridaScriptTool struct {
 	runner    *scripting.Runner
 	sessionID string
+	deviceID  string
 }
 
 func NewStopFridaScript(
 	runner *scripting.Runner,
 	sessionID string,
+	deviceID string,
 ) *StopFridaScriptTool {
-	return &StopFridaScriptTool{runner: runner, sessionID: sessionID}
+	return &StopFridaScriptTool{
+		runner:    runner,
+		sessionID: sessionID,
+		deviceID:  deviceID,
+	}
 }
 
 func (t *StopFridaScriptTool) Info() tool.ToolInfo {
@@ -49,7 +55,7 @@ func (t *StopFridaScriptTool) Run(
 		return tool.NewTextErrorResponse("name is required"), nil
 	}
 
-	resp, err := t.runner.Stop(t.sessionID, input.Name)
+	resp, err := t.runner.Stop(t.sessionID, t.deviceID, input.Name)
 	if err != nil {
 		return tool.NewTextErrorResponse(
 			fmt.Sprintf("failed to stop script: %v", err),

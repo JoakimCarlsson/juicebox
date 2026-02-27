@@ -4,6 +4,7 @@ import {
   handleAttach,
   handleDetach,
   handleDetachApp,
+  handleResumeApp,
   handleSpawnApp,
 } from "./methods/session.ts";
 import {
@@ -73,6 +74,9 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
 
       case "attach":
         return await handleAttach(req);
+
+      case "resumeApp":
+        return await handleResumeApp(req);
 
       case "detach":
         return await handleDetach(req);

@@ -35,7 +35,7 @@ func RegisterRoutes(
 ) {
 	runner := scripting.NewRunner(database, manager)
 	fileManager := scripting.NewFileManager(database, nil)
-	scriptsHandler := scripts.NewHandler(fileManager, runner)
+	scriptsHandler := scripts.NewHandler(fileManager, runner, manager)
 
 	detachHandler := detach.NewHandler(manager)
 	listHandler := list.NewHandler(database, manager)
@@ -111,9 +111,9 @@ func RegisterRoutes(
 	r.DELETE("/sessions/{sessionId}/memory/scan", memoryHandler.StopScan)
 	r.POST("/sessions/{sessionId}/memory/dump", memoryHandler.Dump)
 
-	r.POST("/sessions/{sessionId}/scripts", scriptsHandler.Upsert)
-	r.GET("/sessions/{sessionId}/scripts", scriptsHandler.List)
-	r.DELETE("/sessions/{sessionId}/scripts/{scriptId}", scriptsHandler.Delete)
+	r.POST("/devices/{deviceId}/scripts", scriptsHandler.Upsert)
+	r.GET("/devices/{deviceId}/scripts", scriptsHandler.List)
+	r.DELETE("/devices/{deviceId}/scripts/{scriptId}", scriptsHandler.Delete)
 	r.POST("/sessions/{sessionId}/scripts/run", scriptsHandler.Run)
 	r.GET("/sessions/{sessionId}/scripts/runs", scriptsHandler.ListRuns)
 }

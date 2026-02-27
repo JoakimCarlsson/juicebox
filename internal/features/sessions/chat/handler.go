@@ -192,7 +192,8 @@ func (h *Handler) Handle(c *router.Context) {
 				chattools.NewRunLogcatQuery(h.db, sessionID),
 			)
 		case "frida":
-			sessionTools = append(sessionTools,
+			sessionTools = append(
+				sessionTools,
 				chattools.NewListClasses(h.manager, sessionID),
 				chattools.NewGetClassDetail(h.manager, sessionID),
 				chattools.NewGetCrashes(h.db, sessionID),
@@ -200,11 +201,19 @@ func (h *Handler) Handle(c *router.Context) {
 				chattools.NewGetClipboardEvents(h.db, sessionID),
 				chattools.NewListKeystoreEntries(h.manager, sessionID),
 				chattools.NewListSharedPreferences(h.manager, sessionID),
-				chattools.NewRunFridaScript(h.runner, sessionID),
+				chattools.NewRunFridaScript(
+					h.runner,
+					sessionID,
+					dbSess.DeviceID,
+				),
 				chattools.NewGetScriptOutput(h.runner, sessionID),
-				chattools.NewStopFridaScript(h.runner, sessionID),
-				chattools.NewListScriptFiles(fileManager, sessionID),
-				chattools.NewReadScriptFile(fileManager, sessionID),
+				chattools.NewStopFridaScript(
+					h.runner,
+					sessionID,
+					dbSess.DeviceID,
+				),
+				chattools.NewListScriptFiles(fileManager, dbSess.DeviceID),
+				chattools.NewReadScriptFile(fileManager, dbSess.DeviceID),
 				chattools.NewScanMemory(h.manager, sessionID),
 			)
 		}

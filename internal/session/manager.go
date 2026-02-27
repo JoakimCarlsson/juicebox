@@ -350,7 +350,7 @@ func (m *Manager) AttachApp(deviceID, bundleID string) (*SpawnResult, error) {
 
 	logger := slog.With("device_id", deviceID, "source", "manager")
 
-	bridgeResp, err := m.bridge.Attach(deviceID, bundleID, nil)
+	bridgeResp, err := m.bridge.Attach(deviceID, bundleID, nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("manager: attach app: %w", err)
 	}
@@ -384,6 +384,39 @@ func (m *Manager) AttachApp(deviceID, bundleID string) (*SpawnResult, error) {
 	dc.mu.Lock()
 	dc.Sessions[sess.ID] = sess
 	dc.mu.Unlock()
+
+	scripts, err := m.database.GetScriptFiles(deviceID)
+	if err != nil {
+		logger.Warn("failed to load device scripts", "error", err)
+	}
+	for _, sf := range scripts {
+		if sf.Content == "" {
+			continue
+		}
+		_, err := m.bridge.RunScript(
+			sess.BridgeSessionID,
+			sf.Content,
+			sf.Name,
+			3,
+		)
+		if err != nil {
+			logger.Warn(
+				"failed to inject device script",
+				"script",
+				sf.Name,
+				"error",
+				err,
+			)
+		} else {
+			logger.Info("injected device script", "script", sf.Name)
+		}
+	}
+
+	if err := m.bridge.ResumeApp(deviceID, sess.PID); err != nil {
+		logger.Error("failed to resume app after hook injection", "error", err)
+	} else {
+		logger.Info("attached to app", "bundle", bundleID, "pid", sess.PID)
+	}
 
 	go m.bridgeSubscribeForward(sess, dc)
 

@@ -7,24 +7,27 @@ import (
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/scripting"
+	"github.com/joakimcarlsson/juicebox/internal/session"
 )
 
 type Handler struct {
-	files  *scripting.FileManager
-	runner *scripting.Runner
+	files   *scripting.FileManager
+	runner  *scripting.Runner
+	manager *session.Manager
 }
 
 func NewHandler(
 	files *scripting.FileManager,
 	runner *scripting.Runner,
+	manager *session.Manager,
 ) *Handler {
-	return &Handler{files: files, runner: runner}
+	return &Handler{files: files, runner: runner, manager: manager}
 }
 
 func (h *Handler) Upsert(c *router.Context) {
-	sessionID := c.Param("sessionId")
-	if sessionID == "" {
-		response.Error(c, http.StatusBadRequest, "missing sessionId")
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
 		return
 	}
 
@@ -38,7 +41,7 @@ func (h *Handler) Upsert(c *router.Context) {
 		return
 	}
 
-	f, err := h.files.Upsert(sessionID, req.Name, req.Content)
+	f, err := h.files.Upsert(deviceID, req.Name, req.Content)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -46,7 +49,7 @@ func (h *Handler) Upsert(c *router.Context) {
 
 	c.JSON(http.StatusOK, map[string]any{
 		"id":        f.ID,
-		"sessionId": f.SessionID,
+		"deviceId":  f.DeviceID,
 		"name":      f.Name,
 		"content":   f.Content,
 		"createdAt": f.CreatedAt,
@@ -55,13 +58,13 @@ func (h *Handler) Upsert(c *router.Context) {
 }
 
 func (h *Handler) List(c *router.Context) {
-	sessionID := c.Param("sessionId")
-	if sessionID == "" {
-		response.Error(c, http.StatusBadRequest, "missing sessionId")
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
 		return
 	}
 
-	files, err := h.files.List(sessionID)
+	files, err := h.files.List(deviceID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -103,6 +106,12 @@ func (h *Handler) Run(c *router.Context) {
 		return
 	}
 
+	sess := h.manager.GetSession(sessionID)
+	if sess == nil {
+		response.Error(c, http.StatusNotFound, "session not found")
+		return
+	}
+
 	var req runRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "invalid request body")
@@ -113,7 +122,7 @@ func (h *Handler) Run(c *router.Context) {
 		return
 	}
 
-	res, err := h.runner.Run(sessionID, req.Name, 5)
+	res, err := h.runner.Run(sessionID, sess.DeviceID, req.Name, 5)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

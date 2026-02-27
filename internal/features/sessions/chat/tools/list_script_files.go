@@ -11,15 +11,15 @@ import (
 type ListScriptFilesParams struct{}
 
 type ListScriptFilesTool struct {
-	files     *scripting.FileManager
-	sessionID string
+	files    *scripting.FileManager
+	deviceID string
 }
 
 func NewListScriptFiles(
 	files *scripting.FileManager,
-	sessionID string,
+	deviceID string,
 ) *ListScriptFilesTool {
-	return &ListScriptFilesTool{files: files, sessionID: sessionID}
+	return &ListScriptFilesTool{files: files, deviceID: deviceID}
 }
 
 func (t *ListScriptFilesTool) Info() tool.ToolInfo {
@@ -34,7 +34,7 @@ func (t *ListScriptFilesTool) Run(
 	ctx context.Context,
 	params tool.ToolCall,
 ) (tool.ToolResponse, error) {
-	files, err := t.files.List(t.sessionID)
+	files, err := t.files.List(t.deviceID)
 	if err != nil {
 		return tool.NewTextErrorResponse(
 			fmt.Sprintf("failed to list script files: %v", err),
