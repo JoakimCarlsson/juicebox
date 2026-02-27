@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import type { PanelImperativeHandle } from 'react-resizable-panels'
 import { fetchChatStatus, fetchChatHistory, streamChat, type SSEEvent } from '@/features/chat/api'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
 
 export type MessagePart =
   | { type: 'text'; content: string }
@@ -33,13 +34,9 @@ function nextId() {
   return `msg-${++messageCounter}`
 }
 
-export function ChatPanelProvider({
-  sessionId,
-  children,
-}: {
-  sessionId: string
-  children: React.ReactNode
-}) {
+export function ChatPanelProvider({ children }: { children: React.ReactNode }) {
+  const { selectedApp } = useAttachedApps()
+  const sessionId = selectedApp?.sessionId ?? ''
   const [isOpen, setIsOpen] = useState(true)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)

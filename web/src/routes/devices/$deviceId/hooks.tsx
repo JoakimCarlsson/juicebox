@@ -1,4 +1,4 @@
-import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Editor, { type Monaco } from '@monaco-editor/react'
 import {
@@ -37,6 +37,8 @@ import { cn } from '@/lib/utils'
 import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
 import { useScriptOutput } from '@/contexts/ScriptOutputContext'
 import { useBottomPanel } from '@/contexts/BottomPanelContext'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
+import { NoAppAttachedState } from '@/components/devices/NoAppAttachedState'
 import {
   fetchScriptFiles,
   upsertScriptFile,
@@ -44,12 +46,8 @@ import {
   runScriptByName,
 } from '@/features/sessions/api'
 import type { ScriptFile } from '@/features/sessions/api'
-import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
 
-export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/hooks')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? '',
-  }),
+export const Route = createFileRoute('/devices/$deviceId/hooks')({
   component: HooksPage,
 })
 
@@ -686,9 +684,8 @@ function FileTree({
 }
 
 function HooksPage() {
-  const { sessionId } = useSearch({
-    from: '/devices/$deviceId/app/$bundleId/hooks',
-  })
+  const { selectedApp } = useAttachedApps()
+  const sessionId = selectedApp?.sessionId ?? ''
   const { subscribe } = useDeviceSocket()
   const scriptOutput = useScriptOutput()
   const bottomPanel = useBottomPanel()
@@ -857,8 +854,8 @@ function HooksPage() {
     }
   }, [sessionId, loadFiles])
 
-  if (!sessionId) {
-    return <NoSessionEmptyState />
+  if (!selectedApp) {
+    return <NoAppAttachedState feature="Hooks Editor" />
   }
 
   return (

@@ -1,17 +1,13 @@
-import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Trash2, FileText, ArrowDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
 import type { LogcatEntry } from '@/types/session'
 import { cn } from '@/lib/utils'
-import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
 
-export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/logs')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? '',
-  }),
+export const Route = createFileRoute('/devices/$deviceId/logs')({
   component: LogsPage,
 })
 
@@ -28,10 +24,7 @@ const ALL_LEVELS = ['V', 'D', 'I', 'W', 'E', 'F'] as const
 const MAX_ENTRIES = 10000
 
 function LogsPage() {
-  const { sessionId } = useSearch({
-    from: '/devices/$deviceId/app/$bundleId/logs',
-  })
-  const { messages } = useSessionMessages()
+  const { messages } = useDeviceMessages()
   const [search, setSearch] = useState('')
   const [clearIndex, setClearIndex] = useState(0)
   const [activeLevels, setActiveLevels] = useState<Set<string>>(new Set(['D', 'I', 'W', 'E', 'F']))
@@ -96,10 +89,6 @@ function LogsPage() {
       setShowScrollButton(false)
     }
   }, [])
-
-  if (!sessionId) {
-    return <NoSessionEmptyState />
-  }
 
   return (
     <div className="flex h-full flex-col">
@@ -192,7 +181,9 @@ function LogsPage() {
                         <td className="px-2 py-0.5 text-muted-foreground whitespace-nowrap">
                           {entry.timestamp}
                         </td>
-                        <td className={cn('px-2 py-0.5 font-bold', config.color)}>{entry.level}</td>
+                        <td className={cn('px-2 py-0.5 font-bold', config.color)}>
+                          {entry.level}
+                        </td>
                         <td className="px-2 py-0.5 text-muted-foreground">{entry.tid}</td>
                         <td className="px-2 py-0.5 truncate max-w-[200px]">{entry.tag}</td>
                         <td className="px-2 py-0.5 break-all">{entry.message}</td>

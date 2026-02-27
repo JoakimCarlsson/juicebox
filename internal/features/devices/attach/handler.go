@@ -1,0 +1,51 @@
+package attach
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/juicebox/internal/response"
+	"github.com/joakimcarlsson/juicebox/internal/session"
+)
+
+type Handler struct {
+	manager *session.Manager
+}
+
+func NewHandler(manager *session.Manager) *Handler {
+	return &Handler{manager: manager}
+}
+
+type attachRequest struct {
+	BundleID string `json:"bundleId"`
+}
+
+func (h *Handler) Handle(c *router.Context) {
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
+		return
+	}
+
+	var body attachRequest
+	if c.Request.Body != nil {
+		if err := json.NewDecoder(c.Request.Body).Decode(&body); err != nil {
+			response.Error(c, http.StatusBadRequest, "invalid request body")
+			return
+		}
+	}
+
+	if body.BundleID == "" {
+		response.Error(c, http.StatusBadRequest, "missing bundleId")
+		return
+	}
+
+	result, err := h.manager.AttachApp(deviceID, body.BundleID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}

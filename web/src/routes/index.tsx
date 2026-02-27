@@ -35,7 +35,7 @@ function DeviceCard({ device }: { device: Device }) {
     try {
       await connectDevice(device.id)
       await navigate({
-        to: '/devices/$deviceId',
+        to: '/devices/$deviceId/apps',
         params: { deviceId: device.id },
       })
     } catch (err) {

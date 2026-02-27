@@ -1,4 +1,4 @@
-import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { createFileRoute, useParams } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 import {
   AlertTriangle,
@@ -11,15 +11,11 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
 import type { CrashEvent } from '@/types/session'
 import { cn } from '@/lib/utils'
-import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
 
-export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/crashes')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? '',
-  }),
+export const Route = createFileRoute('/devices/$deviceId/crashes')({
   component: CrashesPage,
 })
 
@@ -35,10 +31,8 @@ function formatTimestamp(ts: number): string {
 }
 
 function CrashesPage() {
-  const { sessionId } = useSearch({
-    from: '/devices/$deviceId/app/$bundleId/crashes',
-  })
-  const { messages } = useSessionMessages()
+  const { deviceId } = useParams({ from: '/devices/$deviceId/crashes' })
+  const { messages } = useDeviceMessages()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [clearIndex, setClearIndex] = useState(0)
 
@@ -58,10 +52,10 @@ function CrashesPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `crashes-${sessionId}-${Date.now()}.json`
+    a.download = `crashes-${deviceId}-${Date.now()}.json`
     a.click()
     URL.revokeObjectURL(url)
-  }, [crashes, sessionId])
+  }, [crashes, deviceId])
 
   const exportSingle = useCallback((crash: CrashEvent) => {
     const data = JSON.stringify(crash, null, 2)
@@ -73,10 +67,6 @@ function CrashesPage() {
     a.click()
     URL.revokeObjectURL(url)
   }, [])
-
-  if (!sessionId) {
-    return <NoSessionEmptyState />
-  }
 
   return (
     <div className="flex h-full flex-col">

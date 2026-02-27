@@ -3,9 +3,12 @@ package devices
 import (
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
+	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/apps"
+	"github.com/joakimcarlsson/juicebox/internal/features/devices/attach"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/connect"
+	"github.com/joakimcarlsson/juicebox/internal/features/devices/data"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/disconnect"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/icon"
 	"github.com/joakimcarlsson/juicebox/internal/features/devices/info"
@@ -21,6 +24,7 @@ func RegisterRoutes(
 	client *bridge.Client,
 	hubManager *devicehub.Manager,
 	sessionManager *session.Manager,
+	database *db.DB,
 ) {
 	listHandler := list.NewHandler(client)
 	appsHandler := apps.NewHandler(client)
@@ -31,6 +35,8 @@ func RegisterRoutes(
 	connectHandler := connect.NewHandler(sessionManager)
 	disconnectHandler := disconnect.NewHandler(sessionManager)
 	spawnHandler := spawn.NewHandler(sessionManager)
+	attachHandler := attach.NewHandler(sessionManager)
+	dataHandler := data.NewHandler(database)
 
 	r.Group("/devices", func(d *router.Router) {
 		d.GET("", listHandler.Handle)
@@ -41,6 +47,12 @@ func RegisterRoutes(
 		d.POST("/{deviceId}/connect", connectHandler.Handle)
 		d.DELETE("/{deviceId}/disconnect", disconnectHandler.Handle)
 		d.POST("/{deviceId}/spawn", spawnHandler.Handle)
+		d.POST("/{deviceId}/attach", attachHandler.Handle)
+		d.GET("/{deviceId}/data/messages", dataHandler.Messages)
+		d.GET("/{deviceId}/data/logs", dataHandler.Logs)
+		d.GET("/{deviceId}/data/crashes", dataHandler.Crashes)
+		d.GET("/{deviceId}/data/crypto", dataHandler.Crypto)
+		d.GET("/{deviceId}/data/clipboard", dataHandler.Clipboard)
 	})
 	r.GET("/ws/devices/{deviceId}", streamHandler.Handle)
 }

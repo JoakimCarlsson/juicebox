@@ -1,4 +1,4 @@
-import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Trash2, Wifi, Pause, FastForward, Download } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -11,27 +11,23 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
-import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
 import { useIntercept } from '@/contexts/InterceptContext'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
 import type { HttpMessage } from '@/types/session'
 import { RequestList } from '@/components/network/RequestList'
 import { RequestDetail } from '@/components/network/RequestDetail'
 import { PendingRequestEditor } from '@/components/network/PendingRequestEditor'
-import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
 import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/network')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? '',
-  }),
+export const Route = createFileRoute('/devices/$deviceId/network')({
   component: NetworkPage,
 })
 
 function NetworkPage() {
-  const { sessionId } = useSearch({
-    from: '/devices/$deviceId/app/$bundleId/network',
-  })
-  const { messages } = useSessionMessages()
+  const { selectedApp } = useAttachedApps()
+  const sessionId = selectedApp?.sessionId ?? ''
+  const { messages } = useDeviceMessages()
   const {
     enabled: interceptEnabled,
     pendingRequests,
@@ -47,6 +43,7 @@ function NetworkPage() {
 
   const exportCapture = useCallback(
     (format: 'har' | 'burp') => {
+      if (!sessionId) return
       const a = document.createElement('a')
       a.href = `/api/v1/sessions/${sessionId}/export?format=${format}`
       a.download = ''
@@ -119,10 +116,6 @@ function NetworkPage() {
     return pendingRequests.find((p) => p.id === selectedId) ?? null
   }, [selectedId, pendingIds, pendingRequests])
 
-  if (!sessionId) {
-    return <NoSessionEmptyState />
-  }
-
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 border-b border-border px-4 py-2">
@@ -161,20 +154,29 @@ function NetworkPage() {
           <Trash2 className="mr-1.5 h-3 w-3" />
           Clear
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8" disabled={allMessages.length === 0}>
-              <Download className="mr-1.5 h-3 w-3" />
-              Export
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => exportCapture('har')}>Export as HAR</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => exportCapture('burp')}>
-              Export as Burp XML
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {sessionId && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                disabled={allMessages.length === 0}
+              >
+                <Download className="mr-1.5 h-3 w-3" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportCapture('har')}>
+                Export as HAR
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportCapture('burp')}>
+                Export as Burp XML
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         <span className="text-xs text-muted-foreground ml-auto tabular-nums">
           {allMessages.length} request{allMessages.length !== 1 ? 's' : ''}
         </span>

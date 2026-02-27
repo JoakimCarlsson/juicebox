@@ -340,6 +340,105 @@ func (m *Manager) SpawnApp(
 	}, nil
 }
 
+func (m *Manager) AttachApp(deviceID, bundleID string) (*SpawnResult, error) {
+	m.mu.RLock()
+	dc, ok := m.devices[deviceID]
+	m.mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("device %s not connected", deviceID)
+	}
+
+	logger := slog.With("device_id", deviceID, "source", "manager")
+
+	bridgeResp, err := m.bridge.Attach(deviceID, bundleID, nil)
+	if err != nil {
+		return nil, fmt.Errorf("manager: attach app: %w", err)
+	}
+
+	sess := &Session{
+		ID:              bridgeResp.SessionID,
+		DeviceID:        deviceID,
+		BundleID:        bundleID,
+		PID:             bridgeResp.PID,
+		BridgeSessionID: bridgeResp.SessionID,
+		StartedAt:       time.Now().UnixMilli(),
+	}
+
+	capsJSON, _ := json.Marshal(dc.Setup.Capabilities())
+	if err := m.database.InsertSession(&db.SessionRow{
+		ID:           sess.ID,
+		DeviceID:     sess.DeviceID,
+		BundleID:     sess.BundleID,
+		PID:          sess.PID,
+		Platform:     dc.Platform,
+		Capabilities: string(capsJSON),
+		StartedAt:    sess.StartedAt,
+	}); err != nil {
+		logger.Error("failed to persist session", "error", err)
+	}
+
+	m.mu.Lock()
+	m.sessions[sess.ID] = sess
+	m.mu.Unlock()
+
+	dc.mu.Lock()
+	dc.Sessions[sess.ID] = sess
+	dc.mu.Unlock()
+
+	go m.bridgeSubscribeForward(sess, dc)
+
+	logStreamLogger := slog.With(
+		"device_id", deviceID,
+		"source", "logstream",
+		"session_id", sess.ID,
+	)
+	closer, err := dc.Setup.StartLogStream(
+		deviceID,
+		sess.PID,
+		func(entry *logcat.Entry) {
+			data, err := devicehub.Marshal("logcat", sess.ID, entry)
+			if err != nil {
+				logStreamLogger.Error("marshal log entry", "error", err)
+				return
+			}
+			dc.Hub.Broadcast(data)
+
+			m.writer.WriteLogcatEntry(&db.LogcatEntryRow{
+				ID:        entry.ID,
+				SessionID: sess.ID,
+				Timestamp: entry.Timestamp,
+				PID:       entry.PID,
+				TID:       entry.TID,
+				Level:     string(entry.Level),
+				Tag:       entry.Tag,
+				Message:   entry.Message,
+			})
+		},
+		logStreamLogger,
+	)
+	if err != nil {
+		logger.Warn("log stream start failed (non-fatal)", "error", err)
+	} else if closer != nil {
+		sess.LogStream = closer
+	}
+
+	logger.Info(
+		"attached to app",
+		"bundle",
+		bundleID,
+		"pid",
+		sess.PID,
+		"session_id",
+		sess.ID,
+	)
+
+	return &SpawnResult{
+		SessionID:    sess.ID,
+		PID:          sess.PID,
+		Capabilities: dc.Setup.Capabilities(),
+	}, nil
+}
+
 func (m *Manager) DetachApp(sessionID string) error {
 	m.mu.Lock()
 	sess, ok := m.sessions[sessionID]

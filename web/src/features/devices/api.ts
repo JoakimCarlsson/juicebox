@@ -72,3 +72,19 @@ export async function spawnApp(
   }
   return res.json()
 }
+
+export async function attachApp(
+  deviceId: string,
+  bundleId: string
+): Promise<SpawnResponse> {
+  const res = await fetch(`/api/v1/devices/${deviceId}/attach`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bundleId }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || 'Failed to attach to app')
+  }
+  return res.json()
+}
