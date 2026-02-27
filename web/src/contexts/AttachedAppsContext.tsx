@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useRef, useState } from 'react'
 
 interface AttachedApp {
   bundleId: string
@@ -11,6 +11,7 @@ interface AttachedAppsContextValue {
   addApp: (bundleId: string, sessionId: string) => void
   removeApp: (bundleId: string) => void
   selectApp: (bundleId: string) => void
+  wasUserDetach: (bundleId: string) => boolean
 }
 
 const AttachedAppsContext = createContext<AttachedAppsContextValue | null>(null)
@@ -18,10 +19,12 @@ const AttachedAppsContext = createContext<AttachedAppsContextValue | null>(null)
 export function AttachedAppsProvider({ children }: { children: React.ReactNode }) {
   const [apps, setApps] = useState<AttachedApp[]>([])
   const [selectedBundleId, setSelectedBundleId] = useState<string | null>(null)
+  const userDetached = useRef(new Set<string>())
 
   const selectedApp = apps.find((a) => a.bundleId === selectedBundleId) ?? apps[0] ?? null
 
   const addApp = useCallback((bundleId: string, sessionId: string) => {
+    userDetached.current.delete(bundleId)
     setApps((prev) => {
       const existing = prev.find((a) => a.bundleId === bundleId)
       if (existing) return prev.map((a) => (a.bundleId === bundleId ? { ...a, sessionId } : a))
@@ -31,6 +34,8 @@ export function AttachedAppsProvider({ children }: { children: React.ReactNode }
   }, [])
 
   const removeApp = useCallback((bundleId: string) => {
+    userDetached.current.add(bundleId)
+    setTimeout(() => userDetached.current.delete(bundleId), 5000)
     setApps((prev) => prev.filter((a) => a.bundleId !== bundleId))
     setSelectedBundleId((prev) => (prev === bundleId ? null : prev))
   }, [])
@@ -39,8 +44,12 @@ export function AttachedAppsProvider({ children }: { children: React.ReactNode }
     setSelectedBundleId(bundleId)
   }, [])
 
+  const wasUserDetach = useCallback((bundleId: string) => {
+    return userDetached.current.has(bundleId)
+  }, [])
+
   return (
-    <AttachedAppsContext.Provider value={{ apps, selectedApp, addApp, removeApp, selectApp }}>
+    <AttachedAppsContext.Provider value={{ apps, selectedApp, addApp, removeApp, selectApp, wasUserDetach }}>
       {children}
     </AttachedAppsContext.Provider>
   )

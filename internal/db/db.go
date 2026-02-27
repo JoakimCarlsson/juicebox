@@ -21,7 +21,7 @@ func New(path string) (*DB, error) {
 		return nil, fmt.Errorf("db.New: %w", err)
 	}
 
-	if _, err := conn.Exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;"); err != nil {
+	if _, err := conn.Exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;"); err != nil {
 		return nil, fmt.Errorf("db.New: pragmas: %w", err)
 	}
 

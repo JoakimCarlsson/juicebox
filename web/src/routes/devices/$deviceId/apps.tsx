@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AppCard } from '@/components/devices/AppCard'
 import { useAttachedApps } from '@/contexts/AttachedAppsContext'
 import { attachApp } from '@/features/devices/api'
+import { detachSession } from '@/features/sessions/api'
 import { appsQueryOptions } from '@/features/devices/queries'
 import type { App } from '@/types/device'
 
@@ -17,7 +18,7 @@ export const Route = createFileRoute('/devices/$deviceId/apps')({
 function AppsPage() {
   const { deviceId } = useParams({ from: '/devices/$deviceId/apps' })
   const { data: apps, isLoading } = useQuery(appsQueryOptions(deviceId))
-  const { apps: attachedApps, addApp, selectApp } = useAttachedApps()
+  const { apps: attachedApps, addApp, removeApp, selectApp } = useAttachedApps()
   const [search, setSearch] = useState('')
   const [attachingId, setAttachingId] = useState<string | null>(null)
 
@@ -54,6 +55,18 @@ function AppsPage() {
     [deviceId, attachedSet, addApp, selectApp]
   )
 
+  const handleDetach = useCallback(
+    async (app: App) => {
+      const attached = attachedApps.find((a) => a.bundleId === app.identifier)
+      if (!attached) return
+      removeApp(app.identifier)
+      try {
+        await detachSession(attached.sessionId)
+      } catch {}
+    },
+    [attachedApps, removeApp]
+  )
+
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto p-6">
       <div className="relative max-w-sm">
@@ -86,6 +99,7 @@ function AppsPage() {
               isAttached={attachedSet.has(app.identifier)}
               isAttaching={attachingId === app.identifier}
               onAttach={handleAttach}
+              onDetach={handleDetach}
             />
           ))}
         </div>

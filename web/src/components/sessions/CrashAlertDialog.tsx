@@ -28,7 +28,7 @@ type AlertState =
 
 export function CrashAlertDialog({ deviceId }: CrashAlertDialogProps) {
   const { subscribe } = useDeviceSocket()
-  const { addApp, removeApp } = useAttachedApps()
+  const { addApp, removeApp, wasUserDetach } = useAttachedApps()
   const navigate = useNavigate()
   const [state, setState] = useState<AlertState>({ kind: 'closed' })
   const [reattaching, setReattaching] = useState(false)
@@ -45,6 +45,7 @@ export function CrashAlertDialog({ deviceId }: CrashAlertDialogProps) {
 
       if (envelope.type === 'detached') {
         const bundleId = (envelope as { bundleId?: string }).bundleId ?? ''
+        if (bundleId && wasUserDetach(bundleId)) return
         const recentCrash = Date.now() - lastCrashTime.current < 5000
         if (bundleId) removeApp(bundleId)
         setState((prev) => {
@@ -60,7 +61,7 @@ export function CrashAlertDialog({ deviceId }: CrashAlertDialogProps) {
     })
 
     return unsub
-  }, [subscribe, removeApp])
+  }, [subscribe, removeApp, wasUserDetach])
 
   const bundleId =
     state.kind === 'crash' ? state.bundleId : state.kind === 'detached' ? state.bundleId : ''

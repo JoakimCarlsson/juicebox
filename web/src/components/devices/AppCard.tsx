@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Loader2 } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import type { App } from '@/types/device'
 import { cn } from '@/lib/utils'
 
@@ -37,9 +37,10 @@ interface AppCardProps {
   isAttached: boolean
   isAttaching: boolean
   onAttach: (app: App) => void
+  onDetach: (app: App) => void
 }
 
-export function AppCard({ app, deviceId, isAttached, isAttaching, onAttach }: AppCardProps) {
+export function AppCard({ app, deviceId, isAttached, isAttaching, onAttach, onDetach }: AppCardProps) {
   const [imgError, setImgError] = useState(false)
   const initial = app.name.charAt(0).toUpperCase()
   const isRunning = app.pid > 0
@@ -49,7 +50,7 @@ export function AppCard({ app, deviceId, isAttached, isAttaching, onAttach }: Ap
     <div
       onClick={() => !isAttaching && onAttach(app)}
       className={cn(
-        'group flex cursor-pointer flex-col items-center gap-2 rounded-lg border bg-card p-4',
+        'group relative flex cursor-pointer flex-col items-center gap-2 rounded-lg border bg-card p-4',
         'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
         isAttached
           ? 'border-primary/50 ring-1 ring-primary/20'
@@ -57,6 +58,18 @@ export function AppCard({ app, deviceId, isAttached, isAttaching, onAttach }: Ap
         isAttaching && 'opacity-70 pointer-events-none'
       )}
     >
+      {isAttached && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onDetach(app)
+          }}
+          className="absolute top-1.5 right-1.5 flex items-center justify-center h-5 w-5 rounded-full bg-muted/80 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors opacity-0 group-hover:opacity-100"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+
       <div className="relative">
         {imgError ? (
           <div
