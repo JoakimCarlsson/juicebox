@@ -805,7 +805,11 @@ func (m *Manager) bridgeSubscribeForward(sess *Session, dc *DeviceConnection) {
 		}
 
 		m.cleanupSession(sess, logger)
-		logger.Info("session cleaned up after stream ended", "bundle", sess.BundleID)
+		logger.Info(
+			"session cleaned up after stream ended",
+			"bundle",
+			sess.BundleID,
+		)
 	}
 }
 
