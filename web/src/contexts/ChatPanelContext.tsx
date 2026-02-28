@@ -172,7 +172,7 @@ export function ChatPanelProvider({
     } else if (availableModels.length > 0 && !selectedModel) {
       setSelectedModelState(availableModels[0].id)
     }
-  }, [activeConversationId, loadHistory, conversations, availableModels, selectedModel])
+  }, [activeConversationId, loadHistory, conversations, availableModels])
 
   const toggle = useCallback(() => {
     const panel = panelRef.current
