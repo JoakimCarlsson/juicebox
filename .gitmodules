@@ -4,3 +4,6 @@
 [submodule "deps/ai"]
 	path = deps/ai
 	url = https://github.com/JoakimCarlsson/ai.git
+[submodule "deps/squeeze"]
+	path = deps/squeeze
+	url = https://github.com/JoakimCarlsson/squeeze.git

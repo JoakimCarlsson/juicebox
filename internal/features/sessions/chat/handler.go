@@ -22,6 +22,7 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/scripting"
 	"github.com/joakimcarlsson/juicebox/internal/session"
+	"github.com/joakimcarlsson/squeeze"
 )
 
 type Handler struct {
@@ -240,9 +241,6 @@ func (h *Handler) Handle(c *router.Context) {
 		chattools.NewDetachApp(h.manager, deviceID),
 		chattools.NewListScriptFiles(fileManager, deviceID),
 		chattools.NewReadScriptFile(fileManager, deviceID),
-		chattools.NewRunShell(),
-		chattools.NewFetchWebpage(),
-		chattools.NewWebSearch(),
 	}
 
 	if activeSessionID != "" {
@@ -322,16 +320,16 @@ func (h *Handler) Handle(c *router.Context) {
 		"SessionID": activeSessionID,
 	}
 
-	a := agent.New(
-		llmClient,
-		agent.WithSystemPrompt(SystemPromptTemplate),
-		agent.WithState(state),
-		agent.WithTools(chatTools...),
-		agent.WithSession(
-			req.ConversationID,
-			h.chatStore.GetOrCreate(req.ConversationID),
+	a := squeeze.NewAgent(llmClient,
+		squeeze.WithTools(chatTools...),
+		squeeze.WithAgentOptions(
+			agent.WithSystemPrompt(SystemPromptTemplate),
+			agent.WithState(state),
+			agent.WithSession(
+				req.ConversationID,
+				h.chatStore.GetOrCreate(req.ConversationID),
+			),
 		),
-		agent.WithMaxIterations(50),
 	)
 
 	bridgeClient := h.manager.Bridge()

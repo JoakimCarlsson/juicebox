@@ -11,7 +11,7 @@ COPY agent/package.json agent/package-lock.json* ./
 RUN npm ci
 COPY agent/ .
 
-FROM golang:1.25 AS backend
+FROM golang:1.26 AS backend
 WORKDIR /app
 COPY go.mod go.sum ./
 COPY deps/ deps/
