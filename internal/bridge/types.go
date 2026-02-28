@@ -89,6 +89,10 @@ type DatabaseColumn struct {
 	PK      bool   `json:"pk"`
 }
 
+type CompileResult struct {
+	Success bool `json:"success"`
+}
+
 type RunScriptResponse struct {
 	Mode              string            `json:"mode"`
 	Name              string            `json:"name,omitempty"`

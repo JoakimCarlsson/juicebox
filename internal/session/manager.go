@@ -59,6 +59,10 @@ type Manager struct {
 	devices      map[string]*DeviceConnection
 }
 
+func (m *Manager) Bridge() *bridge.Client {
+	return m.bridge
+}
+
 func NewManager(
 	cm *proxy.CertManager,
 	bridgeClient *bridge.Client,

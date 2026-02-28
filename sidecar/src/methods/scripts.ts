@@ -10,6 +10,69 @@ import { fail, ok, sessions } from "../state.ts";
 
 const SIDECAR_ROOT = resolve(import.meta.dirname!, "../..");
 
+interface CompileOutput {
+  success: boolean;
+  compiledJS?: string;
+  error?: string;
+  tmpFile: string;
+  outFile: string;
+}
+
+async function fridaCompile(code: string): Promise<CompileOutput> {
+  const tmpDir = resolve(SIDECAR_ROOT, ".tmp");
+  await Deno.mkdir(tmpDir, { recursive: true });
+  const tmpFile = `${tmpDir}/jb_script_${crypto.randomUUID()}.ts`;
+  const outFile = tmpFile.replace(/\.ts$/, ".js");
+
+  await Deno.writeTextFile(tmpFile, code);
+
+  const compilerBin = resolve(
+    SIDECAR_ROOT,
+    "node_modules/.bin/frida-compile",
+  );
+  const compile = new Deno.Command(compilerBin, {
+    args: [tmpFile, "-o", outFile],
+    stdout: "piped",
+    stderr: "piped",
+    cwd: SIDECAR_ROOT,
+  });
+  const compileOut = await compile.output();
+  if (compileOut.code !== 0) {
+    const stderr = new TextDecoder().decode(compileOut.stderr).trim();
+    const stdout = new TextDecoder().decode(compileOut.stdout).trim();
+    const detail = [stderr, stdout].filter(Boolean).join("\n") ||
+      "unknown error";
+    return { success: false, error: detail, tmpFile, outFile };
+  }
+
+  const compiledJS = await Deno.readTextFile(outFile);
+  return { success: true, compiledJS, tmpFile, outFile };
+}
+
+async function cleanupCompileFiles(tmpFile: string, outFile: string) {
+  try {
+    await Deno.remove(tmpFile);
+  } catch {}
+  try {
+    await Deno.remove(outFile);
+  } catch {}
+}
+
+export async function handleCompileScript(
+  req: JsonRpcRequest,
+): Promise<JsonRpcResponse> {
+  const code = req.params?.code as string;
+  if (!code) return fail(req.id, -32602, "missing param: code");
+
+  const result = await fridaCompile(code);
+  await cleanupCompileFiles(result.tmpFile, result.outFile);
+
+  if (!result.success) {
+    return fail(req.id, -32000, `compilation failed:\n${result.error}`);
+  }
+  return ok(req.id, { success: true });
+}
+
 export async function handleRunScript(
   req: JsonRpcRequest,
 ): Promise<JsonRpcResponse> {
@@ -31,36 +94,16 @@ export async function handleRunScript(
     state.userScripts.delete(name);
   }
 
-  const tmpDir = resolve(SIDECAR_ROOT, ".tmp");
-  await Deno.mkdir(tmpDir, { recursive: true });
-  const tmpFile = `${tmpDir}/jb_script_${crypto.randomUUID()}.ts`;
-  const outFile = tmpFile.replace(/\.ts$/, ".js");
+  const compiled = await fridaCompile(code);
 
   let userScript: frida.Script | null = null;
 
   try {
-    await Deno.writeTextFile(tmpFile, code);
-
-    const compilerBin = resolve(
-      SIDECAR_ROOT,
-      "node_modules/.bin/frida-compile",
-    );
-    const compile = new Deno.Command(compilerBin, {
-      args: [tmpFile, "-o", outFile],
-      stdout: "piped",
-      stderr: "piped",
-      cwd: SIDECAR_ROOT,
-    });
-    const compileOut = await compile.output();
-    if (compileOut.code !== 0) {
-      const stderr = new TextDecoder().decode(compileOut.stderr).trim();
-      const stdout = new TextDecoder().decode(compileOut.stdout).trim();
-      const detail = [stderr, stdout].filter(Boolean).join("\n") ||
-        "unknown error";
-      return fail(req.id, -32000, `compilation failed:\n${detail}`);
+    if (!compiled.success) {
+      return fail(req.id, -32000, `compilation failed:\n${compiled.error}`);
     }
 
-    const compiledJS = await Deno.readTextFile(outFile);
+    const compiledJS = compiled.compiledJS!;
     userScript = await state.session.createScript(compiledJS);
 
     const scriptState: UserScriptState = {
@@ -143,12 +186,7 @@ export async function handleRunScript(
         await userScript.unload();
       } catch {}
     }
-    try {
-      await Deno.remove(tmpFile);
-    } catch {}
-    try {
-      await Deno.remove(outFile);
-    } catch {}
+    await cleanupCompileFiles(compiled.tmpFile, compiled.outFile);
   }
 }
 

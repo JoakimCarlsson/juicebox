@@ -344,6 +344,20 @@ func (c *Client) PullDatabase(
 	return resp.LocalPath, nil
 }
 
+func (c *Client) CompileScript(code string) (*CompileResult, error) {
+	raw, err := c.call("compileScript", map[string]string{"code": code})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp CompileResult
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.CompileScript: %w", err)
+	}
+
+	return &resp, nil
+}
+
 func (c *Client) RunScript(
 	sessionID, code, name string,
 	initialWaitSecs int,

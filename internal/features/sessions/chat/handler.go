@@ -3,13 +3,18 @@ package chat
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/message"
 	"github.com/joakimcarlsson/ai/tool"
 	"github.com/joakimcarlsson/ai/types"
 	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
@@ -71,11 +76,15 @@ func (h *Handler) sqliteQueryFn() func(setup session.DeviceSetup, deviceID, bund
 	}
 }
 
+const autoLintPrefix = "[auto-lint] "
+const maxLintRetries = 3
+
 type editApplier struct {
-	deviceID string
-	files    *scripting.FileManager
-	buf      string
-	applied  int
+	deviceID      string
+	files         *scripting.FileManager
+	buf           string
+	applied       int
+	modifiedFiles []string
 }
 
 func (ea *editApplier) accumulate(delta string) {
@@ -106,6 +115,7 @@ func (ea *editApplier) flush() string {
 			applied.Block.Filename,
 			applied.NewContent,
 		)
+		ea.modifiedFiles = append(ea.modifiedFiles, applied.Block.Filename)
 	}
 
 	ea.applied = len(blocks)
@@ -115,6 +125,59 @@ func (ea *editApplier) flush() string {
 	}
 
 	return ""
+}
+
+func (ea *editApplier) reset() {
+	ea.buf = ""
+	ea.applied = 0
+	ea.modifiedFiles = nil
+}
+
+func (ea *editApplier) scriptFiles() []string {
+	var scripts []string
+	seen := make(map[string]bool)
+	for _, f := range ea.modifiedFiles {
+		ext := filepath.Ext(f)
+		if (ext == ".ts" || ext == ".js") && !seen[f] {
+			seen[f] = true
+			scripts = append(scripts, f)
+		}
+	}
+	return scripts
+}
+
+type scriptFileGetter interface {
+	Get(deviceID, name string) (*scripting.ScriptFile, error)
+}
+
+type scriptCompiler interface {
+	CompileScript(code string) (*bridge.CompileResult, error)
+}
+
+func compileModifiedScripts(
+	bc scriptCompiler,
+	fm scriptFileGetter,
+	deviceID string,
+	filenames []string,
+) string {
+	var errs []string
+	for _, name := range filenames {
+		f, err := fm.Get(deviceID, name)
+		if err != nil || f == nil {
+			continue
+		}
+		_, err = bc.CompileScript(f.Content)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("**%s**: %s", name, err.Error()))
+		}
+	}
+	if len(errs) == 0 {
+		return ""
+	}
+	return "Script compilation failed. Fix the errors:\n\n" + strings.Join(
+		errs,
+		"\n\n",
+	)
 }
 
 func (h *Handler) Handle(c *router.Context) {
@@ -272,80 +335,124 @@ func (h *Handler) Handle(c *router.Context) {
 		agent.WithMaxIterations(50),
 	)
 
+	bridgeClient := h.manager.Bridge()
+
 	c.SSEHandler(
 		router.DefaultSSEConfig(),
 		func(ctx context.Context, send router.SSESendFunc) error {
-			eventCh := a.ChatStream(ctx, req.Message)
+			msg := req.Message
+			totalUsage := sseDoneEvent{}
 
-			applier := &editApplier{
-				deviceID: deviceID,
-				files:    fileManager,
-			}
-
-			for event := range eventCh {
-				switch event.Type {
-				case types.EventContentDelta:
-					applier.accumulate(event.Content)
-					if err := send("content", sseContentEvent{Delta: event.Content}); err != nil {
-						return err
-					}
-
-				case types.EventToolUseStart:
-					if editErr := applier.flush(); editErr != "" {
-						_ = send(
-							"edit_failed",
-							sseEditResultEvent{Error: editErr},
-						)
-					} else if applier.applied > 0 {
-						_ = send("edit_applied", sseEditResultEvent{Success: true})
-					}
-					if event.ToolCall != nil {
-						if err := send("tool_start", sseToolStartEvent{
-							Name: event.ToolCall.Name,
-							ID:   event.ToolCall.ID,
-						}); err != nil {
-							return err
-						}
-					}
-
-				case types.EventToolUseStop:
-					if event.ToolResult != nil {
-						if err := send("tool_end", sseToolEndEvent{
-							Name:   event.ToolResult.ToolName,
-							ID:     event.ToolResult.ToolCallID,
-							Result: event.ToolResult.Output,
-						}); err != nil {
-							return err
-						}
-					}
-
-				case types.EventComplete:
-					if editErr := applier.flush(); editErr != "" {
-						_ = send(
-							"edit_failed",
-							sseEditResultEvent{Error: editErr},
-						)
-					} else if applier.applied > 0 {
-						_ = send("edit_applied", sseEditResultEvent{Success: true})
-					}
-
-					evt := sseDoneEvent{}
-					if event.Response != nil {
-						evt.InputTokens = event.Response.Usage.InputTokens
-						evt.OutputTokens = event.Response.Usage.OutputTokens
-					}
-					return send("done", evt)
-
-				case types.EventError:
-					errMsg := "unknown error"
-					if event.Error != nil {
-						errMsg = event.Error.Error()
-					}
-					return send("error", sseErrorEvent{Message: errMsg})
+			for attempt := range maxLintRetries + 1 {
+				applier := &editApplier{
+					deviceID: deviceID,
+					files:    fileManager,
 				}
+
+				var streamErr error
+				var complete bool
+
+				for event := range a.ChatStream(ctx, msg) {
+					switch event.Type {
+					case types.EventContentDelta:
+						applier.accumulate(event.Content)
+						if err := send("content", sseContentEvent{Delta: event.Content}); err != nil {
+							return err
+						}
+
+					case types.EventToolUseStart:
+						if editErr := applier.flush(); editErr != "" {
+							_ = send(
+								"edit_failed",
+								sseEditResultEvent{Error: editErr},
+							)
+						} else if applier.applied > 0 {
+							_ = send("edit_applied", sseEditResultEvent{Success: true})
+						}
+						if event.ToolCall != nil {
+							if err := send("tool_start", sseToolStartEvent{
+								Name: event.ToolCall.Name,
+								ID:   event.ToolCall.ID,
+							}); err != nil {
+								return err
+							}
+						}
+
+					case types.EventToolUseStop:
+						if event.ToolResult != nil {
+							if err := send("tool_end", sseToolEndEvent{
+								Name:   event.ToolResult.ToolName,
+								ID:     event.ToolResult.ToolCallID,
+								Result: event.ToolResult.Output,
+							}); err != nil {
+								return err
+							}
+						}
+
+					case types.EventComplete:
+						if editErr := applier.flush(); editErr != "" {
+							_ = send(
+								"edit_failed",
+								sseEditResultEvent{Error: editErr},
+							)
+						} else if applier.applied > 0 {
+							_ = send("edit_applied", sseEditResultEvent{Success: true})
+						}
+						if event.Response != nil {
+							totalUsage.InputTokens += event.Response.Usage.InputTokens
+							totalUsage.OutputTokens += event.Response.Usage.OutputTokens
+						}
+						complete = true
+
+					case types.EventError:
+						errMsg := "unknown error"
+						if event.Error != nil {
+							errMsg = event.Error.Error()
+						}
+						streamErr = fmt.Errorf("%s", errMsg)
+					}
+				}
+
+				if streamErr != nil {
+					return send(
+						"error",
+						sseErrorEvent{Message: streamErr.Error()},
+					)
+				}
+				if !complete {
+					return send("done", totalUsage)
+				}
+
+				scripts := applier.scriptFiles()
+				if len(scripts) == 0 || attempt == maxLintRetries {
+					return send("done", totalUsage)
+				}
+
+				compileErr := compileModifiedScripts(
+					bridgeClient,
+					fileManager,
+					deviceID,
+					scripts,
+				)
+				if compileErr == "" {
+					return send("done", totalUsage)
+				}
+
+				slog.Info("auto-lint retry",
+					"attempt", attempt+1,
+					"device", deviceID,
+					"scripts", scripts,
+				)
+				_ = send(
+					"content",
+					sseContentEvent{
+						Delta: "\n\n---\n*Compilation error detected, retrying...*\n\n",
+					},
+				)
+				msg = autoLintPrefix + compileErr
 			}
 
-			return nil
+			return send("done", totalUsage)
 		},
 	)
 }
@@ -407,7 +514,7 @@ func (h *Handler) History(c *router.Context) {
 		}
 
 		if m.Role == message.User {
-			if text == "" {
+			if text == "" || strings.HasPrefix(text, autoLintPrefix) {
 				continue
 			}
 			result = append(result, historyMsg{Role: "user", Content: text})

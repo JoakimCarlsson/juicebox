@@ -12,6 +12,7 @@ import {
   handleDisconnectDevice,
 } from "./methods/device-connection.ts";
 import {
+  handleCompileScript,
   handleGetScriptOutput,
   handleRunScript,
   handleStopScript,
@@ -80,6 +81,9 @@ async function handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse> {
 
       case "detach":
         return await handleDetach(req);
+
+      case "compileScript":
+        return await handleCompileScript(req);
 
       case "runScript":
         return await handleRunScript(req);
