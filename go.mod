@@ -95,10 +95,4 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 )
 
-replace github.com/joakimcarlsson/go-router/router => ./deps/go-router/router
 
-replace github.com/joakimcarlsson/ai => ./deps/ai
-
-replace github.com/joakimcarlsson/ai/integrations/sqlite => ./deps/ai/integrations/sqlite
-
-replace github.com/joakimcarlsson/squeeze => ./deps/squeeze
