@@ -143,11 +143,7 @@ function SettingsPage() {
                           onClick={() => handleSave(key)}
                           disabled={saving[key] || !draft.trim()}
                         >
-                          {success[key] ? (
-                            <Check className="h-3.5 w-3.5" />
-                          ) : (
-                            'Save'
-                          )}
+                          {success[key] ? <Check className="h-3.5 w-3.5" /> : 'Save'}
                         </Button>
                       ) : hasSaved ? (
                         <Button

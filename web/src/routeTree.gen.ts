@@ -38,12 +38,11 @@ const DevicesDeviceIdRoute = DevicesDeviceIdRouteImport.update({
   path: '/devices/$deviceId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DevicesDeviceIdProcessesRoute =
-  DevicesDeviceIdProcessesRouteImport.update({
-    id: '/processes',
-    path: '/processes',
-    getParentRoute: () => DevicesDeviceIdRoute,
-  } as any)
+const DevicesDeviceIdProcessesRoute = DevicesDeviceIdProcessesRouteImport.update({
+  id: '/processes',
+  path: '/processes',
+  getParentRoute: () => DevicesDeviceIdRoute,
+} as any)
 const DevicesDeviceIdNetworkRoute = DevicesDeviceIdNetworkRouteImport.update({
   id: '/network',
   path: '/network',
@@ -313,7 +312,7 @@ const DevicesDeviceIdRouteChildren: DevicesDeviceIdRouteChildren = {
 }
 
 const DevicesDeviceIdRouteWithChildren = DevicesDeviceIdRoute._addFileChildren(
-  DevicesDeviceIdRouteChildren,
+  DevicesDeviceIdRouteChildren
 )
 
 const rootRouteChildren: RootRouteChildren = {

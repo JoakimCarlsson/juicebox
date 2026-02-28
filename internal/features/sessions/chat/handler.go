@@ -322,11 +322,15 @@ func (h *Handler) Handle(c *router.Context) {
 		"SessionID": activeSessionID,
 	}
 
-	a := agent.New(llmClient,
+	a := agent.New(
+		llmClient,
 		agent.WithSystemPrompt(SystemPromptTemplate),
 		agent.WithState(state),
 		agent.WithTools(chatTools...),
-		agent.WithSession(req.ConversationID, h.chatStore.GetOrCreate(req.ConversationID)),
+		agent.WithSession(
+			req.ConversationID,
+			h.chatStore.GetOrCreate(req.ConversationID),
+		),
 		agent.WithMaxIterations(50),
 	)
 
@@ -456,7 +460,10 @@ func (h *Handler) Handle(c *router.Context) {
 	)
 }
 
-func (h *Handler) autoNameConversation(ctx context.Context, convoID, userMsg string) {
+func (h *Handler) autoNameConversation(
+	ctx context.Context,
+	convoID, userMsg string,
+) {
 	convo, err := h.db.GetConversation(ctx, convoID)
 	if err != nil || convo == nil {
 		return

@@ -7,7 +7,8 @@ import (
 
 func (d *DB) GetSetting(ctx context.Context, key string) (string, error) {
 	var value string
-	err := d.conn.QueryRowContext(ctx, "SELECT value FROM settings WHERE key = ?", key).Scan(&value)
+	err := d.conn.QueryRowContext(ctx, "SELECT value FROM settings WHERE key = ?", key).
+		Scan(&value)
 	if err == sql.ErrNoRows {
 		return "", nil
 	}
@@ -15,14 +16,19 @@ func (d *DB) GetSetting(ctx context.Context, key string) (string, error) {
 }
 
 func (d *DB) SetSetting(ctx context.Context, key, value string) error {
-	_, err := d.conn.ExecContext(ctx,
+	_, err := d.conn.ExecContext(
+		ctx,
 		"INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-		key, value,
+		key,
+		value,
 	)
 	return err
 }
 
-func (d *DB) GetSettings(ctx context.Context, keys []string) (map[string]string, error) {
+func (d *DB) GetSettings(
+	ctx context.Context,
+	keys []string,
+) (map[string]string, error) {
 	result := make(map[string]string, len(keys))
 	for _, k := range keys {
 		v, err := d.GetSetting(ctx, k)

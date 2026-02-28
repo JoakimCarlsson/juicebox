@@ -10,7 +10,11 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/response"
 )
 
-var providerKeys = []string{"api_key_openai", "api_key_anthropic", "api_key_google"}
+var providerKeys = []string{
+	"api_key_openai",
+	"api_key_anthropic",
+	"api_key_google",
+}
 
 type availableModel struct {
 	ID       string `json:"id"`
@@ -20,21 +24,53 @@ type availableModel struct {
 
 var providerModels = map[string][]availableModel{
 	"api_key_openai": {
-		{ID: string(model.GPT53Codex), Name: "GPT-5.3 Codex", Provider: "openai"},
-		{ID: string(model.GPT52Codex), Name: "GPT-5.2 Codex", Provider: "openai"},
+		{
+			ID:       string(model.GPT53Codex),
+			Name:     "GPT-5.3 Codex",
+			Provider: "openai",
+		},
+		{
+			ID:       string(model.GPT52Codex),
+			Name:     "GPT-5.2 Codex",
+			Provider: "openai",
+		},
 		{ID: string(model.GPT52), Name: "GPT-5.2", Provider: "openai"},
 		{ID: string(model.GPT5Mini), Name: "GPT-5 mini", Provider: "openai"},
 		{ID: string(model.GPT5Nano), Name: "GPT-5 nano", Provider: "openai"},
 	},
 	"api_key_anthropic": {
-		{ID: string(model.Claude46Opus), Name: "Claude 4.6 Opus", Provider: "anthropic"},
-		{ID: string(model.Claude46Sonnet), Name: "Claude 4.6 Sonnet", Provider: "anthropic"},
-		{ID: string(model.Claude45Haiku), Name: "Claude 4.5 Haiku", Provider: "anthropic"},
+		{
+			ID:       string(model.Claude46Opus),
+			Name:     "Claude 4.6 Opus",
+			Provider: "anthropic",
+		},
+		{
+			ID:       string(model.Claude46Sonnet),
+			Name:     "Claude 4.6 Sonnet",
+			Provider: "anthropic",
+		},
+		{
+			ID:       string(model.Claude45Haiku),
+			Name:     "Claude 4.5 Haiku",
+			Provider: "anthropic",
+		},
 	},
 	"api_key_google": {
-		{ID: string(model.Gemini31Pro), Name: "Gemini 3.1 Pro", Provider: "gemini"},
-		{ID: string(model.Gemini25), Name: "Gemini 2.5 Pro", Provider: "gemini"},
-		{ID: string(model.Gemini25Flash), Name: "Gemini 2.5 Flash", Provider: "gemini"},
+		{
+			ID:       string(model.Gemini31Pro),
+			Name:     "Gemini 3.1 Pro",
+			Provider: "gemini",
+		},
+		{
+			ID:       string(model.Gemini25),
+			Name:     "Gemini 2.5 Pro",
+			Provider: "gemini",
+		},
+		{
+			ID:       string(model.Gemini25Flash),
+			Name:     "Gemini 2.5 Flash",
+			Provider: "gemini",
+		},
 	},
 }
 

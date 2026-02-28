@@ -56,19 +56,14 @@ export interface Conversation {
   updated_at: number
 }
 
-export async function fetchConversations(
-  deviceId: string
-): Promise<Conversation[]> {
+export async function fetchConversations(deviceId: string): Promise<Conversation[]> {
   const res = await fetch(`/api/v1/devices/${deviceId}/conversations`)
   if (!res.ok) throw new Error('Failed to fetch conversations')
   const data = await res.json()
   return data.conversations
 }
 
-export async function createConversation(
-  deviceId: string,
-  model: string
-): Promise<Conversation> {
+export async function createConversation(deviceId: string, model: string): Promise<Conversation> {
   const res = await fetch(`/api/v1/devices/${deviceId}/conversations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -29,7 +29,11 @@ func init() {
 	}
 }
 
-func newLLMClient(ctx context.Context, database *db.DB, modelID string) (llm.LLM, error) {
+func newLLMClient(
+	ctx context.Context,
+	database *db.DB,
+	modelID string,
+) (llm.LLM, error) {
 	m, ok := modelRegistry[model.ModelID(modelID)]
 	if !ok {
 		return nil, fmt.Errorf("unknown model: %s", modelID)

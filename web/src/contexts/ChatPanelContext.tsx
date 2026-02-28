@@ -77,6 +77,7 @@ export function ChatPanelProvider({
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [selectedModel, setSelectedModelState] = useState('')
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([])
+  const skipNextHistoryLoad = useRef(false)
 
   useEffect(() => {
     if (!deviceId) return
@@ -86,15 +87,25 @@ export function ChatPanelProvider({
   }, [deviceId])
 
   useEffect(() => {
-    fetchAvailableModels()
-      .then((models) => {
+    if (configured !== true || !deviceId) return
+    Promise.all([fetchAvailableModels(), fetchConversations(deviceId)])
+      .then(([models, convos]) => {
         setAvailableModels(models)
-        if (models.length > 0 && !selectedModel) {
+        setConversations(convos)
+        if (convos.length > 0) {
+          setActiveConversationId(convos[0].id)
+          const savedModel = convos[0].model
+          if (savedModel && models.some((m) => m.id === savedModel)) {
+            setSelectedModelState(savedModel)
+          } else if (models.length > 0) {
+            setSelectedModelState(models[0].id)
+          }
+        } else if (models.length > 0) {
           setSelectedModelState(models[0].id)
         }
       })
       .catch(() => {})
-  }, [configured])
+  }, [deviceId, configured])
 
   const refreshConversations = useCallback(() => {
     if (!deviceId) return
@@ -102,11 +113,6 @@ export function ChatPanelProvider({
       .then((convos) => setConversations(convos))
       .catch(() => {})
   }, [deviceId])
-
-  useEffect(() => {
-    if (!deviceId || configured !== true) return
-    refreshConversations()
-  }, [deviceId, configured, refreshConversations])
 
   const loadHistory = useCallback(
     (conversationId: string) => {
@@ -152,14 +158,21 @@ export function ChatPanelProvider({
   )
 
   useEffect(() => {
-    if (activeConversationId) {
+    if (!activeConversationId) return
+
+    if (skipNextHistoryLoad.current) {
+      skipNextHistoryLoad.current = false
+    } else {
       loadHistory(activeConversationId)
-      const convo = conversations.find((c) => c.id === activeConversationId)
-      if (convo?.model && availableModels.some((m) => m.id === convo.model)) {
-        setSelectedModelState(convo.model)
-      }
     }
-  }, [activeConversationId, loadHistory])
+
+    const convo = conversations.find((c) => c.id === activeConversationId)
+    if (convo?.model && availableModels.some((m) => m.id === convo.model)) {
+      setSelectedModelState(convo.model)
+    } else if (availableModels.length > 0 && !selectedModel) {
+      setSelectedModelState(availableModels[0].id)
+    }
+  }, [activeConversationId, loadHistory, conversations, availableModels])
 
   const toggle = useCallback(() => {
     const panel = panelRef.current
@@ -193,6 +206,7 @@ export function ChatPanelProvider({
     try {
       const convo = await createConversation(deviceId, selectedModel)
       setConversations((prev) => [convo, ...prev])
+      skipNextHistoryLoad.current = true
       setActiveConversationId(convo.id)
       setMessages([])
     } catch {}
@@ -239,6 +253,7 @@ export function ChatPanelProvider({
         createConversation(deviceId, selectedModel)
           .then((convo) => {
             setConversations((prev) => [convo, ...prev])
+            skipNextHistoryLoad.current = true
             setActiveConversationId(convo.id)
             doSend(text, convo.id)
           })

@@ -10,7 +10,9 @@ export async function fetchSettings(): Promise<Record<string, string>> {
   return res.json()
 }
 
-export async function updateSettings(data: Record<string, string>): Promise<Record<string, string>> {
+export async function updateSettings(
+  data: Record<string, string>
+): Promise<Record<string, string>> {
   const res = await fetch('/api/v1/settings', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

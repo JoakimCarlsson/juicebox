@@ -15,8 +15,12 @@ type Conversation struct {
 	UpdatedAt int64  `json:"updated_at"`
 }
 
-func (d *DB) ListConversations(ctx context.Context, deviceID string) ([]Conversation, error) {
-	rows, err := d.conn.QueryContext(ctx,
+func (d *DB) ListConversations(
+	ctx context.Context,
+	deviceID string,
+) ([]Conversation, error) {
+	rows, err := d.conn.QueryContext(
+		ctx,
 		"SELECT id, device_id, title, model, created_at, updated_at FROM chat_conversations WHERE device_id = ? ORDER BY updated_at DESC",
 		deviceID,
 	)
@@ -39,11 +43,20 @@ func (d *DB) ListConversations(ctx context.Context, deviceID string) ([]Conversa
 	return convos, rows.Err()
 }
 
-func (d *DB) CreateConversation(ctx context.Context, id, deviceID, title, modelID string) (*Conversation, error) {
+func (d *DB) CreateConversation(
+	ctx context.Context,
+	id, deviceID, title, modelID string,
+) (*Conversation, error) {
 	now := time.Now().UnixMilli()
-	_, err := d.conn.ExecContext(ctx,
+	_, err := d.conn.ExecContext(
+		ctx,
 		"INSERT INTO chat_conversations (id, device_id, title, model, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-		id, deviceID, title, modelID, now, now,
+		id,
+		deviceID,
+		title,
+		modelID,
+		now,
+		now,
 	)
 	if err != nil {
 		return nil, err
@@ -58,9 +71,13 @@ func (d *DB) CreateConversation(ctx context.Context, id, deviceID, title, modelI
 	}, nil
 }
 
-func (d *DB) GetConversation(ctx context.Context, id string) (*Conversation, error) {
+func (d *DB) GetConversation(
+	ctx context.Context,
+	id string,
+) (*Conversation, error) {
 	var c Conversation
-	err := d.conn.QueryRowContext(ctx,
+	err := d.conn.QueryRowContext(
+		ctx,
 		"SELECT id, device_id, title, model, created_at, updated_at FROM chat_conversations WHERE id = ?",
 		id,
 	).Scan(&c.ID, &c.DeviceID, &c.Title, &c.Model, &c.CreatedAt, &c.UpdatedAt)
@@ -73,26 +90,41 @@ func (d *DB) GetConversation(ctx context.Context, id string) (*Conversation, err
 	return &c, nil
 }
 
-func (d *DB) UpdateConversation(ctx context.Context, id string, title *string, modelID *string) error {
+func (d *DB) UpdateConversation(
+	ctx context.Context,
+	id string,
+	title *string,
+	modelID *string,
+) error {
 	now := time.Now().UnixMilli()
 	if title != nil && modelID != nil {
-		_, err := d.conn.ExecContext(ctx,
+		_, err := d.conn.ExecContext(
+			ctx,
 			"UPDATE chat_conversations SET title = ?, model = ?, updated_at = ? WHERE id = ?",
-			*title, *modelID, now, id,
+			*title,
+			*modelID,
+			now,
+			id,
 		)
 		return err
 	}
 	if title != nil {
-		_, err := d.conn.ExecContext(ctx,
+		_, err := d.conn.ExecContext(
+			ctx,
 			"UPDATE chat_conversations SET title = ?, updated_at = ? WHERE id = ?",
-			*title, now, id,
+			*title,
+			now,
+			id,
 		)
 		return err
 	}
 	if modelID != nil {
-		_, err := d.conn.ExecContext(ctx,
+		_, err := d.conn.ExecContext(
+			ctx,
 			"UPDATE chat_conversations SET model = ?, updated_at = ? WHERE id = ?",
-			*modelID, now, id,
+			*modelID,
+			now,
+			id,
 		)
 		return err
 	}
@@ -100,12 +132,21 @@ func (d *DB) UpdateConversation(ctx context.Context, id string, title *string, m
 }
 
 func (d *DB) DeleteConversation(ctx context.Context, id string) error {
-	_, err := d.conn.ExecContext(ctx, "DELETE FROM chat_conversations WHERE id = ?", id)
+	_, err := d.conn.ExecContext(
+		ctx,
+		"DELETE FROM chat_conversations WHERE id = ?",
+		id,
+	)
 	return err
 }
 
 func (d *DB) TouchConversation(ctx context.Context, id string) error {
 	now := time.Now().UnixMilli()
-	_, err := d.conn.ExecContext(ctx, "UPDATE chat_conversations SET updated_at = ? WHERE id = ?", now, id)
+	_, err := d.conn.ExecContext(
+		ctx,
+		"UPDATE chat_conversations SET updated_at = ? WHERE id = ?",
+		now,
+		id,
+	)
 	return err
 }

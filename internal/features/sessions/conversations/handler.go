@@ -59,7 +59,13 @@ func (h *Handler) Create(c *router.Context) {
 		req = createRequest{}
 	}
 
-	convo, err := h.db.CreateConversation(c.Request.Context(), newID(), deviceID, "", req.Model)
+	convo, err := h.db.CreateConversation(
+		c.Request.Context(),
+		newID(),
+		deviceID,
+		"",
+		req.Model,
+	)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
