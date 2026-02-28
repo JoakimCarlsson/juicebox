@@ -15,7 +15,6 @@ import (
 	"github.com/joakimcarlsson/ai/types"
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
-	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	chattools "github.com/joakimcarlsson/juicebox/internal/features/sessions/chat/tools"
@@ -28,7 +27,6 @@ import (
 type Handler struct {
 	db            *db.DB
 	manager       *session.Manager
-	llmConfig     *config.LLMConfig
 	chatStore     *ChatSessionStore
 	sqliteService *sqlite.Service
 	hubManager    *devicehub.Manager
@@ -38,7 +36,6 @@ type Handler struct {
 func NewHandler(
 	database *db.DB,
 	manager *session.Manager,
-	llmConfig *config.LLMConfig,
 	chatStore *ChatSessionStore,
 	sqliteService *sqlite.Service,
 	hubManager *devicehub.Manager,
@@ -47,7 +44,6 @@ func NewHandler(
 	return &Handler{
 		db:            database,
 		manager:       manager,
-		llmConfig:     llmConfig,
 		chatStore:     chatStore,
 		sqliteService: sqliteService,
 		hubManager:    hubManager,
@@ -187,15 +183,6 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
-	if !h.llmConfig.Configured() {
-		response.Error(
-			c,
-			http.StatusServiceUnavailable,
-			"LLM provider not configured. Set JUICEBOX_LLM_PROVIDER and JUICEBOX_LLM_API_KEY environment variables.",
-		)
-		return
-	}
-
 	var req chatRequest
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "invalid request body")
@@ -203,6 +190,14 @@ func (h *Handler) Handle(c *router.Context) {
 	}
 	if req.Message == "" {
 		response.Error(c, http.StatusBadRequest, "message is required")
+		return
+	}
+	if req.Model == "" {
+		response.Error(c, http.StatusBadRequest, "model is required")
+		return
+	}
+	if req.ConversationID == "" {
+		response.Error(c, http.StatusBadRequest, "conversationId is required")
 		return
 	}
 
@@ -224,7 +219,7 @@ func (h *Handler) Handle(c *router.Context) {
 		}
 	}
 
-	llmClient, err := h.llmConfig.NewClient()
+	llmClient, err := newLLMClient(c.Request.Context(), h.db, req.Model)
 	if err != nil {
 		response.Error(
 			c,
@@ -331,16 +326,19 @@ func (h *Handler) Handle(c *router.Context) {
 		agent.WithSystemPrompt(SystemPromptTemplate),
 		agent.WithState(state),
 		agent.WithTools(chatTools...),
-		agent.WithSession(deviceID, h.chatStore.GetOrCreate(deviceID)),
+		agent.WithSession(req.ConversationID, h.chatStore.GetOrCreate(req.ConversationID)),
 		agent.WithMaxIterations(50),
 	)
 
 	bridgeClient := h.manager.Bridge()
 
+	convoID := req.ConversationID
+	userMsg := req.Message
+
 	c.SSEHandler(
 		router.DefaultSSEConfig(),
 		func(ctx context.Context, send router.SSESendFunc) error {
-			msg := req.Message
+			msg := userMsg
 			totalUsage := sseDoneEvent{}
 
 			for attempt := range maxLintRetries + 1 {
@@ -452,34 +450,53 @@ func (h *Handler) Handle(c *router.Context) {
 				msg = autoLintPrefix + compileErr
 			}
 
+			h.autoNameConversation(ctx, convoID, userMsg)
 			return send("done", totalUsage)
 		},
 	)
 }
 
+func (h *Handler) autoNameConversation(ctx context.Context, convoID, userMsg string) {
+	convo, err := h.db.GetConversation(ctx, convoID)
+	if err != nil || convo == nil {
+		return
+	}
+	if convo.Title != "" {
+		_ = h.db.TouchConversation(ctx, convoID)
+		return
+	}
+	title := userMsg
+	if len(title) > 50 {
+		title = title[:50] + "..."
+	}
+	t := title
+	_ = h.db.UpdateConversation(ctx, convoID, &t, nil)
+}
+
 func (h *Handler) Status(c *router.Context) {
+	ctx := c.Request.Context()
 	c.JSON(http.StatusOK, map[string]any{
-		"configured": h.llmConfig.Configured(),
+		"configured": hasAnyProviderKey(ctx, h.db),
 	})
 }
 
 func (h *Handler) History(c *router.Context) {
-	deviceID := c.Param("deviceId")
-	if deviceID == "" {
-		response.Error(c, http.StatusBadRequest, "missing deviceId")
+	conversationID := c.Request.URL.Query().Get("conversationId")
+	if conversationID == "" {
+		c.JSON(http.StatusOK, map[string]any{"messages": []any{}})
 		return
 	}
 
-	store := h.chatStore.GetOrCreate(deviceID)
+	store := h.chatStore.GetOrCreate(conversationID)
 	ctx := c.Request.Context()
 
-	exists, err := store.Exists(ctx, deviceID)
+	exists, err := store.Exists(ctx, conversationID)
 	if err != nil || !exists {
 		c.JSON(http.StatusOK, map[string]any{"messages": []any{}})
 		return
 	}
 
-	sess, err := store.Load(ctx, deviceID)
+	sess, err := store.Load(ctx, conversationID)
 	if err != nil || sess == nil {
 		c.JSON(http.StatusOK, map[string]any{"messages": []any{}})
 		return

@@ -3,12 +3,12 @@ module github.com/joakimcarlsson/juicebox
 go 1.25.7
 
 require (
+	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.0
 	github.com/andybalholm/brotli v1.2.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/joakimcarlsson/ai v0.0.0
 	github.com/joakimcarlsson/ai/integrations/sqlite v0.0.0
 	github.com/joakimcarlsson/go-router/router v0.0.0
-	github.com/joho/godotenv v1.5.1
 	go.opentelemetry.io/contrib/bridges/otelslog v0.15.0
 	go.opentelemetry.io/otel v1.40.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.16.0
@@ -31,7 +31,6 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
 	github.com/JohannesKaufmann/dom v0.2.0 // indirect
-	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.0 // indirect
 	github.com/anthropics/anthropic-sdk-go v1.19.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.4 // indirect

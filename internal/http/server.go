@@ -7,7 +7,6 @@ import (
 
 	"github.com/joakimcarlsson/go-router/router"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
-	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/chat"
@@ -21,7 +20,6 @@ type Server struct {
 	bridgeClient *bridge.Client
 	manager      *session.Manager
 	hubManager   *devicehub.Manager
-	appConfig    *config.Config
 	chatStore    *chat.ChatSessionStore
 }
 
@@ -30,7 +28,6 @@ func NewServer(
 	bridgeClient *bridge.Client,
 	manager *session.Manager,
 	hubManager *devicehub.Manager,
-	appConfig *config.Config,
 	chatStore *chat.ChatSessionStore,
 ) *Server {
 	r := router.New()
@@ -41,7 +38,6 @@ func NewServer(
 		bridgeClient: bridgeClient,
 		manager:      manager,
 		hubManager:   hubManager,
-		appConfig:    appConfig,
 		chatStore:    chatStore,
 	}
 
@@ -51,7 +47,6 @@ func NewServer(
 		bridgeClient,
 		manager,
 		hubManager,
-		appConfig,
 		chatStore,
 	)
 	s.serveSPA(r)

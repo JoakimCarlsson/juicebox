@@ -114,6 +114,21 @@ CREATE TABLE IF NOT EXISTS script_runs (
     timestamp      INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_script_runs_session ON script_runs(session_id, timestamp DESC);
+
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS chat_conversations (
+    id         TEXT PRIMARY KEY,
+    device_id  TEXT NOT NULL,
+    title      TEXT NOT NULL DEFAULT '',
+    model      TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_device ON chat_conversations(device_id, updated_at DESC);
 `
 
 func (d *DB) Migrate() error {

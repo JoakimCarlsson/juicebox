@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DevicesDeviceIdRouteImport } from './routes/devices/$deviceId'
 import { Route as DevicesDeviceIdProcessesRouteImport } from './routes/devices/$deviceId/processes'
@@ -22,6 +23,11 @@ import { Route as DevicesDeviceIdCrashesRouteImport } from './routes/devices/$de
 import { Route as DevicesDeviceIdClassesRouteImport } from './routes/devices/$deviceId/classes'
 import { Route as DevicesDeviceIdAppsRouteImport } from './routes/devices/$deviceId/apps'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -86,6 +92,7 @@ const DevicesDeviceIdAppsRoute = DevicesDeviceIdAppsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/devices/$deviceId': typeof DevicesDeviceIdRouteWithChildren
   '/devices/$deviceId/apps': typeof DevicesDeviceIdAppsRoute
   '/devices/$deviceId/classes': typeof DevicesDeviceIdClassesRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/devices/$deviceId': typeof DevicesDeviceIdRouteWithChildren
   '/devices/$deviceId/apps': typeof DevicesDeviceIdAppsRoute
   '/devices/$deviceId/classes': typeof DevicesDeviceIdClassesRoute
@@ -115,6 +123,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/devices/$deviceId': typeof DevicesDeviceIdRouteWithChildren
   '/devices/$deviceId/apps': typeof DevicesDeviceIdAppsRoute
   '/devices/$deviceId/classes': typeof DevicesDeviceIdClassesRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/settings'
     | '/devices/$deviceId'
     | '/devices/$deviceId/apps'
     | '/devices/$deviceId/classes'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/settings'
     | '/devices/$deviceId'
     | '/devices/$deviceId/apps'
     | '/devices/$deviceId/classes'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/settings'
     | '/devices/$deviceId'
     | '/devices/$deviceId/apps'
     | '/devices/$deviceId/classes'
@@ -174,11 +186,19 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SettingsRoute: typeof SettingsRoute
   DevicesDeviceIdRoute: typeof DevicesDeviceIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -298,6 +318,7 @@ const DevicesDeviceIdRouteWithChildren = DevicesDeviceIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SettingsRoute: SettingsRoute,
   DevicesDeviceIdRoute: DevicesDeviceIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport

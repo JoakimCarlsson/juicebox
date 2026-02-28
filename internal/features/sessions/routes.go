@@ -2,12 +2,12 @@ package sessions
 
 import (
 	"github.com/joakimcarlsson/go-router/router"
-	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/chat"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/classes"
 	clipboardpkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/clipboard"
+	"github.com/joakimcarlsson/juicebox/internal/features/sessions/conversations"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/crashes"
 	cryptopkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/crypto"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/detach"
@@ -29,7 +29,6 @@ func RegisterRoutes(
 	r *router.Router,
 	manager *session.Manager,
 	database *db.DB,
-	appConfig *config.Config,
 	chatStore *chat.ChatSessionStore,
 	hubManager *devicehub.Manager,
 ) {
@@ -47,7 +46,6 @@ func RegisterRoutes(
 	chatHandler := chat.NewHandler(
 		database,
 		manager,
-		&appConfig.LLM,
 		chatStore,
 		sqliteService,
 		hubManager,
@@ -61,6 +59,7 @@ func RegisterRoutes(
 	clipboardHandler := clipboardpkg.NewHandler(database, manager)
 	memoryHandler := memorypkg.NewHandler(manager)
 	exportHandler := exportpkg.NewHandler(database)
+	convoHandler := conversations.NewHandler(database, chatStore)
 
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
 	r.PATCH("/sessions/{sessionId}", renameHandler.Handle)
@@ -116,4 +115,9 @@ func RegisterRoutes(
 	r.DELETE("/devices/{deviceId}/scripts/{scriptId}", scriptsHandler.Delete)
 	r.POST("/sessions/{sessionId}/scripts/run", scriptsHandler.Run)
 	r.GET("/sessions/{sessionId}/scripts/runs", scriptsHandler.ListRuns)
+
+	r.GET("/devices/{deviceId}/conversations", convoHandler.List)
+	r.POST("/devices/{deviceId}/conversations", convoHandler.Create)
+	r.PATCH("/conversations/{conversationId}", convoHandler.Update)
+	r.DELETE("/conversations/{conversationId}", convoHandler.Delete)
 }

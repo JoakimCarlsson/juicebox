@@ -36,16 +36,87 @@ export async function fetchChatStatus(deviceId: string): Promise<ChatStatusRespo
   return res.json()
 }
 
-export async function fetchChatHistory(deviceId: string): Promise<ChatHistoryResponse> {
-  const res = await fetch(`/api/v1/devices/${deviceId}/chat/history`)
+export async function fetchChatHistory(
+  deviceId: string,
+  conversationId: string
+): Promise<ChatHistoryResponse> {
+  const res = await fetch(
+    `/api/v1/devices/${deviceId}/chat/history?conversationId=${encodeURIComponent(conversationId)}`
+  )
   if (!res.ok) throw new Error('Failed to fetch chat history')
   return res.json()
+}
+
+export interface Conversation {
+  id: string
+  device_id: string
+  title: string
+  model: string
+  created_at: number
+  updated_at: number
+}
+
+export async function fetchConversations(
+  deviceId: string
+): Promise<Conversation[]> {
+  const res = await fetch(`/api/v1/devices/${deviceId}/conversations`)
+  if (!res.ok) throw new Error('Failed to fetch conversations')
+  const data = await res.json()
+  return data.conversations
+}
+
+export async function createConversation(
+  deviceId: string,
+  model: string
+): Promise<Conversation> {
+  const res = await fetch(`/api/v1/devices/${deviceId}/conversations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model }),
+  })
+  if (!res.ok) throw new Error('Failed to create conversation')
+  return res.json()
+}
+
+export async function renameConversation(
+  conversationId: string,
+  title: string
+): Promise<Conversation> {
+  const res = await fetch(`/api/v1/conversations/${conversationId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  })
+  if (!res.ok) throw new Error('Failed to rename conversation')
+  return res.json()
+}
+
+export async function updateConversationModel(
+  conversationId: string,
+  model: string
+): Promise<Conversation> {
+  const res = await fetch(`/api/v1/conversations/${conversationId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model }),
+  })
+  if (!res.ok) throw new Error('Failed to update conversation model')
+  return res.json()
+}
+
+export async function deleteConversation(conversationId: string): Promise<void> {
+  const res = await fetch(`/api/v1/conversations/${conversationId}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error('Failed to delete conversation')
 }
 
 export function streamChat(
   deviceId: string,
   message: string,
   bundleId: string | undefined,
+  model: string,
+  conversationId: string,
   onEvent: (event: SSEEvent) => void
 ): AbortController {
   const controller = new AbortController()
@@ -53,7 +124,12 @@ export function streamChat(
   fetch(`/api/v1/devices/${deviceId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, ...(bundleId ? { bundleId } : {}) }),
+    body: JSON.stringify({
+      message,
+      model,
+      conversationId,
+      ...(bundleId ? { bundleId } : {}),
+    }),
     signal: controller.signal,
   })
     .then(async (res) => {
