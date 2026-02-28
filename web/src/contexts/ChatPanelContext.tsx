@@ -172,7 +172,7 @@ export function ChatPanelProvider({
     } else if (availableModels.length > 0 && !selectedModel) {
       setSelectedModelState(availableModels[0].id)
     }
-  }, [activeConversationId, loadHistory, conversations, availableModels])
+  }, [activeConversationId, loadHistory, conversations, availableModels, selectedModel])
 
   const toggle = useCallback(() => {
     const panel = panelRef.current
@@ -241,29 +241,6 @@ export function ChatPanelProvider({
       }
     },
     [activeConversationId]
-  )
-
-  const sendMessage = useCallback(
-    (text: string) => {
-      if (!deviceId || isStreaming || !text.trim() || !selectedModel) return
-
-      let convoId = activeConversationId
-
-      if (!convoId) {
-        createConversation(deviceId, selectedModel)
-          .then((convo) => {
-            setConversations((prev) => [convo, ...prev])
-            skipNextHistoryLoad.current = true
-            setActiveConversationId(convo.id)
-            doSend(text, convo.id)
-          })
-          .catch(() => {})
-        return
-      }
-
-      doSend(text, convoId)
-    },
-    [deviceId, bundleId, isStreaming, selectedModel, activeConversationId]
   )
 
   function doSend(text: string, convoId: string) {
@@ -375,6 +352,29 @@ export function ChatPanelProvider({
 
     abortRef.current = controller
   }
+
+  const sendMessage = useCallback(
+    (text: string) => {
+      if (!deviceId || isStreaming || !text.trim() || !selectedModel) return
+
+      const convoId = activeConversationId
+
+      if (!convoId) {
+        createConversation(deviceId, selectedModel)
+          .then((convo) => {
+            setConversations((prev) => [convo, ...prev])
+            skipNextHistoryLoad.current = true
+            setActiveConversationId(convo.id)
+            doSend(text, convo.id)
+          })
+          .catch(() => {})
+        return
+      }
+
+      doSend(text, convoId)
+    },
+    [deviceId, bundleId, isStreaming, selectedModel, activeConversationId]
+  )
 
   const clearChat = useCallback(() => {
     if (abortRef.current) {
