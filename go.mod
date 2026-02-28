@@ -1,6 +1,6 @@
 module github.com/joakimcarlsson/juicebox
 
-go 1.25.7
+go 1.26
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.0
