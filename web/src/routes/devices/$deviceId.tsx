@@ -32,6 +32,7 @@ import {
   MessageSquare,
   Unplug,
   ChevronLeft,
+  Settings,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/devices/$deviceId')({
@@ -150,6 +151,16 @@ function DeviceShell({ deviceId, deviceName }: { deviceId: string; deviceName: s
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">AI Assistant</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/settings">
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <Settings className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Settings</TooltipContent>
             </Tooltip>
             <Button
               variant="ghost"
