@@ -27,8 +27,8 @@ func (s *Service) pullKey(sessionID, dbPath string) string {
 }
 
 func (s *Service) EnsurePulled(
-	sess *session.Session,
-	sessionID, dbPath string,
+	setup session.DeviceSetup,
+	deviceID, bundleID, sessionID, dbPath string,
 ) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -41,11 +41,7 @@ func (s *Service) EnsurePulled(
 		delete(s.pulled, key)
 	}
 
-	localPath, err := sess.Setup.PullDatabase(
-		sess.DeviceID,
-		sess.BundleID,
-		dbPath,
-	)
+	localPath, err := setup.PullDatabase(deviceID, bundleID, dbPath)
 	if err != nil {
 		return "", fmt.Errorf("pull database: %w", err)
 	}
@@ -55,10 +51,16 @@ func (s *Service) EnsurePulled(
 }
 
 func (s *Service) OpenDB(
-	sess *session.Session,
-	sessionID, dbPath string,
+	setup session.DeviceSetup,
+	deviceID, bundleID, sessionID, dbPath string,
 ) (*sql.DB, error) {
-	localPath, err := s.EnsurePulled(sess, sessionID, dbPath)
+	localPath, err := s.EnsurePulled(
+		setup,
+		deviceID,
+		bundleID,
+		sessionID,
+		dbPath,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -72,10 +74,10 @@ func (s *Service) OpenDB(
 }
 
 func (s *Service) GetTables(
-	sess *session.Session,
-	sessionID, dbPath string,
+	setup session.DeviceSetup,
+	deviceID, bundleID, sessionID, dbPath string,
 ) ([]bridge.DatabaseTable, error) {
-	db, err := s.OpenDB(sess, sessionID, dbPath)
+	db, err := s.OpenDB(setup, deviceID, bundleID, sessionID, dbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -136,10 +138,10 @@ func (s *Service) getColumns(
 }
 
 func (s *Service) ExecQuery(
-	sess *session.Session,
-	sessionID, dbPath, sqlStr string,
+	setup session.DeviceSetup,
+	deviceID, bundleID, sessionID, dbPath, sqlStr string,
 ) (*QueryResponse, error) {
-	db, err := s.OpenDB(sess, sessionID, dbPath)
+	db, err := s.OpenDB(setup, deviceID, bundleID, sessionID, dbPath)
 	if err != nil {
 		return nil, err
 	}

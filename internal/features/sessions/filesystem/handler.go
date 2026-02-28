@@ -28,11 +28,17 @@ func (h *Handler) List(c *router.Context) {
 		return
 	}
 
+	dc := h.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil {
+		response.Error(c, http.StatusNotFound, "device not connected")
+		return
+	}
+
 	if path == "" {
 		path = "/data/data/" + sess.BundleID
 	}
 
-	entries, err := sess.Setup.ListFiles(sess.DeviceID, sess.BundleID, path)
+	entries, err := dc.Setup.ListFiles(sess.DeviceID, sess.BundleID, path)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -56,7 +62,13 @@ func (h *Handler) Read(c *router.Context) {
 		return
 	}
 
-	content, err := sess.Setup.ReadFile(sess.DeviceID, sess.BundleID, path)
+	dc := h.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil {
+		response.Error(c, http.StatusNotFound, "device not connected")
+		return
+	}
+
+	content, err := dc.Setup.ReadFile(sess.DeviceID, sess.BundleID, path)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -100,11 +112,17 @@ func (h *Handler) Find(c *router.Context) {
 		return
 	}
 
+	dc := h.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil {
+		response.Error(c, http.StatusNotFound, "device not connected")
+		return
+	}
+
 	if basePath == "" {
 		basePath = "/data/data/" + sess.BundleID
 	}
 
-	paths, err := sess.Setup.FindFiles(
+	paths, err := dc.Setup.FindFiles(
 		sess.DeviceID,
 		sess.BundleID,
 		pattern,

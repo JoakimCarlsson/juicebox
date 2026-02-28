@@ -1,7 +1,8 @@
 import { useBottomPanel, type PanelTab } from '@/contexts/BottomPanelContext'
 import { useEventLog, type EventLogEntry } from '@/contexts/EventLogContext'
 import { useScriptOutput } from '@/contexts/ScriptOutputContext'
-import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
 import type { ClipboardEvent, LogEntry } from '@/types/session'
 import { enableClipboardMonitor } from '@/features/sessions/api'
 import { Button } from '@/components/ui/button'
@@ -58,7 +59,7 @@ export function BottomPanel() {
   const { activeTab, setActiveTab } = useBottomPanel()
   const { entries, clear } = useEventLog()
   const scriptOutput = useScriptOutput()
-  const { messages } = useSessionMessages()
+  const { messages } = useDeviceMessages()
   const problemsCount = getProblemsCount(entries)
 
   const clipboardCount = useMemo(
@@ -289,7 +290,9 @@ function OutputTab() {
 }
 
 function ClipboardTab() {
-  const { sessionId, messages } = useSessionMessages()
+  const { messages } = useDeviceMessages()
+  const { selectedApp } = useAttachedApps()
+  const sessionId = selectedApp?.sessionId ?? ''
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef(true)

@@ -25,6 +25,22 @@ export async function getFridaVersion(): Promise<string> {
   return pkg.version;
 }
 
+export async function stopFridaServer(deviceId: string): Promise<void> {
+  try {
+    await exec([
+      "adb",
+      "-s",
+      deviceId,
+      "shell",
+      "su -c 'killall frida-server' 2>/dev/null || killall frida-server 2>/dev/null",
+    ]);
+  } catch {}
+  for (let i = 0; i < 5; i++) {
+    if (!(await isFridaServerRunning(deviceId))) return;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}
+
 export async function isFridaServerRunning(deviceId: string): Promise<boolean> {
   const { stdout } = await exec([
     "adb",
@@ -126,14 +142,42 @@ export async function ensureFridaServer(deviceId: string): Promise<void> {
 
   await exec(["adb", "-s", deviceId, "root"]);
   await new Promise((r) => setTimeout(r, 1000));
-  await exec(["adb", "-s", deviceId, "shell", "setenforce 0"]);
 
-  console.log("starting frida-server...");
-  new Deno.Command("adb", {
-    args: ["-s", deviceId, "shell", `${DEVICE_SERVER_PATH} -D &`],
-    stdout: "null",
-    stderr: "null",
-  }).spawn();
+  const whoami = await exec(["adb", "-s", deviceId, "shell", "whoami"]);
+  const isRoot = whoami.stdout.trim() === "root";
+
+  if (isRoot) {
+    await exec(["adb", "-s", deviceId, "shell", "setenforce 0"]);
+    console.log("starting frida-server (adb root)...");
+    new Deno.Command("adb", {
+      args: ["-s", deviceId, "shell", `${DEVICE_SERVER_PATH} -D &`],
+      stdout: "null",
+      stderr: "null",
+    }).spawn();
+  } else {
+    console.log("adb root unavailable, using su (Magisk)...");
+    await exec([
+      "adb",
+      "-s",
+      deviceId,
+      "shell",
+      "su",
+      "-c",
+      "setenforce 0",
+    ]);
+    new Deno.Command("adb", {
+      args: [
+        "-s",
+        deviceId,
+        "shell",
+        "su",
+        "-c",
+        `${DEVICE_SERVER_PATH} -D &`,
+      ],
+      stdout: "null",
+      stderr: "null",
+    }).spawn();
+  }
 
   await waitForFridaReady(deviceId, 20);
   console.log("frida-server is running and accepting connections");

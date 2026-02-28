@@ -10,19 +10,25 @@ import (
 )
 
 type RunFridaScriptParams struct {
-	Name string `json:"name" description:"Name of the script file to compile and run (e.g. hook_crypto.ts)"`
+	Name string `json:"name" description:"Name of the script file to compile and run, including folder path (e.g. com.example.app/hook_crypto.ts)"`
 }
 
 type RunFridaScriptTool struct {
 	runner    *scripting.Runner
 	sessionID string
+	deviceID  string
 }
 
 func NewRunFridaScript(
 	runner *scripting.Runner,
 	sessionID string,
+	deviceID string,
 ) *RunFridaScriptTool {
-	return &RunFridaScriptTool{runner: runner, sessionID: sessionID}
+	return &RunFridaScriptTool{
+		runner:    runner,
+		sessionID: sessionID,
+		deviceID:  deviceID,
+	}
 }
 
 func (t *RunFridaScriptTool) Info() tool.ToolInfo {
@@ -48,7 +54,7 @@ func (t *RunFridaScriptTool) Run(
 		return tool.NewTextErrorResponse("name is required"), nil
 	}
 
-	res, err := t.runner.Run(t.sessionID, input.Name, 3)
+	res, err := t.runner.Run(t.sessionID, t.deviceID, input.Name, 3)
 	if err != nil {
 		return tool.NewTextErrorResponse(
 			fmt.Sprintf("script execution failed: %v", err),

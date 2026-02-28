@@ -31,10 +31,10 @@ type RunResult struct {
 }
 
 func (r *Runner) Run(
-	sessionID, name string,
+	sessionID, deviceID, name string,
 	initialWaitSecs int,
 ) (*RunResult, error) {
-	file, err := r.db.GetScriptFile(sessionID, name)
+	file, err := r.db.GetScriptFile(deviceID, name)
 	if err != nil || file == nil {
 		return nil, fmt.Errorf("script file %q not found", name)
 	}
@@ -108,14 +108,14 @@ func (r *Runner) GetOutput(
 }
 
 func (r *Runner) Stop(
-	sessionID, name string,
+	sessionID, deviceID, name string,
 ) (*bridge.StopScriptResponse, error) {
 	resp, err := r.manager.StopScript(sessionID, name)
 	if err != nil {
 		return nil, err
 	}
 
-	if file, err := r.db.GetScriptFile(sessionID, name); err == nil &&
+	if file, err := r.db.GetScriptFile(deviceID, name); err == nil &&
 		file != nil {
 		outputJSON, _ := json.Marshal(resp.Messages)
 		_ = r.db.CompleteScriptRunByFile(sessionID, file.ID, string(outputJSON))

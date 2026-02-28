@@ -10,25 +10,25 @@ import (
 )
 
 type ReadScriptFileParams struct {
-	Name string `json:"name" description:"Filename of the script to read (e.g. hook_crypto.ts)"`
+	Name string `json:"name" description:"Filename of the script to read, including folder path (e.g. com.example.app/hook_crypto.ts or global/logger.ts)"`
 }
 
 type ReadScriptFileTool struct {
-	files     *scripting.FileManager
-	sessionID string
+	files    *scripting.FileManager
+	deviceID string
 }
 
 func NewReadScriptFile(
 	files *scripting.FileManager,
-	sessionID string,
+	deviceID string,
 ) *ReadScriptFileTool {
-	return &ReadScriptFileTool{files: files, sessionID: sessionID}
+	return &ReadScriptFileTool{files: files, deviceID: deviceID}
 }
 
 func (t *ReadScriptFileTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"read_script_file",
-		"Read the contents of a saved Frida script file by filename.",
+		"Read the contents of a saved Frida script file by filename. Scripts are stored per-device and organized in folders by bundle ID.",
 		ReadScriptFileParams{},
 	)
 }
@@ -48,7 +48,7 @@ func (t *ReadScriptFileTool) Run(
 		return tool.NewTextErrorResponse("name is required"), nil
 	}
 
-	file, err := t.files.Get(t.sessionID, input.Name)
+	file, err := t.files.Get(t.deviceID, input.Name)
 	if err != nil || file == nil {
 		return tool.NewTextErrorResponse(
 			fmt.Sprintf("script file %q not found", input.Name),

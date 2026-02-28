@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
 import {
   fetchInterceptState,
   updateInterceptState,
@@ -25,12 +26,9 @@ interface InterceptContextValue {
 
 const InterceptContext = createContext<InterceptContextValue | null>(null)
 
-interface InterceptProviderProps {
-  sessionId: string
-  children: React.ReactNode
-}
-
-export function InterceptProvider({ sessionId, children }: InterceptProviderProps) {
+export function InterceptProvider({ children }: { children: React.ReactNode }) {
+  const { selectedApp } = useAttachedApps()
+  const sessionId = selectedApp?.sessionId ?? ''
   const { subscribe, send } = useDeviceSocket()
   const [enabled, setEnabled] = useState(false)
   const [rules, setRules] = useState<InterceptRule[]>([])

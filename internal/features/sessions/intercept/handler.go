@@ -18,9 +18,21 @@ func NewHandler(manager *session.Manager) *Handler {
 	return &Handler{manager: manager}
 }
 
+func (h *Handler) getIntercept(sessionID string) *proxy.InterceptEngine {
+	sess := h.manager.GetSession(sessionID)
+	if sess == nil {
+		return nil
+	}
+	dc := h.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil {
+		return nil
+	}
+	return dc.Intercept
+}
+
 func (h *Handler) GetState(c *router.Context) {
-	sess := h.manager.GetSession(c.Param("sessionId"))
-	if sess == nil || sess.Intercept == nil {
+	ie := h.getIntercept(c.Param("sessionId"))
+	if ie == nil {
 		response.Error(
 			c,
 			http.StatusNotFound,
@@ -29,7 +41,6 @@ func (h *Handler) GetState(c *router.Context) {
 		return
 	}
 
-	ie := sess.Intercept
 	c.JSON(http.StatusOK, stateResponse{
 		Enabled:      ie.IsEnabled(),
 		Rules:        ie.GetRules(),
@@ -38,8 +49,8 @@ func (h *Handler) GetState(c *router.Context) {
 }
 
 func (h *Handler) UpdateState(c *router.Context) {
-	sess := h.manager.GetSession(c.Param("sessionId"))
-	if sess == nil || sess.Intercept == nil {
+	ie := h.getIntercept(c.Param("sessionId"))
+	if ie == nil {
 		response.Error(
 			c,
 			http.StatusNotFound,
@@ -54,7 +65,6 @@ func (h *Handler) UpdateState(c *router.Context) {
 		return
 	}
 
-	ie := sess.Intercept
 	if req.Enabled != nil {
 		ie.SetEnabled(*req.Enabled)
 	}
@@ -70,8 +80,8 @@ func (h *Handler) UpdateState(c *router.Context) {
 }
 
 func (h *Handler) ListPending(c *router.Context) {
-	sess := h.manager.GetSession(c.Param("sessionId"))
-	if sess == nil || sess.Intercept == nil {
+	ie := h.getIntercept(c.Param("sessionId"))
+	if ie == nil {
 		response.Error(
 			c,
 			http.StatusNotFound,
@@ -80,13 +90,13 @@ func (h *Handler) ListPending(c *router.Context) {
 		return
 	}
 
-	pending := sess.Intercept.ListPending()
+	pending := ie.ListPending()
 	c.JSON(http.StatusOK, map[string]any{"pending": pending})
 }
 
 func (h *Handler) Resolve(c *router.Context) {
-	sess := h.manager.GetSession(c.Param("sessionId"))
-	if sess == nil || sess.Intercept == nil {
+	ie := h.getIntercept(c.Param("sessionId"))
+	if ie == nil {
 		response.Error(
 			c,
 			http.StatusNotFound,
@@ -101,7 +111,7 @@ func (h *Handler) Resolve(c *router.Context) {
 		return
 	}
 
-	if err := sess.Intercept.Resolve(decision); err != nil {
+	if err := ie.Resolve(decision); err != nil {
 		response.Error(c, http.StatusNotFound, err.Error())
 		return
 	}
@@ -110,8 +120,8 @@ func (h *Handler) Resolve(c *router.Context) {
 }
 
 func (h *Handler) ResolveAll(c *router.Context) {
-	sess := h.manager.GetSession(c.Param("sessionId"))
-	if sess == nil || sess.Intercept == nil {
+	ie := h.getIntercept(c.Param("sessionId"))
+	if ie == nil {
 		response.Error(
 			c,
 			http.StatusNotFound,
@@ -130,6 +140,6 @@ func (h *Handler) ResolveAll(c *router.Context) {
 		req.Action = proxy.ActionForward
 	}
 
-	sess.Intercept.ResolveAll(req.Action)
+	ie.ResolveAll(req.Action)
 	c.JSON(http.StatusOK, map[string]string{"status": "resolved"})
 }

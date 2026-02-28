@@ -170,10 +170,14 @@ func (c *Client) Attach(
 	deviceID string,
 	identifier string,
 	evasion *EvasionConfig,
+	noResume bool,
 ) (*AttachResponse, error) {
 	params := map[string]any{"deviceId": deviceID, "identifier": identifier}
 	if evasion != nil {
 		params["evasion"] = evasion
+	}
+	if noResume {
+		params["noResume"] = true
 	}
 	raw, err := c.call("attach", params)
 	if err != nil {
@@ -188,8 +192,62 @@ func (c *Client) Attach(
 	return &resp, nil
 }
 
+func (c *Client) ResumeApp(deviceID string, pid int) error {
+	_, err := c.call("resumeApp", map[string]any{
+		"deviceId": deviceID,
+		"pid":      pid,
+	})
+	return err
+}
+
 func (c *Client) Detach(sessionID string) error {
 	_, err := c.call("detach", map[string]string{"sessionId": sessionID})
+	return err
+}
+
+func (c *Client) ConnectDevice(
+	deviceID string,
+) (*ConnectDeviceResponse, error) {
+	raw, err := c.call("connectDevice", map[string]string{"deviceId": deviceID})
+	if err != nil {
+		return nil, err
+	}
+	var resp ConnectDeviceResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.ConnectDevice: %w", err)
+	}
+	return &resp, nil
+}
+
+func (c *Client) SpawnApp(
+	deviceID, bundleID string,
+	evasion *EvasionConfig,
+) (*SpawnAppResponse, error) {
+	params := map[string]any{"deviceId": deviceID, "bundleId": bundleID}
+	if evasion != nil {
+		params["evasion"] = evasion
+	}
+	raw, err := c.call("spawnApp", params)
+	if err != nil {
+		return nil, err
+	}
+	var resp SpawnAppResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.SpawnApp: %w", err)
+	}
+	return &resp, nil
+}
+
+func (c *Client) DetachApp(sessionID string) error {
+	_, err := c.call("detachApp", map[string]string{"sessionId": sessionID})
+	return err
+}
+
+func (c *Client) DisconnectDevice(deviceID string) error {
+	_, err := c.call(
+		"disconnectDevice",
+		map[string]string{"deviceId": deviceID},
+	)
 	return err
 }
 
@@ -284,6 +342,20 @@ func (c *Client) PullDatabase(
 	}
 
 	return resp.LocalPath, nil
+}
+
+func (c *Client) CompileScript(code string) (*CompileResult, error) {
+	raw, err := c.call("compileScript", map[string]string{"code": code})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp CompileResult
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("bridge.CompileScript: %w", err)
+	}
+
+	return &resp, nil
 }
 
 func (c *Client) RunScript(

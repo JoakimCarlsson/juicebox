@@ -46,7 +46,13 @@ func (t *DropRequestTool) Run(
 	}
 
 	sess := t.manager.GetSession(t.sessionID)
-	if sess == nil || sess.Intercept == nil {
+	if sess == nil {
+		return tool.NewTextErrorResponse(
+			"session not found or intercept not available",
+		), nil
+	}
+	dc := t.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil || dc.Intercept == nil {
 		return tool.NewTextErrorResponse(
 			"session not found or intercept not available",
 		), nil
@@ -57,7 +63,7 @@ func (t *DropRequestTool) Run(
 		Action:    proxy.ActionDrop,
 	}
 
-	if err := sess.Intercept.Resolve(decision); err != nil {
+	if err := dc.Intercept.Resolve(decision); err != nil {
 		return tool.NewTextErrorResponse(
 			fmt.Sprintf("failed to resolve: %v", err),
 		), nil

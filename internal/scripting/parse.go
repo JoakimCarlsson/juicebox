@@ -20,6 +20,7 @@ var (
 	dividerPattern = regexp.MustCompile(`^={5,9}\s*$`)
 	updatedPattern = regexp.MustCompile(`^>{5,9} REPLACE\s*$`)
 	fenceOpen      = regexp.MustCompile(`^` + "```" + `\w+\s*$`)
+	fenceFileOpen  = regexp.MustCompile(`^` + "```" + `\S+\s*$`)
 	fenceClose     = regexp.MustCompile(`^` + "```" + `\s*$`)
 )
 
@@ -87,8 +88,18 @@ func ParseEditBlocks(content string) []EditBlock {
 			continue
 		}
 
-		if fenceOpen.MatchString(line) {
-			filename := findFilename(lines, i)
+		if fenceOpen.MatchString(line) || fenceFileOpen.MatchString(line) {
+			var filename string
+			if fenceFileOpen.MatchString(line) && !fenceOpen.MatchString(line) {
+				tag := strings.TrimPrefix(line, "```")
+				tag = strings.TrimSpace(tag)
+				if looksLikeFilename(tag) {
+					filename = tag
+				}
+			}
+			if filename == "" {
+				filename = findFilename(lines, i)
+			}
 			if filename != "" {
 				bodyStart := i + 1
 				j := bodyStart

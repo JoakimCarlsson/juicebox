@@ -23,7 +23,7 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
-	if err := h.manager.Detach(sessionID); err != nil {
+	if err := h.manager.DetachApp(sessionID); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}

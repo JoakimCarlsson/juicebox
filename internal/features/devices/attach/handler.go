@@ -17,30 +17,35 @@ func NewHandler(manager *session.Manager) *Handler {
 	return &Handler{manager: manager}
 }
 
+type attachRequest struct {
+	BundleID string `json:"bundleId"`
+}
+
 func (h *Handler) Handle(c *router.Context) {
 	deviceID := c.Param("deviceId")
-	bundleID := c.Param("bundleId")
-	sessionID := c.QueryDefault("sessionId", "")
-
-	if deviceID == "" || bundleID == "" {
-		response.Error(c, http.StatusBadRequest, "missing deviceId or bundleId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
 		return
 	}
 
-	var body AttachRequestBody
+	var body attachRequest
 	if c.Request.Body != nil {
-		_ = json.NewDecoder(c.Request.Body).Decode(&body)
+		if err := json.NewDecoder(c.Request.Body).Decode(&body); err != nil {
+			response.Error(c, http.StatusBadRequest, "invalid request body")
+			return
+		}
 	}
 
-	resp, err := h.manager.Attach(deviceID, bundleID, sessionID, body.Evasion)
+	if body.BundleID == "" {
+		response.Error(c, http.StatusBadRequest, "missing bundleId")
+		return
+	}
+
+	result, err := h.manager.AttachApp(deviceID, body.BundleID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, AttachResponseBody{
-		SessionID:    resp.SessionID,
-		PID:          resp.PID,
-		Capabilities: resp.Capabilities,
-	})
+	c.JSON(http.StatusOK, result)
 }

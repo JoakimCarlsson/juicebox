@@ -11,20 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DevicesDeviceIdRouteImport } from './routes/devices/$deviceId'
-import { Route as DevicesDeviceIdIndexRouteImport } from './routes/devices/$deviceId/index'
 import { Route as DevicesDeviceIdProcessesRouteImport } from './routes/devices/$deviceId/processes'
+import { Route as DevicesDeviceIdNetworkRouteImport } from './routes/devices/$deviceId/network'
+import { Route as DevicesDeviceIdMemoryRouteImport } from './routes/devices/$deviceId/memory'
+import { Route as DevicesDeviceIdLogsRouteImport } from './routes/devices/$deviceId/logs'
+import { Route as DevicesDeviceIdHooksRouteImport } from './routes/devices/$deviceId/hooks'
+import { Route as DevicesDeviceIdFilesRouteImport } from './routes/devices/$deviceId/files'
+import { Route as DevicesDeviceIdCryptoRouteImport } from './routes/devices/$deviceId/crypto'
+import { Route as DevicesDeviceIdCrashesRouteImport } from './routes/devices/$deviceId/crashes'
+import { Route as DevicesDeviceIdClassesRouteImport } from './routes/devices/$deviceId/classes'
 import { Route as DevicesDeviceIdAppsRouteImport } from './routes/devices/$deviceId/apps'
-import { Route as DevicesDeviceIdAppBundleIdRouteImport } from './routes/devices/$deviceId/app/$bundleId'
-import { Route as DevicesDeviceIdAppBundleIdIndexRouteImport } from './routes/devices/$deviceId/app/$bundleId/index'
-import { Route as DevicesDeviceIdAppBundleIdNetworkRouteImport } from './routes/devices/$deviceId/app/$bundleId/network'
-import { Route as DevicesDeviceIdAppBundleIdMemoryRouteImport } from './routes/devices/$deviceId/app/$bundleId/memory'
-import { Route as DevicesDeviceIdAppBundleIdLogsRouteImport } from './routes/devices/$deviceId/app/$bundleId/logs'
-import { Route as DevicesDeviceIdAppBundleIdHooksRouteImport } from './routes/devices/$deviceId/app/$bundleId/hooks'
-import { Route as DevicesDeviceIdAppBundleIdHomeRouteImport } from './routes/devices/$deviceId/app/$bundleId/home'
-import { Route as DevicesDeviceIdAppBundleIdFilesRouteImport } from './routes/devices/$deviceId/app/$bundleId/files'
-import { Route as DevicesDeviceIdAppBundleIdCryptoRouteImport } from './routes/devices/$deviceId/app/$bundleId/crypto'
-import { Route as DevicesDeviceIdAppBundleIdCrashesRouteImport } from './routes/devices/$deviceId/app/$bundleId/crashes'
-import { Route as DevicesDeviceIdAppBundleIdClassesRouteImport } from './routes/devices/$deviceId/app/$bundleId/classes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -36,14 +32,50 @@ const DevicesDeviceIdRoute = DevicesDeviceIdRouteImport.update({
   path: '/devices/$deviceId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DevicesDeviceIdIndexRoute = DevicesDeviceIdIndexRouteImport.update({
-  id: '/',
-  path: '/',
+const DevicesDeviceIdProcessesRoute =
+  DevicesDeviceIdProcessesRouteImport.update({
+    id: '/processes',
+    path: '/processes',
+    getParentRoute: () => DevicesDeviceIdRoute,
+  } as any)
+const DevicesDeviceIdNetworkRoute = DevicesDeviceIdNetworkRouteImport.update({
+  id: '/network',
+  path: '/network',
   getParentRoute: () => DevicesDeviceIdRoute,
 } as any)
-const DevicesDeviceIdProcessesRoute = DevicesDeviceIdProcessesRouteImport.update({
-  id: '/processes',
-  path: '/processes',
+const DevicesDeviceIdMemoryRoute = DevicesDeviceIdMemoryRouteImport.update({
+  id: '/memory',
+  path: '/memory',
+  getParentRoute: () => DevicesDeviceIdRoute,
+} as any)
+const DevicesDeviceIdLogsRoute = DevicesDeviceIdLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => DevicesDeviceIdRoute,
+} as any)
+const DevicesDeviceIdHooksRoute = DevicesDeviceIdHooksRouteImport.update({
+  id: '/hooks',
+  path: '/hooks',
+  getParentRoute: () => DevicesDeviceIdRoute,
+} as any)
+const DevicesDeviceIdFilesRoute = DevicesDeviceIdFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => DevicesDeviceIdRoute,
+} as any)
+const DevicesDeviceIdCryptoRoute = DevicesDeviceIdCryptoRouteImport.update({
+  id: '/crypto',
+  path: '/crypto',
+  getParentRoute: () => DevicesDeviceIdRoute,
+} as any)
+const DevicesDeviceIdCrashesRoute = DevicesDeviceIdCrashesRouteImport.update({
+  id: '/crashes',
+  path: '/crashes',
+  getParentRoute: () => DevicesDeviceIdRoute,
+} as any)
+const DevicesDeviceIdClassesRoute = DevicesDeviceIdClassesRouteImport.update({
+  id: '/classes',
+  path: '/classes',
   getParentRoute: () => DevicesDeviceIdRoute,
 } as any)
 const DevicesDeviceIdAppsRoute = DevicesDeviceIdAppsRouteImport.update({
@@ -51,114 +83,49 @@ const DevicesDeviceIdAppsRoute = DevicesDeviceIdAppsRouteImport.update({
   path: '/apps',
   getParentRoute: () => DevicesDeviceIdRoute,
 } as any)
-const DevicesDeviceIdAppBundleIdRoute = DevicesDeviceIdAppBundleIdRouteImport.update({
-  id: '/app/$bundleId',
-  path: '/app/$bundleId',
-  getParentRoute: () => DevicesDeviceIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdIndexRoute = DevicesDeviceIdAppBundleIdIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdNetworkRoute = DevicesDeviceIdAppBundleIdNetworkRouteImport.update({
-  id: '/network',
-  path: '/network',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdMemoryRoute = DevicesDeviceIdAppBundleIdMemoryRouteImport.update({
-  id: '/memory',
-  path: '/memory',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdLogsRoute = DevicesDeviceIdAppBundleIdLogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdHooksRoute = DevicesDeviceIdAppBundleIdHooksRouteImport.update({
-  id: '/hooks',
-  path: '/hooks',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdHomeRoute = DevicesDeviceIdAppBundleIdHomeRouteImport.update({
-  id: '/home',
-  path: '/home',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdFilesRoute = DevicesDeviceIdAppBundleIdFilesRouteImport.update({
-  id: '/files',
-  path: '/files',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdCryptoRoute = DevicesDeviceIdAppBundleIdCryptoRouteImport.update({
-  id: '/crypto',
-  path: '/crypto',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdCrashesRoute = DevicesDeviceIdAppBundleIdCrashesRouteImport.update({
-  id: '/crashes',
-  path: '/crashes',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
-const DevicesDeviceIdAppBundleIdClassesRoute = DevicesDeviceIdAppBundleIdClassesRouteImport.update({
-  id: '/classes',
-  path: '/classes',
-  getParentRoute: () => DevicesDeviceIdAppBundleIdRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/devices/$deviceId': typeof DevicesDeviceIdRouteWithChildren
   '/devices/$deviceId/apps': typeof DevicesDeviceIdAppsRoute
+  '/devices/$deviceId/classes': typeof DevicesDeviceIdClassesRoute
+  '/devices/$deviceId/crashes': typeof DevicesDeviceIdCrashesRoute
+  '/devices/$deviceId/crypto': typeof DevicesDeviceIdCryptoRoute
+  '/devices/$deviceId/files': typeof DevicesDeviceIdFilesRoute
+  '/devices/$deviceId/hooks': typeof DevicesDeviceIdHooksRoute
+  '/devices/$deviceId/logs': typeof DevicesDeviceIdLogsRoute
+  '/devices/$deviceId/memory': typeof DevicesDeviceIdMemoryRoute
+  '/devices/$deviceId/network': typeof DevicesDeviceIdNetworkRoute
   '/devices/$deviceId/processes': typeof DevicesDeviceIdProcessesRoute
-  '/devices/$deviceId/': typeof DevicesDeviceIdIndexRoute
-  '/devices/$deviceId/app/$bundleId': typeof DevicesDeviceIdAppBundleIdRouteWithChildren
-  '/devices/$deviceId/app/$bundleId/classes': typeof DevicesDeviceIdAppBundleIdClassesRoute
-  '/devices/$deviceId/app/$bundleId/crashes': typeof DevicesDeviceIdAppBundleIdCrashesRoute
-  '/devices/$deviceId/app/$bundleId/crypto': typeof DevicesDeviceIdAppBundleIdCryptoRoute
-  '/devices/$deviceId/app/$bundleId/files': typeof DevicesDeviceIdAppBundleIdFilesRoute
-  '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
-  '/devices/$deviceId/app/$bundleId/hooks': typeof DevicesDeviceIdAppBundleIdHooksRoute
-  '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
-  '/devices/$deviceId/app/$bundleId/memory': typeof DevicesDeviceIdAppBundleIdMemoryRoute
-  '/devices/$deviceId/app/$bundleId/network': typeof DevicesDeviceIdAppBundleIdNetworkRoute
-  '/devices/$deviceId/app/$bundleId/': typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/devices/$deviceId': typeof DevicesDeviceIdRouteWithChildren
   '/devices/$deviceId/apps': typeof DevicesDeviceIdAppsRoute
+  '/devices/$deviceId/classes': typeof DevicesDeviceIdClassesRoute
+  '/devices/$deviceId/crashes': typeof DevicesDeviceIdCrashesRoute
+  '/devices/$deviceId/crypto': typeof DevicesDeviceIdCryptoRoute
+  '/devices/$deviceId/files': typeof DevicesDeviceIdFilesRoute
+  '/devices/$deviceId/hooks': typeof DevicesDeviceIdHooksRoute
+  '/devices/$deviceId/logs': typeof DevicesDeviceIdLogsRoute
+  '/devices/$deviceId/memory': typeof DevicesDeviceIdMemoryRoute
+  '/devices/$deviceId/network': typeof DevicesDeviceIdNetworkRoute
   '/devices/$deviceId/processes': typeof DevicesDeviceIdProcessesRoute
-  '/devices/$deviceId': typeof DevicesDeviceIdIndexRoute
-  '/devices/$deviceId/app/$bundleId/classes': typeof DevicesDeviceIdAppBundleIdClassesRoute
-  '/devices/$deviceId/app/$bundleId/crashes': typeof DevicesDeviceIdAppBundleIdCrashesRoute
-  '/devices/$deviceId/app/$bundleId/crypto': typeof DevicesDeviceIdAppBundleIdCryptoRoute
-  '/devices/$deviceId/app/$bundleId/files': typeof DevicesDeviceIdAppBundleIdFilesRoute
-  '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
-  '/devices/$deviceId/app/$bundleId/hooks': typeof DevicesDeviceIdAppBundleIdHooksRoute
-  '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
-  '/devices/$deviceId/app/$bundleId/memory': typeof DevicesDeviceIdAppBundleIdMemoryRoute
-  '/devices/$deviceId/app/$bundleId/network': typeof DevicesDeviceIdAppBundleIdNetworkRoute
-  '/devices/$deviceId/app/$bundleId': typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/devices/$deviceId': typeof DevicesDeviceIdRouteWithChildren
   '/devices/$deviceId/apps': typeof DevicesDeviceIdAppsRoute
+  '/devices/$deviceId/classes': typeof DevicesDeviceIdClassesRoute
+  '/devices/$deviceId/crashes': typeof DevicesDeviceIdCrashesRoute
+  '/devices/$deviceId/crypto': typeof DevicesDeviceIdCryptoRoute
+  '/devices/$deviceId/files': typeof DevicesDeviceIdFilesRoute
+  '/devices/$deviceId/hooks': typeof DevicesDeviceIdHooksRoute
+  '/devices/$deviceId/logs': typeof DevicesDeviceIdLogsRoute
+  '/devices/$deviceId/memory': typeof DevicesDeviceIdMemoryRoute
+  '/devices/$deviceId/network': typeof DevicesDeviceIdNetworkRoute
   '/devices/$deviceId/processes': typeof DevicesDeviceIdProcessesRoute
-  '/devices/$deviceId/': typeof DevicesDeviceIdIndexRoute
-  '/devices/$deviceId/app/$bundleId': typeof DevicesDeviceIdAppBundleIdRouteWithChildren
-  '/devices/$deviceId/app/$bundleId/classes': typeof DevicesDeviceIdAppBundleIdClassesRoute
-  '/devices/$deviceId/app/$bundleId/crashes': typeof DevicesDeviceIdAppBundleIdCrashesRoute
-  '/devices/$deviceId/app/$bundleId/crypto': typeof DevicesDeviceIdAppBundleIdCryptoRoute
-  '/devices/$deviceId/app/$bundleId/files': typeof DevicesDeviceIdAppBundleIdFilesRoute
-  '/devices/$deviceId/app/$bundleId/home': typeof DevicesDeviceIdAppBundleIdHomeRoute
-  '/devices/$deviceId/app/$bundleId/hooks': typeof DevicesDeviceIdAppBundleIdHooksRoute
-  '/devices/$deviceId/app/$bundleId/logs': typeof DevicesDeviceIdAppBundleIdLogsRoute
-  '/devices/$deviceId/app/$bundleId/memory': typeof DevicesDeviceIdAppBundleIdMemoryRoute
-  '/devices/$deviceId/app/$bundleId/network': typeof DevicesDeviceIdAppBundleIdNetworkRoute
-  '/devices/$deviceId/app/$bundleId/': typeof DevicesDeviceIdAppBundleIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -166,53 +133,43 @@ export interface FileRouteTypes {
     | '/'
     | '/devices/$deviceId'
     | '/devices/$deviceId/apps'
+    | '/devices/$deviceId/classes'
+    | '/devices/$deviceId/crashes'
+    | '/devices/$deviceId/crypto'
+    | '/devices/$deviceId/files'
+    | '/devices/$deviceId/hooks'
+    | '/devices/$deviceId/logs'
+    | '/devices/$deviceId/memory'
+    | '/devices/$deviceId/network'
     | '/devices/$deviceId/processes'
-    | '/devices/$deviceId/'
-    | '/devices/$deviceId/app/$bundleId'
-    | '/devices/$deviceId/app/$bundleId/classes'
-    | '/devices/$deviceId/app/$bundleId/crashes'
-    | '/devices/$deviceId/app/$bundleId/crypto'
-    | '/devices/$deviceId/app/$bundleId/files'
-    | '/devices/$deviceId/app/$bundleId/home'
-    | '/devices/$deviceId/app/$bundleId/hooks'
-    | '/devices/$deviceId/app/$bundleId/logs'
-    | '/devices/$deviceId/app/$bundleId/memory'
-    | '/devices/$deviceId/app/$bundleId/network'
-    | '/devices/$deviceId/app/$bundleId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/devices/$deviceId/apps'
-    | '/devices/$deviceId/processes'
     | '/devices/$deviceId'
-    | '/devices/$deviceId/app/$bundleId/classes'
-    | '/devices/$deviceId/app/$bundleId/crashes'
-    | '/devices/$deviceId/app/$bundleId/crypto'
-    | '/devices/$deviceId/app/$bundleId/files'
-    | '/devices/$deviceId/app/$bundleId/home'
-    | '/devices/$deviceId/app/$bundleId/hooks'
-    | '/devices/$deviceId/app/$bundleId/logs'
-    | '/devices/$deviceId/app/$bundleId/memory'
-    | '/devices/$deviceId/app/$bundleId/network'
-    | '/devices/$deviceId/app/$bundleId'
+    | '/devices/$deviceId/apps'
+    | '/devices/$deviceId/classes'
+    | '/devices/$deviceId/crashes'
+    | '/devices/$deviceId/crypto'
+    | '/devices/$deviceId/files'
+    | '/devices/$deviceId/hooks'
+    | '/devices/$deviceId/logs'
+    | '/devices/$deviceId/memory'
+    | '/devices/$deviceId/network'
+    | '/devices/$deviceId/processes'
   id:
     | '__root__'
     | '/'
     | '/devices/$deviceId'
     | '/devices/$deviceId/apps'
+    | '/devices/$deviceId/classes'
+    | '/devices/$deviceId/crashes'
+    | '/devices/$deviceId/crypto'
+    | '/devices/$deviceId/files'
+    | '/devices/$deviceId/hooks'
+    | '/devices/$deviceId/logs'
+    | '/devices/$deviceId/memory'
+    | '/devices/$deviceId/network'
     | '/devices/$deviceId/processes'
-    | '/devices/$deviceId/'
-    | '/devices/$deviceId/app/$bundleId'
-    | '/devices/$deviceId/app/$bundleId/classes'
-    | '/devices/$deviceId/app/$bundleId/crashes'
-    | '/devices/$deviceId/app/$bundleId/crypto'
-    | '/devices/$deviceId/app/$bundleId/files'
-    | '/devices/$deviceId/app/$bundleId/home'
-    | '/devices/$deviceId/app/$bundleId/hooks'
-    | '/devices/$deviceId/app/$bundleId/logs'
-    | '/devices/$deviceId/app/$bundleId/memory'
-    | '/devices/$deviceId/app/$bundleId/network'
-    | '/devices/$deviceId/app/$bundleId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -236,18 +193,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevicesDeviceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/devices/$deviceId/': {
-      id: '/devices/$deviceId/'
-      path: '/'
-      fullPath: '/devices/$deviceId/'
-      preLoaderRoute: typeof DevicesDeviceIdIndexRouteImport
-      parentRoute: typeof DevicesDeviceIdRoute
-    }
     '/devices/$deviceId/processes': {
       id: '/devices/$deviceId/processes'
       path: '/processes'
       fullPath: '/devices/$deviceId/processes'
       preLoaderRoute: typeof DevicesDeviceIdProcessesRouteImport
+      parentRoute: typeof DevicesDeviceIdRoute
+    }
+    '/devices/$deviceId/network': {
+      id: '/devices/$deviceId/network'
+      path: '/network'
+      fullPath: '/devices/$deviceId/network'
+      preLoaderRoute: typeof DevicesDeviceIdNetworkRouteImport
+      parentRoute: typeof DevicesDeviceIdRoute
+    }
+    '/devices/$deviceId/memory': {
+      id: '/devices/$deviceId/memory'
+      path: '/memory'
+      fullPath: '/devices/$deviceId/memory'
+      preLoaderRoute: typeof DevicesDeviceIdMemoryRouteImport
+      parentRoute: typeof DevicesDeviceIdRoute
+    }
+    '/devices/$deviceId/logs': {
+      id: '/devices/$deviceId/logs'
+      path: '/logs'
+      fullPath: '/devices/$deviceId/logs'
+      preLoaderRoute: typeof DevicesDeviceIdLogsRouteImport
+      parentRoute: typeof DevicesDeviceIdRoute
+    }
+    '/devices/$deviceId/hooks': {
+      id: '/devices/$deviceId/hooks'
+      path: '/hooks'
+      fullPath: '/devices/$deviceId/hooks'
+      preLoaderRoute: typeof DevicesDeviceIdHooksRouteImport
+      parentRoute: typeof DevicesDeviceIdRoute
+    }
+    '/devices/$deviceId/files': {
+      id: '/devices/$deviceId/files'
+      path: '/files'
+      fullPath: '/devices/$deviceId/files'
+      preLoaderRoute: typeof DevicesDeviceIdFilesRouteImport
+      parentRoute: typeof DevicesDeviceIdRoute
+    }
+    '/devices/$deviceId/crypto': {
+      id: '/devices/$deviceId/crypto'
+      path: '/crypto'
+      fullPath: '/devices/$deviceId/crypto'
+      preLoaderRoute: typeof DevicesDeviceIdCryptoRouteImport
+      parentRoute: typeof DevicesDeviceIdRoute
+    }
+    '/devices/$deviceId/crashes': {
+      id: '/devices/$deviceId/crashes'
+      path: '/crashes'
+      fullPath: '/devices/$deviceId/crashes'
+      preLoaderRoute: typeof DevicesDeviceIdCrashesRouteImport
+      parentRoute: typeof DevicesDeviceIdRoute
+    }
+    '/devices/$deviceId/classes': {
+      id: '/devices/$deviceId/classes'
+      path: '/classes'
+      fullPath: '/devices/$deviceId/classes'
+      preLoaderRoute: typeof DevicesDeviceIdClassesRouteImport
       parentRoute: typeof DevicesDeviceIdRoute
     }
     '/devices/$deviceId/apps': {
@@ -257,131 +263,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevicesDeviceIdAppsRouteImport
       parentRoute: typeof DevicesDeviceIdRoute
     }
-    '/devices/$deviceId/app/$bundleId': {
-      id: '/devices/$deviceId/app/$bundleId'
-      path: '/app/$bundleId'
-      fullPath: '/devices/$deviceId/app/$bundleId'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdRouteImport
-      parentRoute: typeof DevicesDeviceIdRoute
-    }
-    '/devices/$deviceId/app/$bundleId/': {
-      id: '/devices/$deviceId/app/$bundleId/'
-      path: '/'
-      fullPath: '/devices/$deviceId/app/$bundleId/'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdIndexRouteImport
-      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
-    }
-    '/devices/$deviceId/app/$bundleId/network': {
-      id: '/devices/$deviceId/app/$bundleId/network'
-      path: '/network'
-      fullPath: '/devices/$deviceId/app/$bundleId/network'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdNetworkRouteImport
-      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
-    }
-    '/devices/$deviceId/app/$bundleId/memory': {
-      id: '/devices/$deviceId/app/$bundleId/memory'
-      path: '/memory'
-      fullPath: '/devices/$deviceId/app/$bundleId/memory'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdMemoryRouteImport
-      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
-    }
-    '/devices/$deviceId/app/$bundleId/logs': {
-      id: '/devices/$deviceId/app/$bundleId/logs'
-      path: '/logs'
-      fullPath: '/devices/$deviceId/app/$bundleId/logs'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdLogsRouteImport
-      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
-    }
-    '/devices/$deviceId/app/$bundleId/hooks': {
-      id: '/devices/$deviceId/app/$bundleId/hooks'
-      path: '/hooks'
-      fullPath: '/devices/$deviceId/app/$bundleId/hooks'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdHooksRouteImport
-      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
-    }
-    '/devices/$deviceId/app/$bundleId/home': {
-      id: '/devices/$deviceId/app/$bundleId/home'
-      path: '/home'
-      fullPath: '/devices/$deviceId/app/$bundleId/home'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdHomeRouteImport
-      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
-    }
-    '/devices/$deviceId/app/$bundleId/files': {
-      id: '/devices/$deviceId/app/$bundleId/files'
-      path: '/files'
-      fullPath: '/devices/$deviceId/app/$bundleId/files'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdFilesRouteImport
-      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
-    }
-    '/devices/$deviceId/app/$bundleId/crypto': {
-      id: '/devices/$deviceId/app/$bundleId/crypto'
-      path: '/crypto'
-      fullPath: '/devices/$deviceId/app/$bundleId/crypto'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdCryptoRouteImport
-      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
-    }
-    '/devices/$deviceId/app/$bundleId/crashes': {
-      id: '/devices/$deviceId/app/$bundleId/crashes'
-      path: '/crashes'
-      fullPath: '/devices/$deviceId/app/$bundleId/crashes'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdCrashesRouteImport
-      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
-    }
-    '/devices/$deviceId/app/$bundleId/classes': {
-      id: '/devices/$deviceId/app/$bundleId/classes'
-      path: '/classes'
-      fullPath: '/devices/$deviceId/app/$bundleId/classes'
-      preLoaderRoute: typeof DevicesDeviceIdAppBundleIdClassesRouteImport
-      parentRoute: typeof DevicesDeviceIdAppBundleIdRoute
-    }
   }
 }
 
-interface DevicesDeviceIdAppBundleIdRouteChildren {
-  DevicesDeviceIdAppBundleIdClassesRoute: typeof DevicesDeviceIdAppBundleIdClassesRoute
-  DevicesDeviceIdAppBundleIdCrashesRoute: typeof DevicesDeviceIdAppBundleIdCrashesRoute
-  DevicesDeviceIdAppBundleIdCryptoRoute: typeof DevicesDeviceIdAppBundleIdCryptoRoute
-  DevicesDeviceIdAppBundleIdFilesRoute: typeof DevicesDeviceIdAppBundleIdFilesRoute
-  DevicesDeviceIdAppBundleIdHomeRoute: typeof DevicesDeviceIdAppBundleIdHomeRoute
-  DevicesDeviceIdAppBundleIdHooksRoute: typeof DevicesDeviceIdAppBundleIdHooksRoute
-  DevicesDeviceIdAppBundleIdLogsRoute: typeof DevicesDeviceIdAppBundleIdLogsRoute
-  DevicesDeviceIdAppBundleIdMemoryRoute: typeof DevicesDeviceIdAppBundleIdMemoryRoute
-  DevicesDeviceIdAppBundleIdNetworkRoute: typeof DevicesDeviceIdAppBundleIdNetworkRoute
-  DevicesDeviceIdAppBundleIdIndexRoute: typeof DevicesDeviceIdAppBundleIdIndexRoute
-}
-
-const DevicesDeviceIdAppBundleIdRouteChildren: DevicesDeviceIdAppBundleIdRouteChildren = {
-  DevicesDeviceIdAppBundleIdClassesRoute: DevicesDeviceIdAppBundleIdClassesRoute,
-  DevicesDeviceIdAppBundleIdCrashesRoute: DevicesDeviceIdAppBundleIdCrashesRoute,
-  DevicesDeviceIdAppBundleIdCryptoRoute: DevicesDeviceIdAppBundleIdCryptoRoute,
-  DevicesDeviceIdAppBundleIdFilesRoute: DevicesDeviceIdAppBundleIdFilesRoute,
-  DevicesDeviceIdAppBundleIdHomeRoute: DevicesDeviceIdAppBundleIdHomeRoute,
-  DevicesDeviceIdAppBundleIdHooksRoute: DevicesDeviceIdAppBundleIdHooksRoute,
-  DevicesDeviceIdAppBundleIdLogsRoute: DevicesDeviceIdAppBundleIdLogsRoute,
-  DevicesDeviceIdAppBundleIdMemoryRoute: DevicesDeviceIdAppBundleIdMemoryRoute,
-  DevicesDeviceIdAppBundleIdNetworkRoute: DevicesDeviceIdAppBundleIdNetworkRoute,
-  DevicesDeviceIdAppBundleIdIndexRoute: DevicesDeviceIdAppBundleIdIndexRoute,
-}
-
-const DevicesDeviceIdAppBundleIdRouteWithChildren =
-  DevicesDeviceIdAppBundleIdRoute._addFileChildren(DevicesDeviceIdAppBundleIdRouteChildren)
-
 interface DevicesDeviceIdRouteChildren {
   DevicesDeviceIdAppsRoute: typeof DevicesDeviceIdAppsRoute
+  DevicesDeviceIdClassesRoute: typeof DevicesDeviceIdClassesRoute
+  DevicesDeviceIdCrashesRoute: typeof DevicesDeviceIdCrashesRoute
+  DevicesDeviceIdCryptoRoute: typeof DevicesDeviceIdCryptoRoute
+  DevicesDeviceIdFilesRoute: typeof DevicesDeviceIdFilesRoute
+  DevicesDeviceIdHooksRoute: typeof DevicesDeviceIdHooksRoute
+  DevicesDeviceIdLogsRoute: typeof DevicesDeviceIdLogsRoute
+  DevicesDeviceIdMemoryRoute: typeof DevicesDeviceIdMemoryRoute
+  DevicesDeviceIdNetworkRoute: typeof DevicesDeviceIdNetworkRoute
   DevicesDeviceIdProcessesRoute: typeof DevicesDeviceIdProcessesRoute
-  DevicesDeviceIdIndexRoute: typeof DevicesDeviceIdIndexRoute
-  DevicesDeviceIdAppBundleIdRoute: typeof DevicesDeviceIdAppBundleIdRouteWithChildren
 }
 
 const DevicesDeviceIdRouteChildren: DevicesDeviceIdRouteChildren = {
   DevicesDeviceIdAppsRoute: DevicesDeviceIdAppsRoute,
+  DevicesDeviceIdClassesRoute: DevicesDeviceIdClassesRoute,
+  DevicesDeviceIdCrashesRoute: DevicesDeviceIdCrashesRoute,
+  DevicesDeviceIdCryptoRoute: DevicesDeviceIdCryptoRoute,
+  DevicesDeviceIdFilesRoute: DevicesDeviceIdFilesRoute,
+  DevicesDeviceIdHooksRoute: DevicesDeviceIdHooksRoute,
+  DevicesDeviceIdLogsRoute: DevicesDeviceIdLogsRoute,
+  DevicesDeviceIdMemoryRoute: DevicesDeviceIdMemoryRoute,
+  DevicesDeviceIdNetworkRoute: DevicesDeviceIdNetworkRoute,
   DevicesDeviceIdProcessesRoute: DevicesDeviceIdProcessesRoute,
-  DevicesDeviceIdIndexRoute: DevicesDeviceIdIndexRoute,
-  DevicesDeviceIdAppBundleIdRoute: DevicesDeviceIdAppBundleIdRouteWithChildren,
 }
 
 const DevicesDeviceIdRouteWithChildren = DevicesDeviceIdRoute._addFileChildren(
-  DevicesDeviceIdRouteChildren
+  DevicesDeviceIdRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {

@@ -5,7 +5,6 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
-	"github.com/joakimcarlsson/juicebox/internal/features/sessions/attach"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/chat"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/classes"
 	clipboardpkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/clipboard"
@@ -36,9 +35,8 @@ func RegisterRoutes(
 ) {
 	runner := scripting.NewRunner(database, manager)
 	fileManager := scripting.NewFileManager(database, nil)
-	scriptsHandler := scripts.NewHandler(fileManager, runner)
+	scriptsHandler := scripts.NewHandler(fileManager, runner, manager)
 
-	attachHandler := attach.NewHandler(manager)
 	detachHandler := detach.NewHandler(manager)
 	listHandler := list.NewHandler(database, manager)
 	messagesHandler := messages.NewHandler(database)
@@ -64,15 +62,14 @@ func RegisterRoutes(
 	memoryHandler := memorypkg.NewHandler(manager)
 	exportHandler := exportpkg.NewHandler(database)
 
-	r.POST("/devices/{deviceId}/apps/{bundleId}/attach", attachHandler.Handle)
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
 	r.PATCH("/sessions/{sessionId}", renameHandler.Handle)
 	r.GET("/devices/{deviceId}/sessions", listHandler.Handle)
 	r.GET("/sessions/{sessionId}/messages", messagesHandler.Handle)
 	r.GET("/sessions/{sessionId}/logs", logsHandler.Handle)
-	r.POST("/sessions/{sessionId}/chat", chatHandler.Handle)
-	r.GET("/sessions/{sessionId}/chat/status", chatHandler.Status)
-	r.GET("/sessions/{sessionId}/chat/history", chatHandler.History)
+	r.POST("/devices/{deviceId}/chat", chatHandler.Handle)
+	r.GET("/devices/{deviceId}/chat/status", chatHandler.Status)
+	r.GET("/devices/{deviceId}/chat/history", chatHandler.History)
 	r.GET("/sessions/{sessionId}/intercept", interceptHandler.GetState)
 	r.PUT("/sessions/{sessionId}/intercept", interceptHandler.UpdateState)
 	r.GET(
@@ -114,9 +111,9 @@ func RegisterRoutes(
 	r.DELETE("/sessions/{sessionId}/memory/scan", memoryHandler.StopScan)
 	r.POST("/sessions/{sessionId}/memory/dump", memoryHandler.Dump)
 
-	r.POST("/sessions/{sessionId}/scripts", scriptsHandler.Upsert)
-	r.GET("/sessions/{sessionId}/scripts", scriptsHandler.List)
-	r.DELETE("/sessions/{sessionId}/scripts/{scriptId}", scriptsHandler.Delete)
+	r.POST("/devices/{deviceId}/scripts", scriptsHandler.Upsert)
+	r.GET("/devices/{deviceId}/scripts", scriptsHandler.List)
+	r.DELETE("/devices/{deviceId}/scripts/{scriptId}", scriptsHandler.Delete)
 	r.POST("/sessions/{sessionId}/scripts/run", scriptsHandler.Run)
 	r.GET("/sessions/{sessionId}/scripts/runs", scriptsHandler.ListRuns)
 }

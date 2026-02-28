@@ -36,6 +36,16 @@ type AttachResponse struct {
 	PID       int    `json:"pid"`
 }
 
+type ConnectDeviceResponse struct {
+	DeviceID string `json:"deviceId"`
+	Platform string `json:"platform"`
+}
+
+type SpawnAppResponse struct {
+	SessionID string `json:"sessionId"`
+	PID       int    `json:"pid"`
+}
+
 type DeviceInfo struct {
 	Name     string `json:"name"`
 	ID       string `json:"id"`
@@ -77,6 +87,10 @@ type DatabaseColumn struct {
 	Type    string `json:"type"`
 	NotNull bool   `json:"notNull"`
 	PK      bool   `json:"pk"`
+}
+
+type CompileResult struct {
+	Success bool `json:"success"`
 }
 
 type RunScriptResponse struct {

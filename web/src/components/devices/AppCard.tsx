@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Loader2, X } from 'lucide-react'
 import type { App } from '@/types/device'
 import { cn } from '@/lib/utils'
 
@@ -33,10 +34,20 @@ function hashColor(str: string): string {
 interface AppCardProps {
   app: App
   deviceId: string
-  onSelect: (app: App) => void
+  isAttached: boolean
+  isAttaching: boolean
+  onAttach: (app: App) => void
+  onDetach: (app: App) => void
 }
 
-export function AppCard({ app, deviceId, onSelect }: AppCardProps) {
+export function AppCard({
+  app,
+  deviceId,
+  isAttached,
+  isAttaching,
+  onAttach,
+  onDetach,
+}: AppCardProps) {
   const [imgError, setImgError] = useState(false)
   const initial = app.name.charAt(0).toUpperCase()
   const isRunning = app.pid > 0
@@ -44,44 +55,72 @@ export function AppCard({ app, deviceId, onSelect }: AppCardProps) {
 
   return (
     <div
-      onClick={() => onSelect(app)}
+      onClick={() => !isAttaching && onAttach(app)}
       className={cn(
-        'group flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-border bg-card p-4',
-        'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md'
+        'group relative flex cursor-pointer flex-col items-center gap-2 rounded-lg border bg-card p-4',
+        'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+        isAttached ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border',
+        isAttaching && 'opacity-70 pointer-events-none'
       )}
     >
-      {imgError ? (
-        <div
-          className={cn(
-            'flex h-12 w-12 items-center justify-center rounded-xl text-lg font-semibold text-white',
-            hashColor(app.identifier)
-          )}
+      {isAttached && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onDetach(app)
+          }}
+          className="absolute top-1.5 right-1.5 flex items-center justify-center h-5 w-5 rounded-full bg-muted/80 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors opacity-0 group-hover:opacity-100"
         >
-          {initial}
-        </div>
-      ) : (
-        <img
-          src={iconUrl}
-          alt={app.name}
-          className="h-12 w-12 rounded-xl"
-          loading="lazy"
-          onError={() => setImgError(true)}
-        />
+          <X className="h-3 w-3" />
+        </button>
       )}
+
+      <div className="relative">
+        {imgError ? (
+          <div
+            className={cn(
+              'flex h-12 w-12 items-center justify-center rounded-xl text-lg font-semibold text-white',
+              hashColor(app.identifier)
+            )}
+          >
+            {initial}
+          </div>
+        ) : (
+          <img
+            src={iconUrl}
+            alt={app.name}
+            className="h-12 w-12 rounded-xl"
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        )}
+        {isAttaching && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/60">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
+        )}
+      </div>
 
       <div className="flex w-full flex-col items-center gap-1 text-center">
         <span className="line-clamp-1 text-sm font-medium text-foreground">{app.name}</span>
         <span className="line-clamp-1 w-full text-xs text-muted-foreground">{app.identifier}</span>
       </div>
 
-      {isRunning && (
-        <Badge
-          variant="secondary"
-          className="bg-green-500/15 text-green-600 dark:text-green-400 text-xs"
-        >
-          PID {app.pid}
-        </Badge>
-      )}
+      <div className="flex items-center gap-1.5">
+        {isRunning && (
+          <Badge
+            variant="secondary"
+            className="bg-green-500/15 text-green-600 dark:text-green-400 text-xs"
+          >
+            PID {app.pid}
+          </Badge>
+        )}
+        {isAttached && (
+          <Badge variant="secondary" className="bg-primary/15 text-primary text-xs">
+            Attached
+          </Badge>
+        )}
+      </div>
     </div>
   )
 }

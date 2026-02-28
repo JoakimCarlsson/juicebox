@@ -1,4 +1,4 @@
-import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Search,
@@ -22,20 +22,18 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
+import { NoAppAttachedState } from '@/components/devices/NoAppAttachedState'
 import type { CryptoEvent, KeystoreEntry, SharedPrefsFile } from '@/types/session'
 import {
   enableCryptoHooks,
   fetchKeystoreEntries,
   fetchSharedPreferences,
 } from '@/features/sessions/api'
-import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
 import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/crypto')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? '',
-  }),
+export const Route = createFileRoute('/devices/$deviceId/crypto')({
   component: CryptoPage,
 })
 
@@ -75,10 +73,9 @@ const OP_COLORS: Record<string, string> = {
 }
 
 function CryptoPage() {
-  const { sessionId } = useSearch({
-    from: '/devices/$deviceId/app/$bundleId/crypto',
-  })
-  const { messages } = useSessionMessages()
+  const { selectedApp } = useAttachedApps()
+  const sessionId = selectedApp?.sessionId ?? ''
+  const { messages } = useDeviceMessages()
   const [search, setSearch] = useState('')
   const [clearIndex, setClearIndex] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -151,8 +148,8 @@ function CryptoPage() {
     return filtered.find((e) => e.id === selectedId) ?? null
   }, [filtered, selectedId])
 
-  if (!sessionId) {
-    return <NoSessionEmptyState />
+  if (!selectedApp) {
+    return <NoAppAttachedState feature="Crypto Monitor" />
   }
 
   return (

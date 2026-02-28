@@ -21,13 +21,13 @@ type SqliteQueryParams struct {
 }
 
 type SqliteQueryTool struct {
-	execFn    func(sess *session.Session, sessionID, dbPath, sql string) (*QueryResult, error)
+	execFn    func(setup session.DeviceSetup, deviceID, bundleID, sessionID, dbPath, sql string) (*QueryResult, error)
 	manager   *session.Manager
 	sessionID string
 }
 
 func NewSqliteQuery(
-	execFn func(sess *session.Session, sessionID, dbPath, sql string) (*QueryResult, error),
+	execFn func(setup session.DeviceSetup, deviceID, bundleID, sessionID, dbPath, sql string) (*QueryResult, error),
 	manager *session.Manager,
 	sessionID string,
 ) *SqliteQueryTool {
@@ -66,7 +66,19 @@ func (t *SqliteQueryTool) Run(
 		return tool.NewTextErrorResponse("session not found"), nil
 	}
 
-	result, err := t.execFn(sess, t.sessionID, input.DbPath, input.SQL)
+	dc := t.manager.GetDeviceConnection(sess.DeviceID)
+	if dc == nil {
+		return tool.NewTextErrorResponse("device not connected"), nil
+	}
+
+	result, err := t.execFn(
+		dc.Setup,
+		sess.DeviceID,
+		sess.BundleID,
+		t.sessionID,
+		input.DbPath,
+		input.SQL,
+	)
 	if err != nil {
 		return tool.NewTextErrorResponse(
 			fmt.Sprintf("sqlite_query failed: %v", err),

@@ -7,7 +7,7 @@ import (
 
 type ScriptFileRow struct {
 	ID        string
-	SessionID string
+	DeviceID  string
 	Name      string
 	Content   string
 	CreatedAt int64
@@ -25,11 +25,11 @@ type ScriptRunRow struct {
 
 func (d *DB) UpsertScriptFile(f ScriptFileRow) error {
 	_, err := d.conn.Exec(
-		`INSERT INTO script_files (id, session_id, name, content, created_at, updated_at)
+		`INSERT INTO script_files (id, device_id, name, content, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?)
-		 ON CONFLICT(session_id, name) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at`,
+		 ON CONFLICT(device_id, name) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at`,
 		f.ID,
-		f.SessionID,
+		f.DeviceID,
 		f.Name,
 		f.Content,
 		f.CreatedAt,
@@ -41,14 +41,14 @@ func (d *DB) UpsertScriptFile(f ScriptFileRow) error {
 	return nil
 }
 
-func (d *DB) GetScriptFile(sessionID, name string) (*ScriptFileRow, error) {
+func (d *DB) GetScriptFile(deviceID, name string) (*ScriptFileRow, error) {
 	row := d.conn.QueryRow(
-		`SELECT id, session_id, name, content, created_at, updated_at FROM script_files WHERE session_id = ? AND name = ?`,
-		sessionID,
+		`SELECT id, device_id, name, content, created_at, updated_at FROM script_files WHERE device_id = ? AND name = ?`,
+		deviceID,
 		name,
 	)
 	var f ScriptFileRow
-	if err := row.Scan(&f.ID, &f.SessionID, &f.Name, &f.Content, &f.CreatedAt, &f.UpdatedAt); err != nil {
+	if err := row.Scan(&f.ID, &f.DeviceID, &f.Name, &f.Content, &f.CreatedAt, &f.UpdatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -59,11 +59,11 @@ func (d *DB) GetScriptFile(sessionID, name string) (*ScriptFileRow, error) {
 
 func (d *DB) GetScriptFileByID(id string) (*ScriptFileRow, error) {
 	row := d.conn.QueryRow(
-		`SELECT id, session_id, name, content, created_at, updated_at FROM script_files WHERE id = ?`,
+		`SELECT id, device_id, name, content, created_at, updated_at FROM script_files WHERE id = ?`,
 		id,
 	)
 	var f ScriptFileRow
-	if err := row.Scan(&f.ID, &f.SessionID, &f.Name, &f.Content, &f.CreatedAt, &f.UpdatedAt); err != nil {
+	if err := row.Scan(&f.ID, &f.DeviceID, &f.Name, &f.Content, &f.CreatedAt, &f.UpdatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -72,10 +72,10 @@ func (d *DB) GetScriptFileByID(id string) (*ScriptFileRow, error) {
 	return &f, nil
 }
 
-func (d *DB) GetScriptFiles(sessionID string) ([]ScriptFileRow, error) {
+func (d *DB) GetScriptFiles(deviceID string) ([]ScriptFileRow, error) {
 	rows, err := d.conn.Query(
-		`SELECT id, session_id, name, content, created_at, updated_at FROM script_files WHERE session_id = ? ORDER BY updated_at DESC`,
-		sessionID,
+		`SELECT id, device_id, name, content, created_at, updated_at FROM script_files WHERE device_id = ? ORDER BY updated_at DESC`,
+		deviceID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.GetScriptFiles: %w", err)
@@ -85,12 +85,51 @@ func (d *DB) GetScriptFiles(sessionID string) ([]ScriptFileRow, error) {
 	var result []ScriptFileRow
 	for rows.Next() {
 		var f ScriptFileRow
-		if err := rows.Scan(&f.ID, &f.SessionID, &f.Name, &f.Content, &f.CreatedAt, &f.UpdatedAt); err != nil {
+		if err := rows.Scan(&f.ID, &f.DeviceID, &f.Name, &f.Content, &f.CreatedAt, &f.UpdatedAt); err != nil {
 			return nil, err
 		}
 		result = append(result, f)
 	}
 	return result, rows.Err()
+}
+
+func (d *DB) GetScriptFilesForApp(
+	deviceID, bundleID string,
+) ([]ScriptFileRow, error) {
+	rows, err := d.conn.Query(
+		`SELECT id, device_id, name, content, created_at, updated_at FROM script_files
+		 WHERE device_id = ? AND (name LIKE ? || '/%' OR name NOT LIKE '%/%' OR name LIKE 'global/%')
+		 ORDER BY updated_at DESC`,
+		deviceID,
+		bundleID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("db.GetScriptFilesForApp: %w", err)
+	}
+	defer rows.Close()
+
+	var result []ScriptFileRow
+	for rows.Next() {
+		var f ScriptFileRow
+		if err := rows.Scan(&f.ID, &f.DeviceID, &f.Name, &f.Content, &f.CreatedAt, &f.UpdatedAt); err != nil {
+			return nil, err
+		}
+		result = append(result, f)
+	}
+	return result, rows.Err()
+}
+
+func (d *DB) HasScriptFilesForApp(deviceID, bundleID string) (bool, error) {
+	var count int
+	err := d.conn.QueryRow(
+		`SELECT COUNT(*) FROM script_files WHERE device_id = ? AND name LIKE ? || '/%'`,
+		deviceID,
+		bundleID,
+	).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("db.HasScriptFilesForApp: %w", err)
+	}
+	return count > 0, nil
 }
 
 func (d *DB) DeleteScriptFile(id string) error {

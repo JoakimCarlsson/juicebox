@@ -12,48 +12,48 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
-import { attachApp } from '@/features/sessions/api'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
+import { attachApp } from '@/features/devices/api'
 import type { CrashEvent, DeviceEnvelope } from '@/types/session'
 import { cn } from '@/lib/utils'
 
 interface CrashAlertDialogProps {
-  sessionId: string
   deviceId: string
-  bundleId: string
 }
 
 type AlertState =
   | { kind: 'closed' }
-  | { kind: 'crash'; crash: CrashEvent; detached: boolean }
-  | { kind: 'detached' }
+  | { kind: 'crash'; crash: CrashEvent; bundleId: string; detached: boolean }
+  | { kind: 'detached'; bundleId: string }
 
-export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDialogProps) {
+export function CrashAlertDialog({ deviceId }: CrashAlertDialogProps) {
   const { subscribe } = useDeviceSocket()
+  const { addApp, removeApp, wasUserDetach } = useAttachedApps()
   const navigate = useNavigate()
   const [state, setState] = useState<AlertState>({ kind: 'closed' })
   const [reattaching, setReattaching] = useState(false)
   const lastCrashTime = useRef(0)
 
   useEffect(() => {
-    if (!sessionId) return
-
     const unsub = subscribe(null, (envelope: DeviceEnvelope) => {
-      if (envelope.sessionId !== sessionId) return
-
       if (envelope.type === 'crash') {
         const crash = envelope.payload as CrashEvent
+        const bundleId = (envelope as { bundleId?: string }).bundleId ?? ''
         lastCrashTime.current = Date.now()
-        setState({ kind: 'crash', crash, detached: false })
+        setState({ kind: 'crash', crash, bundleId, detached: false })
       }
 
       if (envelope.type === 'detached') {
+        const bundleId = (envelope as { bundleId?: string }).bundleId ?? ''
+        if (bundleId && wasUserDetach(bundleId)) return
         const recentCrash = Date.now() - lastCrashTime.current < 5000
+        if (bundleId) removeApp(bundleId)
         setState((prev) => {
           if (prev.kind === 'crash') {
             return { ...prev, detached: true }
           }
           if (!recentCrash) {
-            return { kind: 'detached' }
+            return { kind: 'detached', bundleId }
           }
           return prev
         })
@@ -61,32 +61,30 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
     })
 
     return unsub
-  }, [subscribe, sessionId])
+  }, [subscribe, removeApp, wasUserDetach])
+
+  const bundleId =
+    state.kind === 'crash' ? state.bundleId : state.kind === 'detached' ? state.bundleId : ''
 
   const handleReattach = useCallback(async () => {
+    if (!bundleId) return
     setReattaching(true)
     try {
-      const resp = await attachApp(deviceId, bundleId, sessionId)
+      const resp = await attachApp(deviceId, bundleId)
+      addApp(bundleId, resp.sessionId)
       setState({ kind: 'closed' })
-      navigate({
-        to: '/devices/$deviceId/app/$bundleId/home',
-        params: { deviceId, bundleId },
-        search: { sessionId: resp.sessionId },
-        replace: true,
-      })
     } catch {
       setReattaching(false)
     }
-  }, [deviceId, bundleId, sessionId, navigate])
+  }, [deviceId, bundleId, addApp])
 
   const handleViewCrashes = useCallback(() => {
     setState({ kind: 'closed' })
     navigate({
-      to: '/devices/$deviceId/app/$bundleId/crashes',
-      params: { deviceId, bundleId },
-      search: { sessionId },
+      to: '/devices/$deviceId/crashes',
+      params: { deviceId },
     })
-  }, [deviceId, bundleId, sessionId, navigate])
+  }, [deviceId, navigate])
 
   const handleDismiss = useCallback(() => {
     setState({ kind: 'closed' })
@@ -191,8 +189,7 @@ export function CrashAlertDialog({ sessionId, deviceId, bundleId }: CrashAlertDi
 
         {showReattach && (
           <p className="text-xs text-muted-foreground">
-            The app process has terminated. You can reattach to restore the session with all its
-            history.
+            The app process has terminated. You can reattach to restart the session.
           </p>
         )}
 

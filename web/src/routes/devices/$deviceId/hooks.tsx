@@ -1,5 +1,6 @@
-import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Editor, { type Monaco } from '@monaco-editor/react'
 import {
   Play,
@@ -37,19 +38,17 @@ import { cn } from '@/lib/utils'
 import { useDeviceSocket } from '@/contexts/DeviceSocketContext'
 import { useScriptOutput } from '@/contexts/ScriptOutputContext'
 import { useBottomPanel } from '@/contexts/BottomPanelContext'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
 import {
-  fetchScriptFiles,
-  upsertScriptFile,
-  deleteScriptFile,
+  fetchDeviceScripts,
+  upsertDeviceScript,
+  deleteDeviceScript,
   runScriptByName,
-} from '@/features/sessions/api'
-import type { ScriptFile } from '@/features/sessions/api'
-import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
+} from '@/features/devices/scripts-api'
+import type { ScriptFile } from '@/features/devices/scripts-api'
+import { appsQueryOptions } from '@/features/devices/queries'
 
-export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/hooks')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? '',
-  }),
+export const Route = createFileRoute('/devices/$deviceId/hooks')({
   component: HooksPage,
 })
 
@@ -335,14 +334,16 @@ function FileTree({
   files,
   selectedId,
   onSelectFile,
-  sessionId,
+  deviceId,
   onFilesChanged,
+  appBundleIds,
 }: {
   files: ScriptFile[]
   selectedId: string | undefined
   onSelectFile: (name: string) => void
-  sessionId: string
+  deviceId: string
   onFilesChanged: () => void
+  appBundleIds: string[]
 }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set())
@@ -354,10 +355,21 @@ function FileTree({
     { id: string; parentPath: string; name: string }[]
   >([])
 
+  const allVirtualFolders = useMemo(() => {
+    const appFolders = appBundleIds
+      .filter((bid) => {
+        const hasReal = files.some((f) => f.name.startsWith(bid + '/'))
+        const hasManual = virtualFolders.some((vf) => vf.parentPath === '' && vf.name === bid)
+        return !hasReal && !hasManual
+      })
+      .map((bid) => ({ id: `app:${bid}`, parentPath: '', name: bid }))
+    return [...virtualFolders, ...appFolders]
+  }, [appBundleIds, files, virtualFolders])
+
   const tree = useMemo(() => {
     const base = buildTree(files)
 
-    for (const vf of virtualFolders) {
+    for (const vf of allVirtualFolders) {
       const node: TreeNode = {
         id: vf.id,
         name: vf.name,
@@ -366,7 +378,9 @@ function FileTree({
       }
       const insertInto = (nodes: TreeNode[], parentPath: string): boolean => {
         if (!parentPath) {
-          nodes.push(node)
+          if (!nodes.some((n) => n.fullPath === node.fullPath && n.children)) {
+            nodes.push(node)
+          }
           return true
         }
         for (const n of nodes) {
@@ -382,7 +396,7 @@ function FileTree({
     }
 
     return base
-  }, [files, virtualFolders])
+  }, [files, allVirtualFolders])
 
   const [prevTree, setPrevTree] = useState<TreeNode[]>([])
   if (tree !== prevTree) {
@@ -454,11 +468,11 @@ function FileTree({
           },
         ])
       } else {
-        await upsertScriptFile(sessionId, fullPath, '')
+        await upsertDeviceScript(deviceId, fullPath, '')
         onFilesChanged()
       }
     },
-    [creating, sessionId, onFilesChanged]
+    [creating, deviceId, onFilesChanged]
   )
 
   const cancelCreate = useCallback(() => setCreating(null), [])
@@ -477,8 +491,8 @@ function FileTree({
         const newPath = parts.join('/')
         for (const f of affected) {
           const newName = newPath + f.name.slice(oldPath.length)
-          await upsertScriptFile(sessionId, newName, f.content)
-          await deleteScriptFile(sessionId, f.id)
+          await upsertDeviceScript(deviceId, newName, f.content)
+          await deleteDeviceScript(deviceId, f.id)
         }
         onFilesChanged()
         return
@@ -495,11 +509,11 @@ function FileTree({
       parts[parts.length - 1] = name
       const newFullPath = parts.join('/')
       if (newFullPath === file.name) return
-      await upsertScriptFile(sessionId, newFullPath, file.content)
-      await deleteScriptFile(sessionId, file.id)
+      await upsertDeviceScript(deviceId, newFullPath, file.content)
+      await deleteDeviceScript(deviceId, file.id)
       onFilesChanged()
     },
-    [files, sessionId, onFilesChanged]
+    [files, deviceId, onFilesChanged]
   )
 
   const cancelEdit = useCallback(() => setEditingId(null), [])
@@ -516,7 +530,7 @@ function FileTree({
 
   const confirmDelete = async () => {
     if (!deletingFile) return
-    await deleteScriptFile(sessionId, deletingFile.id)
+    await deleteDeviceScript(deviceId, deletingFile.id)
     onFilesChanged()
     setDeletingFile(null)
   }
@@ -527,7 +541,7 @@ function FileTree({
       (f) => f.name.startsWith(deletingFolder + '/') || f.name === deletingFolder
     )
     for (const f of affected) {
-      await deleteScriptFile(sessionId, f.id)
+      await deleteDeviceScript(deviceId, f.id)
     }
     onFilesChanged()
     setDeletingFolder(null)
@@ -686,10 +700,12 @@ function FileTree({
 }
 
 function HooksPage() {
-  const { sessionId } = useSearch({
-    from: '/devices/$deviceId/app/$bundleId/hooks',
-  })
+  const { deviceId } = Route.useParams()
+  const { selectedApp } = useAttachedApps()
+  const sessionId = selectedApp?.sessionId ?? ''
   const { subscribe } = useDeviceSocket()
+  const { data: apps } = useQuery(appsQueryOptions(deviceId))
+  const appBundleIds = useMemo(() => (apps ?? []).map((a) => a.identifier), [apps])
   const scriptOutput = useScriptOutput()
   const bottomPanel = useBottomPanel()
 
@@ -715,29 +731,28 @@ function HooksPage() {
   }, [code])
 
   const loadFiles = useCallback(async () => {
-    if (!sessionId) return
+    if (!deviceId) return
     try {
-      const res = await fetchScriptFiles(sessionId)
+      const res = await fetchDeviceScripts(deviceId)
       setFiles(res.files ?? [])
     } catch {}
-  }, [sessionId])
+  }, [deviceId])
 
   useEffect(() => {
-    if (!sessionId) return
-    fetchScriptFiles(sessionId)
+    if (!deviceId) return
+    fetchDeviceScripts(deviceId)
       .then((res) => setFiles(res.files ?? []))
       .catch(() => {})
-  }, [sessionId])
+  }, [deviceId])
 
   useEffect(() => {
-    if (!sessionId) return
+    if (!deviceId) return
     return subscribe(null, (envelope) => {
-      if (envelope.sessionId !== sessionId) return
       if (envelope.type === 'file_write') {
         loadFiles()
         const data = envelope.payload as { name?: string }
         if (data?.name && data.name === activeFileRef.current) {
-          fetchScriptFiles(sessionId)
+          fetchDeviceScripts(deviceId)
             .then((res) => {
               const f = (res.files ?? []).find((f) => f.name === activeFileRef.current)
               if (f) {
@@ -757,7 +772,7 @@ function HooksPage() {
         )
       }
     })
-  }, [subscribe, sessionId, loadFiles, scriptOutput])
+  }, [subscribe, deviceId, loadFiles, scriptOutput])
 
   const selectedFileId = useMemo(
     () => files.find((f) => f.name === activeFile)?.id,
@@ -777,20 +792,20 @@ function HooksPage() {
   )
 
   const handleSave = useCallback(async () => {
-    if (!sessionId || !activeFileRef.current || saving) return
+    if (!deviceId || !activeFileRef.current || saving) return
     setSaving(true)
     try {
-      await upsertScriptFile(sessionId, activeFileRef.current, codeRef.current)
+      await upsertDeviceScript(deviceId, activeFileRef.current, codeRef.current)
       setDirty(false)
       await loadFiles()
     } catch {}
     setSaving(false)
-  }, [sessionId, saving, loadFiles])
+  }, [deviceId, saving, loadFiles])
 
   const handleRun = useCallback(async () => {
     if (!sessionId || !activeFileRef.current || running) return
     if (dirty) {
-      await upsertScriptFile(sessionId, activeFileRef.current, codeRef.current)
+      await upsertDeviceScript(deviceId, activeFileRef.current, codeRef.current)
       setDirty(false)
       await loadFiles()
     }
@@ -815,7 +830,7 @@ function HooksPage() {
     } finally {
       setRunning(false)
     }
-  }, [sessionId, running, dirty, loadFiles, scriptOutput, bottomPanel])
+  }, [sessionId, deviceId, running, dirty, loadFiles, scriptOutput, bottomPanel])
 
   const handleEditorMount = useCallback(
     (
@@ -843,7 +858,7 @@ function HooksPage() {
     await loadFiles()
     if (activeFileRef.current) {
       try {
-        const res = await fetchScriptFiles(sessionId)
+        const res = await fetchDeviceScripts(deviceId)
         const f = (res.files ?? []).find((f) => f.name === activeFileRef.current)
         if (f) {
           setCode(f.content)
@@ -855,11 +870,7 @@ function HooksPage() {
         }
       } catch {}
     }
-  }, [sessionId, loadFiles])
-
-  if (!sessionId) {
-    return <NoSessionEmptyState />
-  }
+  }, [deviceId, loadFiles])
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full">
@@ -868,8 +879,9 @@ function HooksPage() {
           files={files}
           selectedId={selectedFileId}
           onSelectFile={openFile}
-          sessionId={sessionId}
+          deviceId={deviceId}
           onFilesChanged={handleFilesChanged}
+          appBundleIds={appBundleIds}
         />
       </ResizablePanel>
 
@@ -897,7 +909,13 @@ function HooksPage() {
                     <Save className="h-3 w-3" />
                     Save
                   </Button>
-                  <Button size="sm" className="h-7 gap-1.5" onClick={handleRun} disabled={running}>
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1.5"
+                    onClick={handleRun}
+                    disabled={running || !sessionId}
+                    title={!sessionId ? 'Attach to an app to run scripts' : undefined}
+                  >
                     {running ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (

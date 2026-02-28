@@ -1,19 +1,17 @@
-import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { Search, Square, Trash2, ChevronDown, Copy, Check, Cpu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
+import { NoAppAttachedState } from '@/components/devices/NoAppAttachedState'
 import type { MemoryScanMatch, MemoryScanEvent } from '@/types/session'
 import { startMemoryScan, stopMemoryScan } from '@/features/sessions/api'
-import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
 import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/memory')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? '',
-  }),
+export const Route = createFileRoute('/devices/$deviceId/memory')({
   component: MemoryPage,
 })
 
@@ -41,10 +39,9 @@ const PRESETS: Preset[] = [
 ]
 
 function MemoryPage() {
-  const { sessionId } = useSearch({
-    from: '/devices/$deviceId/app/$bundleId/memory',
-  })
-  const { messages } = useSessionMessages()
+  const { selectedApp } = useAttachedApps()
+  const sessionId = selectedApp?.sessionId ?? ''
+  const { messages } = useDeviceMessages()
 
   const [pattern, setPattern] = useState('')
   const [mode, setMode] = useState<PatternMode>('string')
@@ -112,8 +109,8 @@ function MemoryPage() {
     setScanning(false)
   }, [messages.length])
 
-  if (!sessionId) {
-    return <NoSessionEmptyState />
+  if (!selectedApp) {
+    return <NoAppAttachedState feature="Memory Scanner" />
   }
 
   const progressPct =

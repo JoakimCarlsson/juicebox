@@ -97,13 +97,13 @@ CREATE INDEX IF NOT EXISTS idx_clipboard_session ON clipboard_events(session_id,
 
 CREATE TABLE IF NOT EXISTS script_files (
     id         TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL REFERENCES sessions(id),
+    device_id  TEXT NOT NULL,
     name       TEXT NOT NULL,
     content    TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_script_files_name ON script_files(session_id, name);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_script_files_name ON script_files(device_id, name);
 
 CREATE TABLE IF NOT EXISTS script_runs (
     id             TEXT PRIMARY KEY,
@@ -127,5 +127,17 @@ func (d *DB) Migrate() error {
 		`ALTER TABLE sessions ADD COLUMN capabilities TEXT NOT NULL DEFAULT '[]'`,
 	)
 	_, _ = d.conn.Exec(`DROP TABLE IF EXISTS scripts`)
+
+	_, _ = d.conn.Exec(
+		`ALTER TABLE script_files ADD COLUMN device_id TEXT NOT NULL DEFAULT ''`,
+	)
+	_, _ = d.conn.Exec(`
+		UPDATE script_files SET device_id = (
+			SELECT s.device_id FROM sessions s WHERE s.id = script_files.session_id
+		) WHERE device_id = '' AND EXISTS (
+			SELECT 1 FROM pragma_table_info('script_files') WHERE name = 'session_id'
+		)
+	`)
+
 	return nil
 }

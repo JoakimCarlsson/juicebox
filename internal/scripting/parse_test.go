@@ -142,6 +142,42 @@ func TestApplyEdits_MultipleBlocksSameFile(t *testing.T) {
 	}
 }
 
+func TestParseEditBlocks_BundleIdPath(t *testing.T) {
+	input := "com.newleaf.app.android.victor/anti_minimize.ts\n```typescript\n<<<<<<< SEARCH\n=======\nJava.perform(() => {});\n>>>>>>> REPLACE\n```\n"
+	blocks := ParseEditBlocks(input)
+	if len(blocks) != 1 {
+		t.Fatalf("expected 1 block, got %d", len(blocks))
+	}
+	if blocks[0].Filename != "com.newleaf.app.android.victor/anti_minimize.ts" {
+		t.Errorf("filename = %q", blocks[0].Filename)
+	}
+}
+
+func TestParseEditBlocks_BundleIdPathBareBlock(t *testing.T) {
+	input := "Here's the script:\n\ncom.newleaf.app.android.victor/anti_minimize.ts\n```typescript\nJava.perform(() => {\n  console.log(\"hello\");\n});\n```\n"
+	blocks := ParseEditBlocks(input)
+	if len(blocks) != 1 {
+		t.Fatalf("expected 1 block, got %d", len(blocks))
+	}
+	if blocks[0].Filename != "com.newleaf.app.android.victor/anti_minimize.ts" {
+		t.Errorf("filename = %q", blocks[0].Filename)
+	}
+}
+
+func TestParseEditBlocks_FilenameInFenceLine(t *testing.T) {
+	input := "```com.newleaf.app.android.victor/anti_minimize.ts\nJava.perform(() => {});\n```\n"
+	blocks := ParseEditBlocks(input)
+	if len(blocks) != 1 {
+		t.Fatalf("expected 1 block, got %d", len(blocks))
+	}
+	if blocks[0].Filename != "com.newleaf.app.android.victor/anti_minimize.ts" {
+		t.Errorf("filename = %q", blocks[0].Filename)
+	}
+	if !blocks[0].IsNewFile() {
+		t.Error("expected IsNewFile")
+	}
+}
+
 func TestParseEditBlocks_IncompleteBlockNotReturned(t *testing.T) {
 	partial := "hook.ts\n```typescript\n<<<<<<< SEARCH\n=======\nconsole.log(1);\n"
 	blocks := ParseEditBlocks(partial)

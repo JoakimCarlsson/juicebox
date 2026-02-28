@@ -1,7 +1,8 @@
 package chat
 
 type chatRequest struct {
-	Message string `json:"message"`
+	Message  string `json:"message"`
+	BundleID string `json:"bundleId"`
 }
 
 type sseContentEvent struct {

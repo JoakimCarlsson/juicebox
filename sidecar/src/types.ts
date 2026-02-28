@@ -42,3 +42,9 @@ export interface SessionState {
   messageBuffer: string[];
   userScripts: Map<string, UserScriptState>;
 }
+
+export interface DeviceState {
+  id: string;
+  device: frida.Device;
+  platform: string;
+}

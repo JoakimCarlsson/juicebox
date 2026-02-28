@@ -1,17 +1,15 @@
-import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Trash2, FileText, ArrowDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { useSessionMessages } from '@/contexts/SessionMessageContext'
+import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
+import { useAttachedApps } from '@/contexts/AttachedAppsContext'
+import { NoAppAttachedState } from '@/components/devices/NoAppAttachedState'
 import type { LogcatEntry } from '@/types/session'
 import { cn } from '@/lib/utils'
-import { NoSessionEmptyState } from '@/components/sessions/NoSessionEmptyState'
 
-export const Route = createFileRoute('/devices/$deviceId/app/$bundleId/logs')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    sessionId: (search.sessionId as string) ?? '',
-  }),
+export const Route = createFileRoute('/devices/$deviceId/logs')({
   component: LogsPage,
 })
 
@@ -28,25 +26,38 @@ const ALL_LEVELS = ['V', 'D', 'I', 'W', 'E', 'F'] as const
 const MAX_ENTRIES = 10000
 
 function LogsPage() {
-  const { sessionId } = useSearch({
-    from: '/devices/$deviceId/app/$bundleId/logs',
-  })
-  const { messages } = useSessionMessages()
-  const [search, setSearch] = useState('')
-  const [clearIndex, setClearIndex] = useState(0)
-  const [activeLevels, setActiveLevels] = useState<Set<string>>(new Set(['D', 'I', 'W', 'E', 'F']))
+  const { selectedApp } = useAttachedApps()
 
-  const clear = useCallback(() => setClearIndex(messages.length), [messages.length])
+  if (!selectedApp) {
+    return <NoAppAttachedState feature="Logs" />
+  }
+
+  return <LogsPageInner />
+}
+
+function LogsPageInner() {
+  const { messages, clearByType } = useDeviceMessages()
+  const [search, setSearch] = useState('')
+  const [activeLevels, setActiveLevels] = useState<Set<string>>(new Set(['D', 'I', 'W', 'E', 'F']))
+  const [clearing, setClearing] = useState(false)
+
+  const clear = useCallback(async () => {
+    setClearing(true)
+    try {
+      await clearByType('logcat')
+    } finally {
+      setClearing(false)
+    }
+  }, [clearByType])
 
   const logcatMessages = useMemo(() => {
     const all = messages
-      .slice(clearIndex)
       .filter(
         (m): m is { type: 'logcat'; payload: LogcatEntry } => m.type === 'logcat' && !!m.payload
       )
       .map((m) => m.payload as unknown as LogcatEntry)
     return all.length > MAX_ENTRIES ? all.slice(all.length - MAX_ENTRIES) : all
-  }, [messages, clearIndex])
+  }, [messages])
 
   const filtered = useMemo(() => {
     return logcatMessages.filter((entry) => {
@@ -97,10 +108,6 @@ function LogsPage() {
     }
   }, [])
 
-  if (!sessionId) {
-    return <NoSessionEmptyState />
-  }
-
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">
@@ -137,9 +144,9 @@ function LogsPage() {
           />
         </div>
 
-        <Button variant="ghost" size="sm" className="h-8" onClick={clear}>
+        <Button variant="ghost" size="sm" className="h-8" onClick={clear} disabled={clearing}>
           <Trash2 className="mr-1.5 h-3 w-3" />
-          Clear
+          {clearing ? 'Clearing...' : 'Clear'}
         </Button>
 
         <span className="text-xs text-muted-foreground ml-auto">

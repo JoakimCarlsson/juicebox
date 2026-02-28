@@ -20,7 +20,7 @@ func NewFileManager(database *db.DB, hub *devicehub.Hub) *FileManager {
 
 type ScriptFile struct {
 	ID        string
-	SessionID string
+	DeviceID  string
 	Name      string
 	Content   string
 	CreatedAt int64
@@ -28,14 +28,14 @@ type ScriptFile struct {
 }
 
 func (fm *FileManager) Upsert(
-	sessionID, name, content string,
+	deviceID, name, content string,
 ) (*ScriptFile, error) {
 	now := time.Now().UnixMilli()
 	fileID := fmt.Sprintf("sf_%d", time.Now().UnixNano())
 
 	if err := fm.db.UpsertScriptFile(db.ScriptFileRow{
 		ID:        fileID,
-		SessionID: sessionID,
+		DeviceID:  deviceID,
 		Name:      name,
 		Content:   content,
 		CreatedAt: now,
@@ -44,20 +44,20 @@ func (fm *FileManager) Upsert(
 		return nil, fmt.Errorf("scripting.Upsert: %w", err)
 	}
 
-	f, err := fm.db.GetScriptFile(sessionID, name)
+	f, err := fm.db.GetScriptFile(deviceID, name)
 	if err != nil || f == nil {
 		return nil, fmt.Errorf(
 			"scripting.Upsert: failed to read back script file",
 		)
 	}
 
-	fm.broadcastFileWrite(sessionID, name)
+	fm.broadcastFileWrite(deviceID, name)
 
 	return rowToFile(f), nil
 }
 
-func (fm *FileManager) Get(sessionID, name string) (*ScriptFile, error) {
-	f, err := fm.db.GetScriptFile(sessionID, name)
+func (fm *FileManager) Get(deviceID, name string) (*ScriptFile, error) {
+	f, err := fm.db.GetScriptFile(deviceID, name)
 	if err != nil {
 		return nil, fmt.Errorf("scripting.Get: %w", err)
 	}
@@ -78,8 +78,8 @@ func (fm *FileManager) GetByID(id string) (*ScriptFile, error) {
 	return rowToFile(f), nil
 }
 
-func (fm *FileManager) List(sessionID string) ([]ScriptFile, error) {
-	rows, err := fm.db.GetScriptFiles(sessionID)
+func (fm *FileManager) List(deviceID string) ([]ScriptFile, error) {
+	rows, err := fm.db.GetScriptFiles(deviceID)
 	if err != nil {
 		return nil, fmt.Errorf("scripting.List: %w", err)
 	}
@@ -95,12 +95,12 @@ func (fm *FileManager) Delete(id string) error {
 	return fm.db.DeleteScriptFile(id)
 }
 
-func (fm *FileManager) broadcastFileWrite(sessionID, name string) {
+func (fm *FileManager) broadcastFileWrite(deviceID, name string) {
 	if fm.hub == nil {
 		return
 	}
 	payload, _ := json.Marshal(map[string]string{"name": name})
-	if data, err := devicehub.Marshal("file_write", sessionID, json.RawMessage(payload)); err == nil {
+	if data, err := devicehub.Marshal("file_write", deviceID, json.RawMessage(payload)); err == nil {
 		fm.hub.Broadcast(data)
 	}
 }
@@ -108,7 +108,7 @@ func (fm *FileManager) broadcastFileWrite(sessionID, name string) {
 func rowToFile(r *db.ScriptFileRow) *ScriptFile {
 	return &ScriptFile{
 		ID:        r.ID,
-		SessionID: r.SessionID,
+		DeviceID:  r.DeviceID,
 		Name:      r.Name,
 		Content:   r.Content,
 		CreatedAt: r.CreatedAt,
