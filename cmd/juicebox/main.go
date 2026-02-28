@@ -10,7 +10,6 @@ import (
 
 	sqlitestore "github.com/joakimcarlsson/ai/integrations/sqlite"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
-	"github.com/joakimcarlsson/juicebox/internal/config"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/chat"
@@ -21,8 +20,6 @@ import (
 )
 
 func main() {
-	appConfig := config.Load()
-
 	database, err := db.New("juicebox.db")
 	if err != nil {
 		log.Fatal(err)
@@ -58,12 +55,6 @@ func main() {
 
 	slog.Info("CA certificate ready", "path", certManager.CAPEMPath())
 
-	if appConfig.LLM.Configured() {
-		slog.Info("LLM provider configured", "provider", appConfig.LLM.Provider)
-	} else {
-		slog.Info("LLM provider not configured, AI chat disabled")
-	}
-
 	deviceSetups := map[string]session.DeviceSetup{
 		"android": session.NewAndroidSetup(bridgeClient),
 		"ios":     &session.IOSSetup{},
@@ -92,7 +83,6 @@ func main() {
 		bridgeClient,
 		manager,
 		hubManager,
-		appConfig,
 		chatStore,
 	)
 

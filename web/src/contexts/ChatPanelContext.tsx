@@ -1,6 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import type { PanelImperativeHandle } from 'react-resizable-panels'
-import { fetchChatStatus, fetchChatHistory, streamChat, type SSEEvent } from '@/features/chat/api'
+import {
+  fetchChatStatus,
+  fetchChatHistory,
+  streamChat,
+  fetchConversations,
+  createConversation,
+  deleteConversation,
+  renameConversation,
+  updateConversationModel,
+  type SSEEvent,
+  type Conversation,
+} from '@/features/chat/api'
+import { fetchAvailableModels, type AvailableModel } from '@/features/settings/api'
 import { useAttachedApps } from '@/contexts/AttachedAppsContext'
 
 export type MessagePart =
@@ -25,6 +37,16 @@ interface ChatPanelContextValue {
   onPanelResize: (sizePercent: number) => void
   sendMessage: (text: string) => void
   clearChat: () => void
+  conversations: Conversation[]
+  activeConversationId: string | null
+  selectedModel: string
+  availableModels: AvailableModel[]
+  setSelectedModel: (model: string) => void
+  switchConversation: (id: string) => void
+  startNewConversation: () => void
+  deleteConvo: (id: string) => void
+  renameConvo: (id: string, title: string) => void
+  refreshConversations: () => void
 }
 
 const ChatPanelContext = createContext<ChatPanelContextValue | null>(null)
@@ -51,52 +73,106 @@ export function ChatPanelProvider({
   const abortRef = useRef<AbortController | null>(null)
   const lastExpandedSize = useRef(30)
 
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const [selectedModel, setSelectedModelState] = useState('')
+  const [availableModels, setAvailableModels] = useState<AvailableModel[]>([])
+  const skipNextHistoryLoad = useRef(false)
+
   useEffect(() => {
     if (!deviceId) return
     fetchChatStatus(deviceId)
-      .then((status) => {
-        setConfigured(status.configured)
-      })
+      .then((status) => setConfigured(status.configured))
       .catch(() => setConfigured(false))
   }, [deviceId])
 
   useEffect(() => {
-    if (!deviceId || configured !== true) return
-    fetchChatHistory(deviceId)
-      .then((history) => {
-        if (history.messages.length > 0) {
-          setMessages(
-            history.messages.map((m) => {
-              const msg: ChatMessage = {
-                id: nextId(),
-                role: m.role as 'user' | 'assistant',
-                content: m.content,
-              }
-              if (m.role === 'assistant') {
-                if (m.parts && m.parts.length > 0) {
-                  msg.parts = m.parts.map((p): MessagePart => {
-                    if (p.type === 'tool_call') {
-                      return {
-                        type: 'tool_call',
-                        id: p.id || '',
-                        name: p.name || '',
-                        status: 'done',
-                        result: p.result,
-                      }
-                    }
-                    return { type: 'text', content: p.content || '' }
-                  })
-                } else {
-                  msg.parts = [{ type: 'text', content: m.content }]
-                }
-              }
-              return msg
-            })
-          )
+    if (configured !== true || !deviceId) return
+    Promise.all([fetchAvailableModels(), fetchConversations(deviceId)])
+      .then(([models, convos]) => {
+        setAvailableModels(models)
+        setConversations(convos)
+        if (convos.length > 0) {
+          setActiveConversationId(convos[0].id)
+          const savedModel = convos[0].model
+          if (savedModel && models.some((m) => m.id === savedModel)) {
+            setSelectedModelState(savedModel)
+          } else if (models.length > 0) {
+            setSelectedModelState(models[0].id)
+          }
+        } else if (models.length > 0) {
+          setSelectedModelState(models[0].id)
         }
       })
       .catch(() => {})
   }, [deviceId, configured])
+
+  const refreshConversations = useCallback(() => {
+    if (!deviceId) return
+    fetchConversations(deviceId)
+      .then((convos) => setConversations(convos))
+      .catch(() => {})
+  }, [deviceId])
+
+  const loadHistory = useCallback(
+    (conversationId: string) => {
+      if (!deviceId) return
+      fetchChatHistory(deviceId, conversationId)
+        .then((history) => {
+          if (history.messages.length > 0) {
+            setMessages(
+              history.messages.map((m) => {
+                const msg: ChatMessage = {
+                  id: nextId(),
+                  role: m.role as 'user' | 'assistant',
+                  content: m.content,
+                }
+                if (m.role === 'assistant') {
+                  if (m.parts && m.parts.length > 0) {
+                    msg.parts = m.parts.map((p): MessagePart => {
+                      if (p.type === 'tool_call') {
+                        return {
+                          type: 'tool_call',
+                          id: p.id || '',
+                          name: p.name || '',
+                          status: 'done',
+                          result: p.result,
+                        }
+                      }
+                      return { type: 'text', content: p.content || '' }
+                    })
+                  } else {
+                    msg.parts = [{ type: 'text', content: m.content }]
+                  }
+                }
+                return msg
+              })
+            )
+          } else {
+            setMessages([])
+          }
+        })
+        .catch(() => setMessages([]))
+    },
+    [deviceId]
+  )
+
+  useEffect(() => {
+    if (!activeConversationId) return
+
+    if (skipNextHistoryLoad.current) {
+      skipNextHistoryLoad.current = false
+    } else {
+      loadHistory(activeConversationId)
+    }
+
+    const convo = conversations.find((c) => c.id === activeConversationId)
+    if (convo?.model && availableModels.some((m) => m.id === convo.model)) {
+      setSelectedModelState(convo.model)
+    } else if (availableModels.length > 0 && !selectedModel) {
+      setSelectedModelState(availableModels[0].id)
+    }
+  }, [activeConversationId, loadHistory, conversations, availableModels])
 
   const toggle = useCallback(() => {
     const panel = panelRef.current
@@ -117,28 +193,81 @@ export function ChatPanelProvider({
     }
   }, [])
 
-  const sendMessage = useCallback(
-    (text: string) => {
-      if (!deviceId || isStreaming || !text.trim()) return
+  const switchConversation = useCallback(
+    (id: string) => {
+      if (isStreaming) return
+      setActiveConversationId(id)
+    },
+    [isStreaming]
+  )
 
-      const userMsg: ChatMessage = {
-        id: nextId(),
-        role: 'user',
-        content: text.trim(),
+  const startNewConversation = useCallback(async () => {
+    if (!deviceId || isStreaming) return
+    try {
+      const convo = await createConversation(deviceId, selectedModel)
+      setConversations((prev) => [convo, ...prev])
+      skipNextHistoryLoad.current = true
+      setActiveConversationId(convo.id)
+      setMessages([])
+    } catch {}
+  }, [deviceId, isStreaming, selectedModel])
+
+  const deleteConvo = useCallback(
+    async (id: string) => {
+      try {
+        await deleteConversation(id)
+        setConversations((prev) => prev.filter((c) => c.id !== id))
+        if (activeConversationId === id) {
+          setActiveConversationId(null)
+          setMessages([])
+        }
+      } catch {}
+    },
+    [activeConversationId]
+  )
+
+  const renameConvo = useCallback(async (id: string, title: string) => {
+    try {
+      const updated = await renameConversation(id, title)
+      setConversations((prev) => prev.map((c) => (c.id === id ? updated : c)))
+    } catch {}
+  }, [])
+
+  const setSelectedModel = useCallback(
+    (model: string) => {
+      setSelectedModelState(model)
+      if (activeConversationId) {
+        updateConversationModel(activeConversationId, model).catch(() => {})
       }
-      const assistantId = nextId()
-      const assistantMsg: ChatMessage = {
-        id: assistantId,
-        role: 'assistant',
-        content: '',
-        parts: [],
-        isStreaming: true,
-      }
+    },
+    [activeConversationId]
+  )
 
-      setMessages((prev) => [...prev, userMsg, assistantMsg])
-      setIsStreaming(true)
+  function doSend(text: string, convoId: string) {
+    const userMsg: ChatMessage = {
+      id: nextId(),
+      role: 'user',
+      content: text.trim(),
+    }
+    const assistantId = nextId()
+    const assistantMsg: ChatMessage = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      parts: [],
+      isStreaming: true,
+    }
 
-      const controller = streamChat(deviceId, text.trim(), bundleId, (event: SSEEvent) => {
+    setMessages((prev) => [...prev, userMsg, assistantMsg])
+    setIsStreaming(true)
+
+    const controller = streamChat(
+      deviceId,
+      text.trim(),
+      bundleId,
+      selectedModel,
+      convoId,
+      (event: SSEEvent) => {
         switch (event.type) {
           case 'content': {
             setMessages((prev) =>
@@ -200,6 +329,7 @@ export function ChatPanelProvider({
               prev.map((m) => (m.id === assistantId ? { ...m, isStreaming: false } : m))
             )
             setIsStreaming(false)
+            refreshConversations()
             break
 
           case 'error':
@@ -217,11 +347,33 @@ export function ChatPanelProvider({
             setIsStreaming(false)
             break
         }
-      })
+      }
+    )
 
-      abortRef.current = controller
+    abortRef.current = controller
+  }
+
+  const sendMessage = useCallback(
+    (text: string) => {
+      if (!deviceId || isStreaming || !text.trim() || !selectedModel) return
+
+      const convoId = activeConversationId
+
+      if (!convoId) {
+        createConversation(deviceId, selectedModel)
+          .then((convo) => {
+            setConversations((prev) => [convo, ...prev])
+            skipNextHistoryLoad.current = true
+            setActiveConversationId(convo.id)
+            doSend(text, convo.id)
+          })
+          .catch(() => {})
+        return
+      }
+
+      doSend(text, convoId)
     },
-    [deviceId, bundleId, isStreaming]
+    [deviceId, bundleId, isStreaming, selectedModel, activeConversationId]
   )
 
   const clearChat = useCallback(() => {
@@ -245,6 +397,16 @@ export function ChatPanelProvider({
         onPanelResize,
         sendMessage,
         clearChat,
+        conversations,
+        activeConversationId,
+        selectedModel,
+        availableModels,
+        setSelectedModel,
+        switchConversation,
+        startNewConversation,
+        deleteConvo,
+        renameConvo,
+        refreshConversations,
       }}
     >
       {children}
