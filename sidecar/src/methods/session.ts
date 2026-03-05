@@ -156,16 +156,26 @@ async function spawnAndInject(
     }
   }
 
-  try {
-    await script.exports.invoke("ssl", "bypass", []);
-  } catch (err) {
-    logAgentError("ssl bypass failed", err);
+  if (evasionConfig?.ssl_bypass !== false) {
+    try {
+      await script.exports.invoke("ssl", "bypass", []);
+    } catch (err) {
+      logAgentError("ssl bypass failed", err);
+    }
+  }
+
+  if (evasionConfig?.crash_handler !== false) {
+    try {
+      await script.exports.invoke("crash", "enable", []);
+    } catch (err) {
+      logAgentError("crash handler setup failed", err);
+    }
   }
 
   try {
-    await script.exports.invoke("crash", "enable", []);
+    await script.exports.invoke("proxyredirect", "enable", [8082]);
   } catch (err) {
-    logAgentError("crash handler setup failed", err);
+    logAgentError("proxy redirect failed", err);
   }
 
   if (!noResume) {

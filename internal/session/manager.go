@@ -344,7 +344,7 @@ func (m *Manager) SpawnApp(
 	}, nil
 }
 
-func (m *Manager) AttachApp(deviceID, bundleID string) (*SpawnResult, error) {
+func (m *Manager) AttachApp(deviceID, bundleID string, evasion *bridge.EvasionConfig) (*SpawnResult, error) {
 	m.mu.RLock()
 	dc, ok := m.devices[deviceID]
 	m.mu.RUnlock()
@@ -354,7 +354,7 @@ func (m *Manager) AttachApp(deviceID, bundleID string) (*SpawnResult, error) {
 
 	logger := slog.With("device_id", deviceID, "source", "manager")
 
-	bridgeResp, err := m.bridge.Attach(deviceID, bundleID, nil, true)
+	bridgeResp, err := m.bridge.Attach(deviceID, bundleID, evasion, true)
 	if err != nil {
 		return nil, fmt.Errorf("manager: attach app: %w", err)
 	}

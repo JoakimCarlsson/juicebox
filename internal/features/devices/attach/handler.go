@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 )
@@ -18,7 +19,9 @@ func NewHandler(manager *session.Manager) *Handler {
 }
 
 type attachRequest struct {
-	BundleID string `json:"bundleId"`
+	BundleID  string               `json:"bundleId"`
+	SessionID string               `json:"sessionId,omitempty"`
+	Evasion   *bridge.EvasionConfig `json:"evasion,omitempty"`
 }
 
 func (h *Handler) Handle(c *router.Context) {
@@ -41,7 +44,7 @@ func (h *Handler) Handle(c *router.Context) {
 		return
 	}
 
-	result, err := h.manager.AttachApp(deviceID, body.BundleID)
+	result, err := h.manager.AttachApp(deviceID, body.BundleID, body.Evasion)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

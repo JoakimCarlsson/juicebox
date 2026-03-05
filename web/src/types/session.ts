@@ -2,6 +2,8 @@ export interface EvasionConfig {
   frida_bypass?: boolean
   root_bypass?: boolean
   emulator_bypass?: boolean
+  ssl_bypass?: boolean
+  crash_handler?: boolean
 }
 
 export interface AttachResponse {

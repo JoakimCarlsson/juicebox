@@ -10,6 +10,7 @@ import { attachApp } from '@/features/devices/api'
 import { detachSession } from '@/features/sessions/api'
 import { appsQueryOptions } from '@/features/devices/queries'
 import type { App } from '@/types/device'
+import type { EvasionConfig } from '@/types/session'
 
 export const Route = createFileRoute('/devices/$deviceId/apps')({
   component: AppsPage,
@@ -34,7 +35,7 @@ function AppsPage() {
   const attachedSet = useMemo(() => new Set(attachedApps.map((a) => a.bundleId)), [attachedApps])
 
   const handleAttach = useCallback(
-    async (app: App) => {
+    async (app: App, evasion?: EvasionConfig) => {
       if (attachedSet.has(app.identifier)) {
         selectApp(app.identifier)
         return
@@ -42,7 +43,7 @@ function AppsPage() {
 
       setAttachingId(app.identifier)
       try {
-        const resp = await attachApp(deviceId, app.identifier)
+        const resp = await attachApp(deviceId, app.identifier, undefined, evasion)
         addApp(app.identifier, resp.sessionId)
       } catch {
       } finally {

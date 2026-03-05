@@ -21,10 +21,19 @@ const hookedModules = new Set<string>();
 let _nativeApplied = false;
 let _javaApplied = false;
 
+function tryAttach(
+  addr: NativePointer,
+  callbacks: InvocationListenerCallbacks,
+): void {
+  try {
+    Interceptor.attach(addr, callbacks);
+  } catch (_) {}
+}
+
 function hookNativeVerification(mod: Module): void {
   const setVerify = mod.findExportByName("SSL_CTX_set_verify");
   if (setVerify) {
-    Interceptor.attach(setVerify, {
+    tryAttach(setVerify, {
       onEnter(args) {
         args[1] = ptr(0);
         args[2] = ptr(0);
@@ -34,7 +43,7 @@ function hookNativeVerification(mod: Module): void {
 
   const setCustomVerify = mod.findExportByName("SSL_CTX_set_custom_verify");
   if (setCustomVerify) {
-    Interceptor.attach(setCustomVerify, {
+    tryAttach(setCustomVerify, {
       onEnter(args) {
         args[1] = ptr(0);
         args[2] = nopVerifyCallback;
@@ -44,7 +53,7 @@ function hookNativeVerification(mod: Module): void {
 
   const sslSetCustomVerify = mod.findExportByName("SSL_set_custom_verify");
   if (sslSetCustomVerify) {
-    Interceptor.attach(sslSetCustomVerify, {
+    tryAttach(sslSetCustomVerify, {
       onEnter(args) {
         args[1] = ptr(0);
         args[2] = nopVerifyCallback;
@@ -56,7 +65,7 @@ function hookNativeVerification(mod: Module): void {
     "SSL_CTX_set_cert_verify_callback",
   );
   if (setCertVerifyCb) {
-    Interceptor.attach(setCertVerifyCb, {
+    tryAttach(setCertVerifyCb, {
       onEnter(args) {
         args[1] = nopCertVerifyCallback;
         args[2] = ptr(0);
@@ -66,14 +75,11 @@ function hookNativeVerification(mod: Module): void {
 
   const x509VerifyCert = mod.findExportByName("X509_verify_cert");
   if (x509VerifyCert) {
-    Interceptor.replace(
-      x509VerifyCert,
-      new NativeCallback(
-        (_ctx: NativePointer): number => 1,
-        "int",
-        ["pointer"],
-      ),
-    );
+    tryAttach(x509VerifyCert, {
+      onLeave(retval) {
+        retval.replace(ptr(1));
+      },
+    });
   }
 }
 
@@ -101,9 +107,11 @@ function bypassNative(): BypassNativeResult {
       if (!SSL_LIB_PATTERN.test(mod.name)) return;
       if (hookedModules.has(mod.path)) return;
       hookedModules.add(mod.path);
-      try {
-        hookNativeVerification(mod);
-      } catch (_) {}
+      setTimeout(() => {
+        try {
+          hookNativeVerification(mod);
+        } catch (_) {}
+      }, 0);
     },
   });
 
