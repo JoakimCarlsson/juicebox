@@ -80,6 +80,15 @@ function FlutterPage() {
     return <NoAppAttachedState feature="Flutter Channels" />
   }
 
+  if (selectedApp.isFlutter === null) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 h-full text-muted-foreground">
+        <Smartphone className="h-8 w-8 opacity-30 animate-pulse" />
+        <p className="text-sm">Detecting Flutter...</p>
+      </div>
+    )
+  }
+
   if (selectedApp.isFlutter === false) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 h-full text-muted-foreground">
