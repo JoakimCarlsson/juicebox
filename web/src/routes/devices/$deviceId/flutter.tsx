@@ -43,22 +43,20 @@ const DIRECTION_LABELS: Record<string, string> = {
 
 function FlutterPage() {
   const { selectedApp } = useAttachedApps()
-  const { messages } = useDeviceMessages()
+  const { messages, clearByType } = useDeviceMessages()
   const [search, setSearch] = useState('')
-  const [clearIndex, setClearIndex] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const clear = useCallback(() => setClearIndex(messages.length), [messages.length])
+  const clear = useCallback(() => clearByType('flutter_channel'), [clearByType])
 
   const events = useMemo(() => {
     return messages
-      .slice(clearIndex)
       .filter(
         (m): m is { type: 'flutter_channel'; payload: FlutterChannelEvent } =>
           m.type === 'flutter_channel' && !!m.payload
       )
       .map((m) => m.payload as unknown as FlutterChannelEvent)
-  }, [messages, clearIndex])
+  }, [messages])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return events
