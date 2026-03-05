@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 import { Search, Trash2, Smartphone, ArrowRight, ArrowLeft } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -73,8 +73,34 @@ function FlutterPage() {
     return filtered.find((e) => e.id === selectedId) ?? null
   }, [filtered, selectedId])
 
+  const { deviceId } = useParams({ strict: false })
+  const navigate = useNavigate()
+
   if (!selectedApp) {
     return <NoAppAttachedState feature="Flutter Channels" />
+  }
+
+  if (selectedApp.isFlutter === false) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 h-full text-muted-foreground">
+        <Smartphone className="h-8 w-8 opacity-30" />
+        <p className="text-sm font-medium">Connect to a Flutter app</p>
+        <p className="text-xs opacity-60">The attached app is not a Flutter app</p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            navigate({
+              to: '/devices/$deviceId/apps',
+              params: { deviceId: deviceId! },
+            })
+          }
+        >
+          <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+          Go to Apps
+        </Button>
+      </div>
+    )
   }
 
   return (

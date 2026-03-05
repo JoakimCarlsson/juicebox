@@ -194,14 +194,16 @@ async function spawnAndInject(
         const flutterInfo = await script.exports.invoke("flutter", "isFlutter", []) as { flutter: boolean; cronet: boolean } | null;
         if (flutterInfo?.flutter) {
           await script.exports.invoke("flutter", "enableChannels", []);
-          console.log(`[${sessionId}] flutter app detected, channel hooks enabled`);
+          broadcast(state, JSON.stringify({ type: "flutter_detected", payload: { flutter: true, cronet: flutterInfo.cronet } }) + "\n");
           return;
         }
       } catch (err) {
         logAgentError("flutter detection failed", err);
+        broadcast(state, JSON.stringify({ type: "flutter_detected", payload: { flutter: false, cronet: false } }) + "\n");
         return;
       }
     }
+    broadcast(state, JSON.stringify({ type: "flutter_detected", payload: { flutter: false, cronet: false } }) + "\n");
   })();
 
   return { sessionId, pid };
