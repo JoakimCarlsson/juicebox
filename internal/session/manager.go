@@ -737,6 +737,34 @@ func (m *Manager) bridgeSubscribeForward(sess *Session, dc *DeviceConnection) {
 			}
 		}
 
+		if msg.Type == "flutter_channel" {
+			var fcEvt struct {
+				ID        string  `json:"id"`
+				Channel   string  `json:"channel"`
+				Method    *string `json:"method"`
+				Direction string  `json:"direction"`
+				Arguments *string `json:"arguments"`
+				Result    *string `json:"result"`
+				Timestamp int64   `json:"timestamp"`
+			}
+			if err := json.Unmarshal(msg.Payload, &fcEvt); err == nil &&
+				fcEvt.ID != "" {
+				if fcEvt.Timestamp == 0 {
+					fcEvt.Timestamp = time.Now().UnixMilli()
+				}
+				m.writer.WriteFlutterChannel(&db.FlutterChannelRow{
+					ID:        fcEvt.ID,
+					SessionID: sess.ID,
+					Channel:   fcEvt.Channel,
+					Method:    fcEvt.Method,
+					Direction: fcEvt.Direction,
+					Arguments: fcEvt.Arguments,
+					Result:    fcEvt.Result,
+					Timestamp: fcEvt.Timestamp,
+				})
+			}
+		}
+
 		if msg.Type == "crash" {
 			var crash struct {
 				ID               string            `json:"id"`

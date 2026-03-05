@@ -95,6 +95,18 @@ CREATE TABLE IF NOT EXISTS clipboard_events (
 );
 CREATE INDEX IF NOT EXISTS idx_clipboard_session ON clipboard_events(session_id, timestamp);
 
+CREATE TABLE IF NOT EXISTS flutter_channel_events (
+    id         TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    channel    TEXT NOT NULL,
+    method     TEXT,
+    direction  TEXT NOT NULL,
+    arguments  TEXT,
+    result     TEXT,
+    timestamp  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_flutter_channel_session ON flutter_channel_events(session_id, timestamp);
+
 CREATE TABLE IF NOT EXISTS script_files (
     id         TEXT PRIMARY KEY,
     device_id  TEXT NOT NULL,

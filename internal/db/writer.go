@@ -8,6 +8,7 @@ type writeOp struct {
 	crashRow       *CrashRow
 	cryptoEvent    *CryptoEventRow
 	clipboardEvent *ClipboardEventRow
+	flutterChannel *FlutterChannelRow
 }
 
 type AsyncWriter struct {
@@ -66,6 +67,14 @@ func (w *AsyncWriter) WriteClipboardEvent(c *ClipboardEventRow) {
 	}
 }
 
+func (w *AsyncWriter) WriteFlutterChannel(r *FlutterChannelRow) {
+	select {
+	case w.ch <- writeOp{flutterChannel: r}:
+	default:
+		slog.Warn("db write buffer full, dropping flutter channel event", "id", r.ID)
+	}
+}
+
 func (w *AsyncWriter) loop() {
 	defer close(w.done)
 	for op := range w.ch {
@@ -92,6 +101,11 @@ func (w *AsyncWriter) loop() {
 		if op.clipboardEvent != nil {
 			if err := w.db.InsertClipboardEvent(op.clipboardEvent); err != nil {
 				slog.Error("async write clipboard event", "error", err)
+			}
+		}
+		if op.flutterChannel != nil {
+			if err := w.db.InsertFlutterChannel(op.flutterChannel); err != nil {
+				slog.Error("async write flutter channel event", "error", err)
 			}
 		}
 	}

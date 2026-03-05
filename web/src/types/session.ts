@@ -133,6 +133,21 @@ export interface ClipboardEventsResponse {
   total: number
 }
 
+export interface FlutterChannelEvent {
+  id: string
+  channel: string
+  method?: string
+  direction: 'dart_to_native' | 'native_to_dart'
+  arguments?: string
+  result?: string
+  timestamp: number
+}
+
+export interface FlutterChannelEventsResponse {
+  events: FlutterChannelEvent[]
+  total: number
+}
+
 export interface CertInfo {
   subject: string
   issuer: string

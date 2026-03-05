@@ -173,3 +173,30 @@ func (d *DB) ListClipboardEventsByDevice(
 	defer rows.Close()
 	return scanClipboardEvents(rows)
 }
+
+func (d *DB) ListFlutterChannelsByDevice(
+	deviceID string,
+	limit, offset int,
+) ([]FlutterChannelRow, error) {
+	rows, err := d.conn.Query(
+		`SELECT fc.id, fc.session_id, fc.channel, fc.method, fc.direction, fc.arguments, fc.result, fc.timestamp
+		 FROM flutter_channel_events fc
+		 JOIN sessions s ON fc.session_id = s.id
+		 WHERE s.device_id = ?
+		 ORDER BY fc.timestamp ASC LIMIT ? OFFSET ?`,
+		deviceID, limit, offset,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("db.ListFlutterChannelsByDevice: %w", err)
+	}
+	defer rows.Close()
+	return scanFlutterChannels(rows)
+}
+
+func (d *DB) ClearFlutterChannelsByDevice(deviceID string) error {
+	_, err := d.conn.Exec(
+		`DELETE FROM flutter_channel_events WHERE session_id IN (SELECT id FROM sessions WHERE device_id = ?)`,
+		deviceID,
+	)
+	return err
+}

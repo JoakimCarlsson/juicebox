@@ -58,6 +58,10 @@ func (h *Handler) ClearClipboard(
 	h.clearByDevice(c, h.db.ClearClipboardByDevice)
 }
 
+func (h *Handler) ClearFlutterChannels(c *router.Context) {
+	h.clearByDevice(c, h.db.ClearFlutterChannelsByDevice)
+}
+
 func (h *Handler) Messages(c *router.Context) {
 	deviceID := c.Param("deviceId")
 	if deviceID == "" {
@@ -289,6 +293,48 @@ func (h *Handler) Clipboard(c *router.Context) {
 		}
 		if r.CallerStack != nil {
 			evt["callerStack"] = *r.CallerStack
+		}
+		events = append(events, evt)
+	}
+
+	c.JSON(http.StatusOK, map[string]any{
+		"events": events,
+		"total":  len(events),
+	})
+}
+
+func (h *Handler) FlutterChannels(c *router.Context) {
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
+		return
+	}
+
+	limit := c.QueryIntDefault("limit", 500)
+	offset := c.QueryIntDefault("offset", 0)
+
+	rows, err := h.db.ListFlutterChannelsByDevice(deviceID, limit, offset)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	events := make([]map[string]any, 0, len(rows))
+	for _, r := range rows {
+		evt := map[string]any{
+			"id":        r.ID,
+			"channel":   r.Channel,
+			"direction": r.Direction,
+			"timestamp": r.Timestamp,
+		}
+		if r.Method != nil {
+			evt["method"] = *r.Method
+		}
+		if r.Arguments != nil {
+			evt["arguments"] = *r.Arguments
+		}
+		if r.Result != nil {
+			evt["result"] = *r.Result
 		}
 		events = append(events, evt)
 	}

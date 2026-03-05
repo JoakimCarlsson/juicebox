@@ -187,6 +187,20 @@ async function spawnAndInject(
     );
   }
 
+  // Flutter detection must run after resume — libflutter.so isn't loaded while suspended.
+  // Use a delay to let the app initialize and load its native libraries.
+  setTimeout(async () => {
+    try {
+      const flutterInfo = await script.exports.invoke("flutter", "isFlutter", []) as { flutter: boolean; cronet: boolean } | null;
+      if (flutterInfo?.flutter) {
+        await script.exports.invoke("flutter", "enableChannels", []);
+        console.log(`[${sessionId}] flutter app detected, channel hooks enabled`);
+      }
+    } catch (err) {
+      logAgentError("flutter detection failed", err);
+    }
+  }, 3000);
+
   return { sessionId, pid };
 }
 

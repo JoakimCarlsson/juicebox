@@ -266,6 +266,7 @@ func (h *Handler) Handle(c *router.Context) {
 					chattools.NewGetCrashes(h.db, activeSessionID),
 					chattools.NewGetCryptoEvents(h.db, activeSessionID),
 					chattools.NewGetClipboardEvents(h.db, activeSessionID),
+					chattools.NewGetFlutterEvents(h.db, activeSessionID),
 					chattools.NewListKeystoreEntries(
 						h.manager,
 						activeSessionID,

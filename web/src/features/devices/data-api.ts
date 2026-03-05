@@ -44,3 +44,12 @@ export const clearDeviceLogs = (id: string) => clearData(id, 'logs')
 export const clearDeviceCrashes = (id: string) => clearData(id, 'crashes')
 export const clearDeviceCrypto = (id: string) => clearData(id, 'crypto')
 export const clearDeviceClipboard = (id: string) => clearData(id, 'clipboard')
+export const clearDeviceFlutterChannels = (id: string) => clearData(id, 'flutter-channels')
+
+export async function fetchDeviceFlutterChannels(deviceId: string, limit = 500, offset = 0) {
+  const res = await fetch(
+    `/api/v1/devices/${deviceId}/data/flutter-channels?limit=${limit}&offset=${offset}`
+  )
+  if (!res.ok) throw new Error('Failed to fetch flutter channels')
+  return res.json()
+}
