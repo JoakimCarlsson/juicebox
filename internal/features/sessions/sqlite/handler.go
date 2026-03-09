@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/go-router/router/v2"
 	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/session"
 	_ "modernc.org/sqlite"

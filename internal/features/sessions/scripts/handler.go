@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/go-router/router/v2"
 	"github.com/joakimcarlsson/juicebox/internal/response"
 	"github.com/joakimcarlsson/juicebox/internal/scripting"
 	"github.com/joakimcarlsson/juicebox/internal/session"
