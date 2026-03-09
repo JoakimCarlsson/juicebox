@@ -32,7 +32,7 @@ export async function stopFridaServer(deviceId: string): Promise<void> {
       "-s",
       deviceId,
       "shell",
-      "su -c 'killall frida-server' 2>/dev/null || killall frida-server 2>/dev/null",
+      "su -c 'killall frida-server' 2>/dev/null; killall frida-server 2>/dev/null",
     ]);
   } catch {}
   for (let i = 0; i < 5; i++) {
@@ -118,10 +118,8 @@ export async function ensureFridaServer(deviceId: string): Promise<void> {
     const unxz = await exec(["unxz", "-f", tmpXz]);
     if (unxz.code !== 0) throw new Error(`unxz failed: ${unxz.stderr}`);
 
-    console.log(`cached ${binName} in sidecar/bin/`);
   }
 
-  console.log("pushing frida-server to device...");
   const push = await exec([
     "adb",
     "-s",
@@ -148,31 +146,25 @@ export async function ensureFridaServer(deviceId: string): Promise<void> {
 
   if (isRoot) {
     await exec(["adb", "-s", deviceId, "shell", "setenforce 0"]);
-    console.log("starting frida-server (adb root)...");
     new Deno.Command("adb", {
       args: ["-s", deviceId, "shell", `${DEVICE_SERVER_PATH} -D &`],
       stdout: "null",
       stderr: "null",
     }).spawn();
   } else {
-    console.log("adb root unavailable, using su (Magisk)...");
     await exec([
       "adb",
       "-s",
       deviceId,
       "shell",
-      "su",
-      "-c",
-      "setenforce 0",
+      "su -c 'setenforce 0'",
     ]);
     new Deno.Command("adb", {
       args: [
         "-s",
         deviceId,
         "shell",
-        "su",
-        "-c",
-        `${DEVICE_SERVER_PATH} -D &`,
+        `su -c 'setsid runcon u:r:su:s0 ${DEVICE_SERVER_PATH} -D &'`,
       ],
       stdout: "null",
       stderr: "null",
@@ -180,5 +172,4 @@ export async function ensureFridaServer(deviceId: string): Promise<void> {
   }
 
   await waitForFridaReady(deviceId, 20);
-  console.log("frida-server is running and accepting connections");
 }

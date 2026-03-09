@@ -2,6 +2,7 @@ import frida from "frida";
 import { Buffer } from "node:buffer";
 import { resolve } from "node:path";
 import type {
+  DeviceState,
   JsonRpcRequest,
   JsonRpcResponse,
   SessionState,
@@ -286,20 +287,28 @@ export async function handleAttach(
   if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
   if (!identifier) return fail(req.id, -32602, "missing param: identifier");
 
-  const tempDevice = await frida.getDevice(deviceId);
-  const sysParams = await tempDevice.querySystemParameters();
-  if (normalizePlatform(sysParams.platform as string) === "android") {
-    await ensureFridaServer(deviceId);
+  let deviceState = devices.get(deviceId);
+  if (!deviceState) {
+    let device = await frida.getDevice(deviceId);
+    const sysParams = await device.querySystemParameters();
+    const platform = normalizePlatform(sysParams.platform as string);
+
+    if (platform === "android") {
+      await ensureFridaServer(deviceId);
+      device = await frida.getDevice(deviceId);
+    }
+
+    deviceState = { id: deviceId, device, platform };
+    devices.set(deviceId, deviceState);
   }
 
-  const device = await frida.getDevice(deviceId);
   const evasionConfig = req.params?.evasion as
     | Record<string, boolean>
     | undefined;
   const noResume = req.params?.noResume as boolean | undefined;
 
   const result = await spawnAndInject(
-    device,
+    deviceState.device,
     deviceId,
     identifier,
     evasionConfig,
