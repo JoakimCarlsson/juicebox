@@ -184,7 +184,9 @@ func (d *DB) ListFlutterChannelsByDevice(
 		 JOIN sessions s ON fc.session_id = s.id
 		 WHERE s.device_id = ?
 		 ORDER BY fc.timestamp ASC LIMIT ? OFFSET ?`,
-		deviceID, limit, offset,
+		deviceID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListFlutterChannelsByDevice: %w", err)

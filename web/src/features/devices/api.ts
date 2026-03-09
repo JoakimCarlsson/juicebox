@@ -77,7 +77,7 @@ export async function attachApp(
   deviceId: string,
   bundleId: string,
   sessionId?: string,
-  evasion?: EvasionConfig,
+  evasion?: EvasionConfig
 ): Promise<SpawnResponse> {
   const res = await fetch(`/api/v1/devices/${deviceId}/attach`, {
     method: 'POST',

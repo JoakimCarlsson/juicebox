@@ -170,7 +170,9 @@ function readByteBuffer(buf: any): number[] | null {
       return result;
     } catch (_) {}
 
-    const addressField = Java.use("java.nio.Buffer").class.getDeclaredField("address");
+    const addressField = Java.use("java.nio.Buffer").class.getDeclaredField(
+      "address",
+    );
     addressField.setAccessible(true);
     const address = addressField.getLong(buf);
     if (address.toInt32() === 0) return null;
@@ -245,7 +247,9 @@ function decodeReply(buf: any): string | null {
   const msgCodec = decodeStandardMessageCodec(bytes);
   if (msgCodec != null) return JSON.stringify(msgCodec);
 
-  return `hex:${bytes.map((b: number) => b.toString(16).padStart(2, "0")).join("")}`;
+  return `hex:${
+    bytes.map((b: number) => b.toString(16).padStart(2, "0")).join("")
+  }`;
 }
 
 function enableChannels(): { enabled: boolean } {

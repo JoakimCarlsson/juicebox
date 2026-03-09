@@ -19,8 +19,8 @@ func NewHandler(manager *session.Manager) *Handler {
 }
 
 type attachRequest struct {
-	BundleID  string               `json:"bundleId"`
-	SessionID string               `json:"sessionId,omitempty"`
+	BundleID  string                `json:"bundleId"`
+	SessionID string                `json:"sessionId,omitempty"`
 	Evasion   *bridge.EvasionConfig `json:"evasion,omitempty"`
 }
 

@@ -117,7 +117,6 @@ export async function ensureFridaServer(deviceId: string): Promise<void> {
 
     const unxz = await exec(["unxz", "-f", tmpXz]);
     if (unxz.code !== 0) throw new Error(`unxz failed: ${unxz.stderr}`);
-
   }
 
   const push = await exec([

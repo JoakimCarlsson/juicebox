@@ -232,66 +232,74 @@ func (h *Handler) Handle(c *router.Context) {
 
 	hub := h.hubManager.GetOrCreate(deviceID)
 	fileManager := scripting.NewFileManager(h.db, hub)
+	chatSession := h.chatStore.GetOrCreate(req.ConversationID)
 
 	setup := dc.Setup
-	chatTools := []tool.BaseTool{
-		chattools.NewGetRequestDetail(h.db),
+	rootTools := []tool.BaseTool{
 		chattools.NewListProcesses(setup, deviceID),
 		chattools.NewAttachApp(h.manager, deviceID),
 		chattools.NewDetachApp(h.manager, deviceID),
 		chattools.NewListScriptFiles(fileManager, deviceID),
 		chattools.NewReadScriptFile(fileManager, deviceID),
 	}
+	trafficTools := []tool.BaseTool{}
+	fridaTools := []tool.BaseTool{}
+	filesystemTools := []tool.BaseTool{}
+
+	hasCapability := func(capability string) bool {
+		for _, cap := range setup.Capabilities() {
+			if cap == capability {
+				return true
+			}
+		}
+		return false
+	}
 
 	if activeSessionID != "" {
-		chatTools = append(chatTools,
+		trafficTools = append(trafficTools,
+			chattools.NewGetRequestDetail(h.db),
 			chattools.NewSearchTraffic(h.db, activeSessionID),
 			chattools.NewListPendingRequests(h.manager, activeSessionID),
 			chattools.NewModifyAndForward(h.manager, activeSessionID),
 			chattools.NewForwardRequest(h.manager, activeSessionID),
 			chattools.NewDropRequest(h.manager, activeSessionID),
 		)
-		for _, cap := range setup.Capabilities() {
-			switch cap {
-			case "logstream":
-				chatTools = append(
-					chatTools,
-					chattools.NewRunLogcatQuery(h.db, activeSessionID),
-				)
-			case "frida":
-				chatTools = append(
-					chatTools,
-					chattools.NewListClasses(h.manager, activeSessionID),
-					chattools.NewGetClassDetail(h.manager, activeSessionID),
-					chattools.NewGetCrashes(h.db, activeSessionID),
-					chattools.NewGetCryptoEvents(h.db, activeSessionID),
-					chattools.NewGetClipboardEvents(h.db, activeSessionID),
-					chattools.NewGetFlutterEvents(h.db, activeSessionID),
-					chattools.NewListKeystoreEntries(
-						h.manager,
-						activeSessionID,
-					),
-					chattools.NewListSharedPreferences(
-						h.manager,
-						activeSessionID,
-					),
-					chattools.NewRunFridaScript(
-						h.runner,
-						activeSessionID,
-						deviceID,
-					),
-					chattools.NewGetScriptOutput(h.runner, activeSessionID),
-					chattools.NewStopFridaScript(
-						h.runner,
-						activeSessionID,
-						deviceID,
-					),
-					chattools.NewScanMemory(h.manager, activeSessionID),
-				)
-			}
+
+		if hasCapability("logstream") {
+			trafficTools = append(
+				trafficTools,
+				chattools.NewRunLogcatQuery(h.db, activeSessionID),
+			)
 		}
-		chatTools = append(
-			chatTools,
+
+		if hasCapability("frida") {
+			fridaTools = append(
+				fridaTools,
+				chattools.NewRunFridaScript(
+					h.runner,
+					activeSessionID,
+					deviceID,
+				),
+				chattools.NewGetScriptOutput(h.runner, activeSessionID),
+				chattools.NewStopFridaScript(
+					h.runner,
+					activeSessionID,
+					deviceID,
+				),
+				chattools.NewScanMemory(h.manager, activeSessionID),
+				chattools.NewListClasses(h.manager, activeSessionID),
+				chattools.NewGetClassDetail(h.manager, activeSessionID),
+				chattools.NewGetCryptoEvents(h.db, activeSessionID),
+				chattools.NewGetClipboardEvents(h.db, activeSessionID),
+				chattools.NewGetFlutterEvents(h.db, activeSessionID),
+				chattools.NewGetCrashes(h.db, activeSessionID),
+				chattools.NewListKeystoreEntries(h.manager, activeSessionID),
+				chattools.NewListSharedPreferences(h.manager, activeSessionID),
+			)
+		}
+
+		filesystemTools = append(
+			filesystemTools,
 			chattools.NewLs(setup, deviceID, activeSess.BundleID),
 			chattools.NewReadFile(setup, deviceID, activeSess.BundleID),
 			chattools.NewFindFiles(setup, deviceID, activeSess.BundleID),
@@ -303,16 +311,6 @@ func (h *Handler) Handle(c *router.Context) {
 				activeSessionID,
 			),
 		)
-	} else {
-		for _, cap := range setup.Capabilities() {
-			switch cap {
-			case "logstream":
-				chatTools = append(
-					chatTools,
-					chattools.NewRunLogcatQuery(h.db, ""),
-				)
-			}
-		}
 	}
 
 	state := map[string]any{
@@ -321,15 +319,56 @@ func (h *Handler) Handle(c *router.Context) {
 		"SessionID": activeSessionID,
 	}
 
+	juiceboxSubAgents := []agent.SubAgentConfig{}
+	if len(fridaTools) > 0 {
+		juiceboxSubAgents = append(juiceboxSubAgents, agent.SubAgentConfig{
+			Name:        "frida_instrumentation",
+			Description: "Frida instrumentation specialist. Handles Frida scripts, class/memory inspection, and Frida-backed telemetry. Supports background=true for long-running hooks.",
+			Agent: agent.New(llmClient,
+				agent.WithSystemPrompt(FridaInstrumentationPromptTemplate),
+				agent.WithTools(fridaTools...),
+				agent.WithState(state),
+				agent.WithSession(req.ConversationID, chatSession),
+			),
+		})
+	}
+
+	if len(trafficTools) > 0 {
+		juiceboxSubAgents = append(juiceboxSubAgents, agent.SubAgentConfig{
+			Name:        "traffic_analyst",
+			Description: "Traffic interception specialist. Handles search/detail, pending request control, and logstream correlation. Supports background=true for parallel analysis.",
+			Agent: agent.New(llmClient,
+				agent.WithSystemPrompt(TrafficAnalystPromptTemplate),
+				agent.WithTools(trafficTools...),
+				agent.WithState(state),
+				agent.WithSession(req.ConversationID, chatSession),
+			),
+		})
+	}
+
+	if len(filesystemTools) > 0 {
+		juiceboxSubAgents = append(juiceboxSubAgents, agent.SubAgentConfig{
+			Name:        "filesystem_analyst",
+			Description: "Filesystem and SQLite specialist. Handles sandbox exploration, schema inspection, and SQL analysis.",
+			Agent: agent.New(llmClient,
+				agent.WithSystemPrompt(FilesystemAnalystPromptTemplate),
+				agent.WithTools(filesystemTools...),
+				agent.WithState(state),
+				agent.WithSession(req.ConversationID, chatSession),
+			),
+		})
+	}
+
 	a := squeeze.NewAgent(llmClient,
-		squeeze.WithTools(chatTools...),
+		squeeze.WithTools(rootTools...),
 		squeeze.WithAgentOptions(
 			agent.WithSystemPrompt(SystemPromptTemplate),
 			agent.WithState(state),
 			agent.WithSession(
 				req.ConversationID,
-				h.chatStore.GetOrCreate(req.ConversationID),
+				chatSession,
 			),
+			agent.WithSubAgents(juiceboxSubAgents...),
 		),
 	)
 

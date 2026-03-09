@@ -20,7 +20,14 @@ func (d *DB) InsertFlutterChannel(r *FlutterChannelRow) error {
 	_, err := d.conn.Exec(
 		`INSERT INTO flutter_channel_events (id, session_id, channel, method, direction, arguments, result, timestamp)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		r.ID, r.SessionID, r.Channel, r.Method, r.Direction, r.Arguments, r.Result, r.Timestamp,
+		r.ID,
+		r.SessionID,
+		r.Channel,
+		r.Method,
+		r.Direction,
+		r.Arguments,
+		r.Result,
+		r.Timestamp,
 	)
 	if err != nil {
 		return fmt.Errorf("db.InsertFlutterChannel: %w", err)
@@ -35,7 +42,9 @@ func (d *DB) ListFlutterChannelsBySession(
 	rows, err := d.conn.Query(
 		`SELECT id, session_id, channel, method, direction, arguments, result, timestamp
 		 FROM flutter_channel_events WHERE session_id = ? ORDER BY timestamp ASC LIMIT ? OFFSET ?`,
-		sessionID, limit, offset,
+		sessionID,
+		limit,
+		offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("db.ListFlutterChannelsBySession: %w", err)
