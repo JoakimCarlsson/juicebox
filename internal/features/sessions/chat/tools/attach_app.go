@@ -45,7 +45,7 @@ func (t *AttachAppTool) Run(
 		return tool.NewTextErrorResponse("bundle_id is required"), nil
 	}
 
-	result, err := t.manager.AttachApp(t.deviceID, input.BundleID)
+	result, err := t.manager.AttachApp(t.deviceID, input.BundleID, nil)
 	if err != nil {
 		return tool.NewTextErrorResponse(
 			fmt.Sprintf("failed to attach to app: %v", err),

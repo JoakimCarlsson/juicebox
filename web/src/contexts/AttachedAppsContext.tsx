@@ -1,9 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useDeviceSocket } from './DeviceSocketContext'
 
-interface AttachedApp {
+export interface AttachedApp {
   bundleId: string
   sessionId: string
+  isFlutter: boolean | null
 }
 
 interface AttachedAppsContextValue {
@@ -29,8 +30,8 @@ export function AttachedAppsProvider({ children }: { children: React.ReactNode }
     userDetached.current.delete(bundleId)
     setApps((prev) => {
       const existing = prev.find((a) => a.bundleId === bundleId)
-      if (existing) return prev.map((a) => (a.bundleId === bundleId ? { ...a, sessionId } : a))
-      return [...prev, { bundleId, sessionId }]
+      if (existing) return prev.map((a) => (a.bundleId === bundleId ? { ...a, sessionId, isFlutter: null } : a))
+      return [...prev, { bundleId, sessionId, isFlutter: null }]
     })
     setSelectedBundleId(bundleId)
   }, [])
@@ -63,9 +64,21 @@ export function AttachedAppsProvider({ children }: { children: React.ReactNode }
         removeApp(payload.bundleId)
       }
     })
+    const unsub3 = subscribe('flutter_detected', (envelope) => {
+      const payload = envelope.payload as { flutter?: boolean } | undefined
+      const sessionId = envelope.sessionId
+      if (sessionId && payload != null) {
+        setApps((prev) =>
+          prev.map((a) =>
+            a.sessionId === sessionId ? { ...a, isFlutter: payload.flutter ?? false } : a
+          )
+        )
+      }
+    })
     return () => {
       unsub1()
       unsub2()
+      unsub3()
     }
   }, [subscribe, addApp, removeApp])
 

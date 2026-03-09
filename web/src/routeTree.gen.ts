@@ -17,6 +17,7 @@ import { Route as DevicesDeviceIdNetworkRouteImport } from './routes/devices/$de
 import { Route as DevicesDeviceIdMemoryRouteImport } from './routes/devices/$deviceId/memory'
 import { Route as DevicesDeviceIdLogsRouteImport } from './routes/devices/$deviceId/logs'
 import { Route as DevicesDeviceIdHooksRouteImport } from './routes/devices/$deviceId/hooks'
+import { Route as DevicesDeviceIdFlutterRouteImport } from './routes/devices/$deviceId/flutter'
 import { Route as DevicesDeviceIdFilesRouteImport } from './routes/devices/$deviceId/files'
 import { Route as DevicesDeviceIdCryptoRouteImport } from './routes/devices/$deviceId/crypto'
 import { Route as DevicesDeviceIdCrashesRouteImport } from './routes/devices/$deviceId/crashes'
@@ -64,6 +65,11 @@ const DevicesDeviceIdHooksRoute = DevicesDeviceIdHooksRouteImport.update({
   path: '/hooks',
   getParentRoute: () => DevicesDeviceIdRoute,
 } as any)
+const DevicesDeviceIdFlutterRoute = DevicesDeviceIdFlutterRouteImport.update({
+  id: '/flutter',
+  path: '/flutter',
+  getParentRoute: () => DevicesDeviceIdRoute,
+} as any)
 const DevicesDeviceIdFilesRoute = DevicesDeviceIdFilesRouteImport.update({
   id: '/files',
   path: '/files',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/devices/$deviceId/crashes': typeof DevicesDeviceIdCrashesRoute
   '/devices/$deviceId/crypto': typeof DevicesDeviceIdCryptoRoute
   '/devices/$deviceId/files': typeof DevicesDeviceIdFilesRoute
+  '/devices/$deviceId/flutter': typeof DevicesDeviceIdFlutterRoute
   '/devices/$deviceId/hooks': typeof DevicesDeviceIdHooksRoute
   '/devices/$deviceId/logs': typeof DevicesDeviceIdLogsRoute
   '/devices/$deviceId/memory': typeof DevicesDeviceIdMemoryRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/devices/$deviceId/crashes': typeof DevicesDeviceIdCrashesRoute
   '/devices/$deviceId/crypto': typeof DevicesDeviceIdCryptoRoute
   '/devices/$deviceId/files': typeof DevicesDeviceIdFilesRoute
+  '/devices/$deviceId/flutter': typeof DevicesDeviceIdFlutterRoute
   '/devices/$deviceId/hooks': typeof DevicesDeviceIdHooksRoute
   '/devices/$deviceId/logs': typeof DevicesDeviceIdLogsRoute
   '/devices/$deviceId/memory': typeof DevicesDeviceIdMemoryRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/devices/$deviceId/crashes': typeof DevicesDeviceIdCrashesRoute
   '/devices/$deviceId/crypto': typeof DevicesDeviceIdCryptoRoute
   '/devices/$deviceId/files': typeof DevicesDeviceIdFilesRoute
+  '/devices/$deviceId/flutter': typeof DevicesDeviceIdFlutterRoute
   '/devices/$deviceId/hooks': typeof DevicesDeviceIdHooksRoute
   '/devices/$deviceId/logs': typeof DevicesDeviceIdLogsRoute
   '/devices/$deviceId/memory': typeof DevicesDeviceIdMemoryRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/crashes'
     | '/devices/$deviceId/crypto'
     | '/devices/$deviceId/files'
+    | '/devices/$deviceId/flutter'
     | '/devices/$deviceId/hooks'
     | '/devices/$deviceId/logs'
     | '/devices/$deviceId/memory'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/crashes'
     | '/devices/$deviceId/crypto'
     | '/devices/$deviceId/files'
+    | '/devices/$deviceId/flutter'
     | '/devices/$deviceId/hooks'
     | '/devices/$deviceId/logs'
     | '/devices/$deviceId/memory'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/devices/$deviceId/crashes'
     | '/devices/$deviceId/crypto'
     | '/devices/$deviceId/files'
+    | '/devices/$deviceId/flutter'
     | '/devices/$deviceId/hooks'
     | '/devices/$deviceId/logs'
     | '/devices/$deviceId/memory'
@@ -248,6 +260,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevicesDeviceIdHooksRouteImport
       parentRoute: typeof DevicesDeviceIdRoute
     }
+    '/devices/$deviceId/flutter': {
+      id: '/devices/$deviceId/flutter'
+      path: '/flutter'
+      fullPath: '/devices/$deviceId/flutter'
+      preLoaderRoute: typeof DevicesDeviceIdFlutterRouteImport
+      parentRoute: typeof DevicesDeviceIdRoute
+    }
     '/devices/$deviceId/files': {
       id: '/devices/$deviceId/files'
       path: '/files'
@@ -292,6 +311,7 @@ interface DevicesDeviceIdRouteChildren {
   DevicesDeviceIdCrashesRoute: typeof DevicesDeviceIdCrashesRoute
   DevicesDeviceIdCryptoRoute: typeof DevicesDeviceIdCryptoRoute
   DevicesDeviceIdFilesRoute: typeof DevicesDeviceIdFilesRoute
+  DevicesDeviceIdFlutterRoute: typeof DevicesDeviceIdFlutterRoute
   DevicesDeviceIdHooksRoute: typeof DevicesDeviceIdHooksRoute
   DevicesDeviceIdLogsRoute: typeof DevicesDeviceIdLogsRoute
   DevicesDeviceIdMemoryRoute: typeof DevicesDeviceIdMemoryRoute
@@ -305,6 +325,7 @@ const DevicesDeviceIdRouteChildren: DevicesDeviceIdRouteChildren = {
   DevicesDeviceIdCrashesRoute: DevicesDeviceIdCrashesRoute,
   DevicesDeviceIdCryptoRoute: DevicesDeviceIdCryptoRoute,
   DevicesDeviceIdFilesRoute: DevicesDeviceIdFilesRoute,
+  DevicesDeviceIdFlutterRoute: DevicesDeviceIdFlutterRoute,
   DevicesDeviceIdHooksRoute: DevicesDeviceIdHooksRoute,
   DevicesDeviceIdLogsRoute: DevicesDeviceIdLogsRoute,
   DevicesDeviceIdMemoryRoute: DevicesDeviceIdMemoryRoute,

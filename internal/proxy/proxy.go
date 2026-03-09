@@ -117,6 +117,17 @@ func (p *Proxy) handleConn(conn net.Conn) {
 	defer conn.Close()
 
 	br := bufio.NewReader(conn)
+
+	first, err := br.Peek(1)
+	if err != nil {
+		return
+	}
+
+	if first[0] == 0x16 {
+		p.handleTransparentTLS(conn, br)
+		return
+	}
+
 	req, err := http.ReadRequest(br)
 	if err != nil {
 		return
@@ -127,6 +138,127 @@ func (p *Proxy) handleConn(conn net.Conn) {
 	} else {
 		p.handlePlainHTTP(conn, req)
 	}
+}
+
+func extractSNI(data []byte) string {
+	if len(data) < 5 || data[0] != 0x16 {
+		return ""
+	}
+	recordLen := int(data[3])<<8 | int(data[4])
+	if len(data) < 5+recordLen {
+		return ""
+	}
+	msg := data[5 : 5+recordLen]
+	if len(msg) < 38 {
+		return ""
+	}
+	pos := 1 + 3 + 2 + 32 // type + length + version + random
+	if pos >= len(msg) {
+		return ""
+	}
+	sessionIDLen := int(msg[pos])
+	pos += 1 + sessionIDLen
+	if pos+2 > len(msg) {
+		return ""
+	}
+	cipherSuitesLen := int(msg[pos])<<8 | int(msg[pos+1])
+	pos += 2 + cipherSuitesLen
+	if pos >= len(msg) {
+		return ""
+	}
+	compMethodsLen := int(msg[pos])
+	pos += 1 + compMethodsLen
+	if pos+2 > len(msg) {
+		return ""
+	}
+	extensionsLen := int(msg[pos])<<8 | int(msg[pos+1])
+	pos += 2
+	end := pos + extensionsLen
+	if end > len(msg) {
+		end = len(msg)
+	}
+	for pos+4 <= end {
+		extType := int(msg[pos])<<8 | int(msg[pos+1])
+		extLen := int(msg[pos+2])<<8 | int(msg[pos+3])
+		pos += 4
+		if extType == 0 && pos+extLen <= end { // SNI extension
+			d := msg[pos : pos+extLen]
+			if len(d) >= 5 {
+				nameLen := int(d[3])<<8 | int(d[4])
+				if 5+nameLen <= len(d) {
+					return string(d[5 : 5+nameLen])
+				}
+			}
+		}
+		pos += extLen
+	}
+	return ""
+}
+
+func (p *Proxy) handleTransparentTLS(clientConn net.Conn, br *bufio.Reader) {
+	// Peek enough to read TLS record header (5 bytes) then the full record.
+	recHeader, err := br.Peek(5)
+	if err != nil || len(recHeader) < 5 {
+		return
+	}
+	recordLen := int(recHeader[3])<<8 | int(recHeader[4])
+	fullLen := 5 + recordLen
+	if fullLen > 16384 {
+		fullLen = 16384
+	}
+	header, err := br.Peek(fullLen)
+	if err != nil && len(header) < 43 {
+		return
+	}
+
+	hostname := extractSNI(header)
+	if hostname == "" {
+		return
+	}
+
+	cert, err := p.certManager.GetCert(hostname)
+	if err != nil {
+		return
+	}
+
+	tlsConn := tls.Server(readPrefixConn{br: br, Conn: clientConn}, &tls.Config{
+		Certificates: []tls.Certificate{*cert},
+	})
+	defer tlsConn.Close()
+
+	if err := tlsConn.Handshake(); err != nil {
+		return
+	}
+
+	host := hostname + ":443"
+	tlsBr := bufio.NewReader(tlsConn)
+	for {
+		select {
+		case <-p.done:
+			return
+		default:
+		}
+
+		req, err := http.ReadRequest(tlsBr)
+		if err != nil {
+			return
+		}
+
+		req.URL.Scheme = "https"
+		req.URL.Host = host
+		req.RequestURI = ""
+
+		p.roundTripAndEmit(tlsConn, req)
+	}
+}
+
+type readPrefixConn struct {
+	br *bufio.Reader
+	net.Conn
+}
+
+func (c readPrefixConn) Read(b []byte) (int, error) {
+	return c.br.Read(b)
 }
 
 func (p *Proxy) handleConnect(clientConn net.Conn, connectReq *http.Request) {

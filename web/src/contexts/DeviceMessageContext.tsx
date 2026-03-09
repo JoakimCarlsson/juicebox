@@ -7,11 +7,13 @@ import {
   fetchDeviceCrashes,
   fetchDeviceCrypto,
   fetchDeviceClipboard,
+  fetchDeviceFlutterChannels,
   clearDeviceMessages,
   clearDeviceLogs,
   clearDeviceCrashes,
   clearDeviceCrypto,
   clearDeviceClipboard,
+  clearDeviceFlutterChannels,
 } from '@/features/devices/data-api'
 import type { AgentMessage, DeviceEnvelope } from '@/types/session'
 
@@ -21,6 +23,7 @@ const clearApiFns: Record<string, (id: string) => Promise<void>> = {
   crash: clearDeviceCrashes,
   crypto: clearDeviceCrypto,
   clipboard: clearDeviceClipboard,
+  flutter_channel: clearDeviceFlutterChannels,
 }
 
 interface DeviceMessageContextValue {
@@ -57,7 +60,8 @@ export function DeviceMessageProvider({ children }: { children: React.ReactNode 
       fetchDeviceCrashes(deviceId).catch(() => null),
       fetchDeviceCrypto(deviceId).catch(() => null),
       fetchDeviceClipboard(deviceId).catch(() => null),
-    ]).then(([msgResp, logResp, crashResp, cryptoResp, clipboardResp]) => {
+      fetchDeviceFlutterChannels(deviceId).catch(() => null),
+    ]).then(([msgResp, logResp, crashResp, cryptoResp, clipboardResp, flutterResp]) => {
       const historical: AgentMessage[] = []
 
       if (msgResp?.messages) {
@@ -101,6 +105,15 @@ export function DeviceMessageProvider({ children }: { children: React.ReactNode 
           if (!seenIds.current.has(e.id)) {
             seenIds.current.add(e.id)
             historical.push({ type: 'clipboard', payload: e })
+          }
+        }
+      }
+
+      if (flutterResp?.events) {
+        for (const e of flutterResp.events) {
+          if (!seenIds.current.has(e.id)) {
+            seenIds.current.add(e.id)
+            historical.push({ type: 'flutter_channel', payload: e })
           }
         }
       }

@@ -29,6 +29,8 @@ type EvasionConfig struct {
 	FridaBypass    *bool `json:"frida_bypass,omitempty"`
 	RootBypass     *bool `json:"root_bypass,omitempty"`
 	EmulatorBypass *bool `json:"emulator_bypass,omitempty"`
+	SSLBypass      *bool `json:"ssl_bypass,omitempty"`
+	CrashHandler   *bool `json:"crash_handler,omitempty"`
 }
 
 type AttachResponse struct {

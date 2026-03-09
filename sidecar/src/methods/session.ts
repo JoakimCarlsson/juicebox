@@ -2,6 +2,7 @@ import frida from "frida";
 import { Buffer } from "node:buffer";
 import { resolve } from "node:path";
 import type {
+  DeviceState,
   JsonRpcRequest,
   JsonRpcResponse,
   SessionState,
@@ -156,16 +157,26 @@ async function spawnAndInject(
     }
   }
 
-  try {
-    await script.exports.invoke("ssl", "bypass", []);
-  } catch (err) {
-    logAgentError("ssl bypass failed", err);
+  if (evasionConfig?.ssl_bypass !== false) {
+    try {
+      await script.exports.invoke("ssl", "bypass", []);
+    } catch (err) {
+      logAgentError("ssl bypass failed", err);
+    }
+  }
+
+  if (evasionConfig?.crash_handler !== false) {
+    try {
+      await script.exports.invoke("crash", "enable", []);
+    } catch (err) {
+      logAgentError("crash handler setup failed", err);
+    }
   }
 
   try {
-    await script.exports.invoke("crash", "enable", []);
+    await script.exports.invoke("proxyredirect", "enable", [8082]);
   } catch (err) {
-    logAgentError("crash handler setup failed", err);
+    logAgentError("proxy redirect failed", err);
   }
 
   if (!noResume) {
@@ -176,6 +187,25 @@ async function spawnAndInject(
       `spawned ${identifier} (pid ${pid}), session ${sessionId} [suspended, waiting for resume]`,
     );
   }
+
+  (async () => {
+    for (const delay of [500, 1500, 3000]) {
+      await new Promise((r) => setTimeout(r, delay));
+      try {
+        const flutterInfo = await script.exports.invoke("flutter", "isFlutter", []) as { flutter: boolean; cronet: boolean } | null;
+        if (flutterInfo?.flutter) {
+          await script.exports.invoke("flutter", "enableChannels", []);
+          broadcast(state, JSON.stringify({ type: "flutter_detected", payload: { flutter: true, cronet: flutterInfo.cronet } }) + "\n");
+          return;
+        }
+      } catch (err) {
+        logAgentError("flutter detection failed", err);
+        broadcast(state, JSON.stringify({ type: "flutter_detected", payload: { flutter: false, cronet: false } }) + "\n");
+        return;
+      }
+    }
+    broadcast(state, JSON.stringify({ type: "flutter_detected", payload: { flutter: false, cronet: false } }) + "\n");
+  })();
 
   return { sessionId, pid };
 }
@@ -257,20 +287,28 @@ export async function handleAttach(
   if (!deviceId) return fail(req.id, -32602, "missing param: deviceId");
   if (!identifier) return fail(req.id, -32602, "missing param: identifier");
 
-  const tempDevice = await frida.getDevice(deviceId);
-  const sysParams = await tempDevice.querySystemParameters();
-  if (normalizePlatform(sysParams.platform as string) === "android") {
-    await ensureFridaServer(deviceId);
+  let deviceState = devices.get(deviceId);
+  if (!deviceState) {
+    let device = await frida.getDevice(deviceId);
+    const sysParams = await device.querySystemParameters();
+    const platform = normalizePlatform(sysParams.platform as string);
+
+    if (platform === "android") {
+      await ensureFridaServer(deviceId);
+      device = await frida.getDevice(deviceId);
+    }
+
+    deviceState = { id: deviceId, device, platform };
+    devices.set(deviceId, deviceState);
   }
 
-  const device = await frida.getDevice(deviceId);
   const evasionConfig = req.params?.evasion as
     | Record<string, boolean>
     | undefined;
   const noResume = req.params?.noResume as boolean | undefined;
 
   const result = await spawnAndInject(
-    device,
+    deviceState.device,
     deviceId,
     identifier,
     evasionConfig,

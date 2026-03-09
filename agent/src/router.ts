@@ -8,6 +8,8 @@ import keystore from "./modules/keystore";
 import sharedprefs from "./modules/sharedprefs";
 import clipboard from "./modules/clipboard";
 import memory from "./modules/memory";
+import proxyredirect from "./modules/proxyredirect";
+import flutter from "./modules/flutter";
 
 const registry: Record<string, AgentModule> = {
   evasion,
@@ -19,6 +21,8 @@ const registry: Record<string, AgentModule> = {
   sharedprefs,
   clipboard,
   memory,
+  proxyredirect,
+  flutter,
 };
 
 export function getModule(namespace: string): AgentModule | undefined {

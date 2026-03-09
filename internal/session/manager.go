@@ -344,7 +344,7 @@ func (m *Manager) SpawnApp(
 	}, nil
 }
 
-func (m *Manager) AttachApp(deviceID, bundleID string) (*SpawnResult, error) {
+func (m *Manager) AttachApp(deviceID, bundleID string, evasion *bridge.EvasionConfig) (*SpawnResult, error) {
 	m.mu.RLock()
 	dc, ok := m.devices[deviceID]
 	m.mu.RUnlock()
@@ -354,7 +354,7 @@ func (m *Manager) AttachApp(deviceID, bundleID string) (*SpawnResult, error) {
 
 	logger := slog.With("device_id", deviceID, "source", "manager")
 
-	bridgeResp, err := m.bridge.Attach(deviceID, bundleID, nil, true)
+	bridgeResp, err := m.bridge.Attach(deviceID, bundleID, evasion, true)
 	if err != nil {
 		return nil, fmt.Errorf("manager: attach app: %w", err)
 	}
@@ -733,6 +733,34 @@ func (m *Manager) bridgeSubscribeForward(sess *Session, dc *DeviceConnection) {
 					MimeType:    clipEvt.MimeType,
 					CallerStack: clipEvt.CallerStack,
 					Timestamp:   clipEvt.Timestamp,
+				})
+			}
+		}
+
+		if msg.Type == "flutter_channel" {
+			var fcEvt struct {
+				ID        string  `json:"id"`
+				Channel   string  `json:"channel"`
+				Method    *string `json:"method"`
+				Direction string  `json:"direction"`
+				Arguments *string `json:"arguments"`
+				Result    *string `json:"result"`
+				Timestamp int64   `json:"timestamp"`
+			}
+			if err := json.Unmarshal(msg.Payload, &fcEvt); err == nil &&
+				fcEvt.ID != "" {
+				if fcEvt.Timestamp == 0 {
+					fcEvt.Timestamp = time.Now().UnixMilli()
+				}
+				m.writer.WriteFlutterChannel(&db.FlutterChannelRow{
+					ID:        fcEvt.ID,
+					SessionID: sess.ID,
+					Channel:   fcEvt.Channel,
+					Method:    fcEvt.Method,
+					Direction: fcEvt.Direction,
+					Arguments: fcEvt.Arguments,
+					Result:    fcEvt.Result,
+					Timestamp: fcEvt.Timestamp,
 				})
 			}
 		}

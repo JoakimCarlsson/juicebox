@@ -2,6 +2,8 @@ export interface EvasionConfig {
   frida_bypass?: boolean
   root_bypass?: boolean
   emulator_bypass?: boolean
+  ssl_bypass?: boolean
+  crash_handler?: boolean
 }
 
 export interface AttachResponse {
@@ -128,6 +130,21 @@ export interface ClipboardEvent {
 
 export interface ClipboardEventsResponse {
   events: ClipboardEvent[]
+  total: number
+}
+
+export interface FlutterChannelEvent {
+  id: string
+  channel: string
+  method?: string
+  direction: 'dart_to_native' | 'native_to_dart'
+  arguments?: string
+  result?: string
+  timestamp: number
+}
+
+export interface FlutterChannelEventsResponse {
+  events: FlutterChannelEvent[]
   total: number
 }
 
