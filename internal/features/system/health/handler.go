@@ -3,7 +3,7 @@ package health
 import (
 	"net/http"
 
-	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/go-router/router/v2"
 )
 
 type Handler struct{}

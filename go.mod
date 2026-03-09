@@ -6,9 +6,9 @@ require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/joakimcarlsson/ai v0.13.0
-	github.com/joakimcarlsson/ai/integrations/sqlite v0.0.0
-	github.com/joakimcarlsson/go-router/router v0.0.0
-	github.com/joakimcarlsson/squeeze v0.0.0
+	github.com/joakimcarlsson/ai/integrations/sqlite v1.0.0
+	github.com/joakimcarlsson/go-router/router/v2 v2.0.1
+	github.com/joakimcarlsson/squeeze v0.0.0-20260305170128-b507c9aa4b6c
 	go.opentelemetry.io/contrib/bridges/otelslog v0.15.0
 	go.opentelemetry.io/otel v1.40.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.16.0
@@ -97,11 +97,4 @@ require (
 	modernc.org/libc v1.68.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-)
-
-replace (
-	github.com/joakimcarlsson/ai => ./deps/ai
-	github.com/joakimcarlsson/ai/integrations/sqlite => ./deps/ai/integrations/sqlite
-	github.com/joakimcarlsson/go-router/router => ./deps/go-router/router
-	github.com/joakimcarlsson/squeeze => ./deps/squeeze
 )

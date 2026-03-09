@@ -1,7 +1,7 @@
 package settings
 
 import (
-	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/go-router/router/v2"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 )
 

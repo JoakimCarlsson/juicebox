@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	"github.com/gorilla/websocket"
-	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/go-router/router/v2"
 	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/proxy"
 	"github.com/joakimcarlsson/juicebox/internal/response"

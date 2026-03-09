@@ -1,6 +1,6 @@
 package response
 
-import "github.com/joakimcarlsson/go-router/router"
+import "github.com/joakimcarlsson/go-router/router/v2"
 
 type errorBody struct {
 	Error string `json:"error"`

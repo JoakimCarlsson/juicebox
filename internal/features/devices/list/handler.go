@@ -3,7 +3,7 @@ package list
 import (
 	"net/http"
 
-	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/go-router/router/v2"
 	"github.com/joakimcarlsson/juicebox/internal/bridge"
 	"github.com/joakimcarlsson/juicebox/internal/response"
 )

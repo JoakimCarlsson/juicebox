@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/joakimcarlsson/go-router/router"
+	"github.com/joakimcarlsson/go-router/router/v2"
 	"github.com/joakimcarlsson/juicebox/internal/db"
 	"github.com/joakimcarlsson/juicebox/internal/response"
 )
