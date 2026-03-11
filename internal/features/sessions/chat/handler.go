@@ -364,6 +364,24 @@ func (h *Handler) Handle(c *router.Context) {
 		squeeze.WithAgentOptions(
 			agent.WithSystemPrompt(SystemPromptTemplate),
 			agent.WithState(state),
+			agent.WithHooks(
+				agent.NewObservingHooks(func(evt agent.HookEvent) {
+					if evt.Type == agent.HookEventSubagentStop &&
+						evt.Error != "" {
+						slog.Error(
+							"background sub-agent task failed",
+							"conversation_id", req.ConversationID,
+							"device_id", deviceID,
+							"bundle_id", req.BundleID,
+							"session_id", activeSessionID,
+							"task_id", evt.TaskID,
+							"agent_name", evt.AgentName,
+							"error", evt.Error,
+							"duration_ms", evt.Duration.Milliseconds(),
+						)
+					}
+				}),
+			),
 			agent.WithSession(
 				req.ConversationID,
 				chatSession,
