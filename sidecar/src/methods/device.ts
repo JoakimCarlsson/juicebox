@@ -10,27 +10,25 @@ export async function handleListDevices(
   const mgr = frida.getDeviceManager();
   const devices = await mgr.enumerateDevices();
   const usb = devices.filter((d) => d.type === "usb");
-  const result = (
-    await Promise.all(
-      usb.map(async (d) => {
-        try {
-          const params = await d.querySystemParameters();
-          return {
-            id: d.id,
-            name: d.name,
-            type: d.type,
-            platform: normalizePlatform(params.platform as string),
-          };
-        } catch {
-          return {
-            id: d.id,
-            name: d.name,
-            type: d.type,
-            platform: "unknown",
-          };
-        }
-      }),
-    )
+  const result = await Promise.all(
+    usb.map(async (d) => {
+      try {
+        const params = await d.querySystemParameters();
+        return {
+          id: d.id,
+          name: d.name,
+          type: d.type,
+          platform: normalizePlatform(params.platform as string),
+        };
+      } catch {
+        return {
+          id: d.id,
+          name: d.name,
+          type: d.type,
+          platform: "unknown",
+        };
+      }
+    }),
   );
   return ok(req.id, result);
 }

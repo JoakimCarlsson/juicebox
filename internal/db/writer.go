@@ -71,7 +71,11 @@ func (w *AsyncWriter) WriteFlutterChannel(r *FlutterChannelRow) {
 	select {
 	case w.ch <- writeOp{flutterChannel: r}:
 	default:
-		slog.Warn("db write buffer full, dropping flutter channel event", "id", r.ID)
+		slog.Warn(
+			"db write buffer full, dropping flutter channel event",
+			"id",
+			r.ID,
+		)
 	}
 }
 

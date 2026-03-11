@@ -141,7 +141,9 @@ export function AppCard({
 
           <div className="flex w-full flex-col items-center gap-1 text-center">
             <span className="line-clamp-1 text-sm font-medium text-foreground">{app.name}</span>
-            <span className="line-clamp-1 w-full text-xs text-muted-foreground">{app.identifier}</span>
+            <span className="line-clamp-1 w-full text-xs text-muted-foreground">
+              {app.identifier}
+            </span>
           </div>
 
           <div className="flex items-center gap-1.5">

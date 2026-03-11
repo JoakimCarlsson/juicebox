@@ -59,7 +59,10 @@ func RegisterRoutes(
 		d.GET("/{deviceId}/data/clipboard", dataHandler.Clipboard)
 		d.DELETE("/{deviceId}/data/clipboard", dataHandler.ClearClipboard)
 		d.GET("/{deviceId}/data/flutter-channels", dataHandler.FlutterChannels)
-		d.DELETE("/{deviceId}/data/flutter-channels", dataHandler.ClearFlutterChannels)
+		d.DELETE(
+			"/{deviceId}/data/flutter-channels",
+			dataHandler.ClearFlutterChannels,
+		)
 	})
 	r.GET("/ws/devices/{deviceId}", streamHandler.Handle)
 }

@@ -344,7 +344,10 @@ func (m *Manager) SpawnApp(
 	}, nil
 }
 
-func (m *Manager) AttachApp(deviceID, bundleID string, evasion *bridge.EvasionConfig) (*SpawnResult, error) {
+func (m *Manager) AttachApp(
+	deviceID, bundleID string,
+	evasion *bridge.EvasionConfig,
+) (*SpawnResult, error) {
 	m.mu.RLock()
 	dc, ok := m.devices[deviceID]
 	m.mu.RUnlock()

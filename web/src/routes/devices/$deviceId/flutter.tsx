@@ -62,9 +62,7 @@ function FlutterPage() {
     if (!search.trim()) return events
     const q = search.toLowerCase()
     return events.filter(
-      (e) =>
-        e.channel.toLowerCase().includes(q) ||
-        (e.method?.toLowerCase().includes(q) ?? false)
+      (e) => e.channel.toLowerCase().includes(q) || (e.method?.toLowerCase().includes(q) ?? false)
     )
   }, [events, search])
 
@@ -194,9 +192,7 @@ function EventList({
             </Badge>
             <span className="text-xs font-mono truncate text-foreground min-w-0 flex-1">
               {event.channel}
-              {event.method && (
-                <span className="text-muted-foreground">.{event.method}</span>
-              )}
+              {event.method && <span className="text-muted-foreground">.{event.method}</span>}
             </span>
             <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
               {formatTimestamp(event.timestamp)}
@@ -225,12 +221,8 @@ function EventDetail({ event }: { event: FlutterChannelEvent }) {
       </div>
 
       <div className="grid grid-cols-1 gap-1.5">
-        {event.arguments && (
-          <DataBlock label="Arguments" value={event.arguments} />
-        )}
-        {event.result && (
-          <DataBlock label="Result" value={event.result} />
-        )}
+        {event.arguments && <DataBlock label="Arguments" value={event.arguments} />}
+        {event.result && <DataBlock label="Result" value={event.result} />}
       </div>
     </div>
   )

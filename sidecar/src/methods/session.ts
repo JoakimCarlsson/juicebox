@@ -192,19 +192,41 @@ async function spawnAndInject(
     for (const delay of [500, 1500, 3000]) {
       await new Promise((r) => setTimeout(r, delay));
       try {
-        const flutterInfo = await script.exports.invoke("flutter", "isFlutter", []) as { flutter: boolean; cronet: boolean } | null;
+        const flutterInfo = await script.exports.invoke(
+          "flutter",
+          "isFlutter",
+          [],
+        ) as { flutter: boolean; cronet: boolean } | null;
         if (flutterInfo?.flutter) {
           await script.exports.invoke("flutter", "enableChannels", []);
-          broadcast(state, JSON.stringify({ type: "flutter_detected", payload: { flutter: true, cronet: flutterInfo.cronet } }) + "\n");
+          broadcast(
+            state,
+            JSON.stringify({
+              type: "flutter_detected",
+              payload: { flutter: true, cronet: flutterInfo.cronet },
+            }) + "\n",
+          );
           return;
         }
       } catch (err) {
         logAgentError("flutter detection failed", err);
-        broadcast(state, JSON.stringify({ type: "flutter_detected", payload: { flutter: false, cronet: false } }) + "\n");
+        broadcast(
+          state,
+          JSON.stringify({
+            type: "flutter_detected",
+            payload: { flutter: false, cronet: false },
+          }) + "\n",
+        );
         return;
       }
     }
-    broadcast(state, JSON.stringify({ type: "flutter_detected", payload: { flutter: false, cronet: false } }) + "\n");
+    broadcast(
+      state,
+      JSON.stringify({
+        type: "flutter_detected",
+        payload: { flutter: false, cronet: false },
+      }) + "\n",
+    );
   })();
 
   return { sessionId, pid };
