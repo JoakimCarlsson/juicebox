@@ -29,7 +29,10 @@ func NewGetFlutterEvents(
 func (t *GetFlutterEventsTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"get_flutter_events",
-		"Get recent Flutter platform channel events for this session. Returns channel name, method, direction (dart_to_native or native_to_dart), arguments, and result data. Use to investigate Flutter MethodChannel/EventChannel/BasicMessageChannel communication between Dart and native code. Useful for understanding payment flows, biometric auth, plugin calls, and other platform interactions.",
+		`Get recent Flutter platform channel events captured by Frida on the target device.
+Returns channel name, method, direction (dart_to_native or native_to_dart), arguments, and result data.
+Use to investigate Flutter MethodChannel/EventChannel/BasicMessageChannel communication between Dart and native code.
+Useful for understanding payment flows, biometric auth, plugin calls, and other platform interactions.`,
 		GetFlutterEventsParams{},
 	)
 }

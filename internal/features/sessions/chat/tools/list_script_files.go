@@ -25,7 +25,9 @@ func NewListScriptFiles(
 func (t *ListScriptFilesTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"list_script_files",
-		"List all saved Frida script files for this device. Returns filenames (including folder paths like bundleId/script.ts) and last updated timestamps.",
+		`List all saved Frida script files for this device.
+Returns filenames (including folder paths like bundleId/script.ts) and last updated timestamps.
+These are Frida scripts stored on the server, not files in the Docker container.`,
 		ListScriptFilesParams{},
 	)
 }

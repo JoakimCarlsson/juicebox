@@ -30,7 +30,8 @@ func NewFindFiles(
 func (t *FindFilesTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"find_files",
-		"Search for files matching a name pattern inside the app's sandbox. Uses find -name semantics. Returns a list of matching absolute paths.",
+		`Search for files matching a name pattern inside the app's sandbox on the target device.
+Uses find -name semantics. Returns a list of matching absolute paths.`,
 		FindFilesParams{},
 	)
 }

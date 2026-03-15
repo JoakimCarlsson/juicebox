@@ -26,7 +26,8 @@ func NewLs(setup session.DeviceSetup, deviceID, bundleID string) *LsTool {
 func (t *LsTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"ls",
-		"List files and directories at a given path inside the app's sandbox. Returns name, type (file/dir/symlink), size, permissions, and modification timestamp for each entry.",
+		`List files and directories at a given path inside the app's sandbox on the target device.
+Returns name, type (file/dir/symlink), size, permissions, and modification timestamp for each entry.`,
 		LsParams{},
 	)
 }

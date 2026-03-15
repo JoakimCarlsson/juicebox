@@ -29,7 +29,8 @@ func NewGetClassDetail(
 func (t *GetClassDetailTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"get_class_detail",
-		"Inspect a Java class at runtime. Returns declared methods (name, params, return type, modifiers), fields (name, type, modifiers, static values), implemented interfaces, and superclass chain.",
+		`Inspect a Java class at runtime on the target device.
+Returns declared methods (name, params, return type, modifiers), fields (name, type, modifiers, static values), implemented interfaces, and superclass chain.`,
 		GetClassDetailParams{},
 	)
 }

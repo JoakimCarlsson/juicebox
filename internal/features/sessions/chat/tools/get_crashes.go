@@ -28,7 +28,9 @@ func NewGetCrashes(database *db.DB, sessionID string) *GetCrashesTool {
 func (t *GetCrashesTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"get_crashes",
-		"Get recent crash events (native signals and Java exceptions) for this session. Returns crash type, signal/exception info, stack traces, and register context. Use after running Frida scripts or launching intents to detect if the action caused a crash.",
+		`Get recent crash events (native signals and Java exceptions) from the target device for this session.
+Returns crash type, signal/exception info, stack traces, and register context.
+Use after running Frida scripts or launching intents to detect if the action caused a crash.`,
 		GetCrashesParams{},
 	)
 }

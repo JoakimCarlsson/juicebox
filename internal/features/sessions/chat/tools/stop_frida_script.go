@@ -35,7 +35,8 @@ func NewStopFridaScript(
 func (t *StopFridaScriptTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"stop_frida_script",
-		"Stop a running Frida script and return its final collected output.",
+		`Stop a running Frida script on the target device and return its final collected output.
+The script is unloaded from the app's process.`,
 		StopFridaScriptParams{},
 	)
 }

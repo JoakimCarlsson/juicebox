@@ -25,7 +25,8 @@ func NewDetachApp(manager *session.Manager, deviceID string) *DetachAppTool {
 func (t *DetachAppTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"detach_app",
-		"Detach Frida from a currently attached app by bundle ID. Tears down the Frida session and stops log streaming, but keeps the device connected.",
+		`Detach Frida from a currently attached app by bundle ID.
+Tears down the Frida session and stops log streaming, but keeps the device connected.`,
 		DetachAppParams{},
 	)
 }

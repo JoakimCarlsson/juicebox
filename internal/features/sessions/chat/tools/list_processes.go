@@ -25,7 +25,9 @@ func NewListProcesses(
 func (t *ListProcessesTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"list_processes",
-		"List all running processes on the connected device. Returns process ID and name for each process.",
+		`List all running processes on the connected device.
+Returns process ID and name for each process.
+Use to find the target app's process before attaching Frida.`,
 		ListProcessesParams{},
 	)
 }

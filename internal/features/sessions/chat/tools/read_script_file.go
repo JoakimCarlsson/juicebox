@@ -28,7 +28,9 @@ func NewReadScriptFile(
 func (t *ReadScriptFileTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"read_script_file",
-		"Read the contents of a saved Frida script file by filename. Scripts are stored per-device and organized in folders by bundle ID.",
+		`Read the contents of a saved Frida script file by filename.
+Scripts are stored per-device and organized in folders by bundle ID.
+These are Frida scripts on the server, not files in the Docker container.`,
 		ReadScriptFileParams{},
 	)
 }

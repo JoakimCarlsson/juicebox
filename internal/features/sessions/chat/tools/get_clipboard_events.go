@@ -30,7 +30,10 @@ func NewGetClipboardEvents(
 func (t *GetClipboardEventsTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"get_clipboard_events",
-		"Get recent clipboard read/write events for this session. Returns direction (read/write), text content, MIME type, and caller stack trace. Use to find OTPs, passwords, card numbers, tokens, or other sensitive data the app reads from or writes to the clipboard. Flag any sensitive content as a finding and correlate clipboard writes with subsequent network requests.",
+		`Get recent clipboard read/write events captured by Frida on the target device.
+Returns direction (read/write), text content, MIME type, and caller stack trace.
+Use to find OTPs, passwords, card numbers, tokens, or other sensitive data the app reads from or writes to the clipboard.
+Flag any sensitive content as a finding and correlate clipboard writes with subsequent network requests.`,
 		GetClipboardEventsParams{},
 	)
 }

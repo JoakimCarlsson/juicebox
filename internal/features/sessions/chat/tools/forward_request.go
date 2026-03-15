@@ -29,7 +29,7 @@ func NewForwardRequest(
 func (t *ForwardRequestTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"forward_request",
-		"Forward a paused/intercepted HTTP request to the server without any modifications.",
+		`Forward a paused/intercepted HTTP request to the server without any modifications.`,
 		ForwardRequestParams{},
 	)
 }

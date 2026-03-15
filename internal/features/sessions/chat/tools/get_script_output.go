@@ -30,7 +30,10 @@ func NewGetScriptOutput(
 func (t *GetScriptOutputTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"get_script_output",
-		"Read collected output from a running Frida script. Supports pagination with since/limit params.",
+		`Read collected output from a running Frida script on the target device.
+Supports pagination with since/limit params.
+This reads output from device-side Frida hooks, not from Docker container scripts.
+For Docker script output, use docker_get_output instead.`,
 		GetScriptOutputParams{},
 	)
 }

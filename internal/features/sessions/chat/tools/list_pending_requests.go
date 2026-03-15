@@ -24,7 +24,9 @@ func NewListPendingRequests(
 func (t *ListPendingRequestsTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"list_pending_requests",
-		"List all currently intercepted/paused HTTP requests waiting for a decision. Returns request ID, method, URL, headers, and body for each pending request. Use this to see what requests are available to modify or forward.",
+		`List all currently intercepted/paused HTTP requests waiting for a decision.
+Returns request ID, method, URL, headers, and body for each pending request.
+Use this to see what requests are available to modify or forward.`,
 		ListPendingRequestsParams{},
 	)
 }

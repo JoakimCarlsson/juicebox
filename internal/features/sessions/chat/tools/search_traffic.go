@@ -29,7 +29,9 @@ func NewSearchTraffic(database *db.DB, sessionID string) *SearchTrafficTool {
 func (t *SearchTrafficTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"search_traffic",
-		"Search captured HTTP requests and responses for this session. Filter by method, host/URL, status code, or body content. Returns a list of matching requests with their ID, method, URL, status, and duration.",
+		`Search captured HTTP requests and responses for this session.
+Filter by method, host/URL, status code, or body content.
+Returns a list of matching requests with their ID, method, URL, status, and duration.`,
 		SearchTrafficParams{},
 	)
 }

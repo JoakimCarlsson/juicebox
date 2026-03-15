@@ -30,7 +30,8 @@ func NewListDatabases(
 func (t *ListDatabasesTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"list_databases",
-		"List all SQLite database files (.db) in the app's data directory. Returns an array of absolute paths.",
+		`List all SQLite database files (.db) in the app's data directory on the target device.
+Returns an array of absolute paths.`,
 		ListDatabasesParams{},
 	)
 }

@@ -29,7 +29,8 @@ func NewDropRequest(
 func (t *DropRequestTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"drop_request",
-		"Drop/block a paused/intercepted HTTP request, preventing it from reaching the server. The client will receive a 502 response.",
+		`Drop/block a paused/intercepted HTTP request, preventing it from reaching the server.
+The client will receive a 502 response.`,
 		DropRequestParams{},
 	)
 }

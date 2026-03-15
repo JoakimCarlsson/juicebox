@@ -28,7 +28,9 @@ func NewRunLogcatQuery(database *db.DB, sessionID string) *RunLogcatQueryTool {
 func (t *RunLogcatQueryTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"run_logcat_query",
-		"Search Android logcat entries for this session. Filter by tag, message text, or log level. Returns matching log lines with timestamp, PID, level, tag, and message.",
+		`Search Android logcat entries for this session on the target device.
+Filter by tag, message text, or log level.
+Returns matching log lines with timestamp, PID, level, tag, and message.`,
 		RunLogcatQueryParams{},
 	)
 }

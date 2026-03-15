@@ -34,7 +34,10 @@ func NewRunFridaScript(
 func (t *RunFridaScriptTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"run_frida_script",
-		"Compile and execute a saved Frida script. One-shot scripts (that send __done) return output immediately. Hook scripts start in the background — use get_script_output to read intercepted data.",
+		`Compile and execute a saved Frida script on the target device.
+One-shot scripts (that send __done) return output immediately.
+Hook scripts start in the background — use get_script_output to read intercepted data.
+Scripts run inside the app's process on the device, not in Docker.`,
 		RunFridaScriptParams{},
 	)
 }

@@ -29,7 +29,9 @@ func NewReadFile(
 func (t *ReadFileTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"read_file",
-		"Read the contents of a file inside the app's sandbox. Returns text content for text files. Binary files return a base64-encoded payload with MIME type. Files larger than 5 MB are rejected.",
+		`Read the contents of a file inside the app's sandbox on the target device.
+Returns text content for text files. Binary files return a base64-encoded payload with MIME type.
+Files larger than 5 MB are rejected.`,
 		ReadFileParams{},
 	)
 }

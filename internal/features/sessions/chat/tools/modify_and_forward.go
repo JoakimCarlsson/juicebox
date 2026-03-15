@@ -36,7 +36,10 @@ func NewModifyAndForward(
 func (t *ModifyAndForwardTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"modify_and_forward",
-		"Modify a paused/intercepted HTTP request or response and forward it. For request-phase intercepts: modify method, URL, headers, body. For response-phase intercepts: modify status_code, response_headers, response_body. Fields not provided will keep their original values.",
+		`Modify a paused/intercepted HTTP request or response and forward it.
+For request-phase intercepts: modify method, URL, headers, body.
+For response-phase intercepts: modify status_code, response_headers, response_body.
+Fields not provided will keep their original values.`,
 		ModifyAndForwardParams{},
 	)
 }

@@ -30,7 +30,10 @@ func NewGetCryptoEvents(
 func (t *GetCryptoEventsTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"get_crypto_events",
-		"Get recent cryptographic operation events for this session. Returns algorithm, operation type, key bytes, IV, input data, and output data in hex. Use to investigate encryption, signing, hashing, and key derivation calls made by the app. Correlate with HTTP traffic to identify signing keys, encryption schemes, and crypto misuse.",
+		`Get recent cryptographic operation events captured by Frida on the target device.
+Returns algorithm, operation type, key bytes, IV, input data, and output data in hex.
+Use to investigate encryption, signing, hashing, and key derivation calls made by the app.
+Correlate with HTTP traffic to identify signing keys, encryption schemes, and crypto misuse.`,
 		GetCryptoEventsParams{},
 	)
 }

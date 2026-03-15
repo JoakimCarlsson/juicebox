@@ -41,7 +41,8 @@ func NewSqliteQuery(
 func (t *SqliteQueryTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"sqlite_query",
-		"Execute a read-only SQL query against a SQLite database in the app's sandbox. The database is pulled from the device automatically. Returns columns and rows.",
+		`Execute a read-only SQL query against a SQLite database in the app's sandbox on the target device.
+The database is pulled from the device automatically. Returns columns and rows.`,
 		SqliteQueryParams{},
 	)
 }

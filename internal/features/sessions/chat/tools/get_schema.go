@@ -42,7 +42,9 @@ func NewGetSchema(
 func (t *GetSchemaTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"get_schema",
-		"Get the schema of a SQLite database. Returns all table names and their column definitions (name, type, constraints). The database is pulled from the device automatically.",
+		`Get the schema of a SQLite database from the target device.
+Returns all table names and their column definitions (name, type, constraints).
+The database is pulled from the device automatically.`,
 		GetSchemaParams{},
 	)
 }
