@@ -1,7 +1,16 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { ChevronDown, ChevronRight, Copy, Check, Terminal, Code, FileJson } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { generateCurl, generateFetch, generatePythonRequests, generateHarEntry } from '@/lib/export'
 import type { HttpMessage } from '@/types/session'
 import { BodyViewer } from './BodyViewer'
 import { formatBytes, formatDuration, statusColor, methodColor } from './helpers'
@@ -56,6 +65,53 @@ function CollapsibleSection({
   )
 }
 
+function CopyAsDropdown({ message }: { message: HttpMessage }) {
+  const [copiedLabel, setCopiedLabel] = useState<string | null>(null)
+
+  const handleCopy = useCallback(
+    (label: string, generator: (m: HttpMessage) => string) => {
+      navigator.clipboard.writeText(generator(message))
+      setCopiedLabel(label)
+      setTimeout(() => setCopiedLabel(null), 1500)
+    },
+    [message]
+  )
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1.5">
+          {copiedLabel ? (
+            <Check className="h-3 w-3 text-green-500" />
+          ) : (
+            <Copy className="h-3 w-3" />
+          )}
+          {copiedLabel ? `Copied as ${copiedLabel}` : 'Copy as...'}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => handleCopy('cURL', generateCurl)}>
+          <Terminal className="h-3.5 w-3.5 mr-2" />
+          Copy as cURL
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleCopy('fetch', generateFetch)}>
+          <Code className="h-3.5 w-3.5 mr-2" />
+          Copy as fetch
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleCopy('Python', generatePythonRequests)}>
+          <Code className="h-3.5 w-3.5 mr-2" />
+          Copy as Python requests
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => handleCopy('HAR', generateHarEntry)}>
+          <FileJson className="h-3.5 w-3.5 mr-2" />
+          Export as HAR entry
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export function RequestDetail({ message }: { message: HttpMessage | null }) {
   if (!message) {
     return (
@@ -70,6 +126,10 @@ export function RequestDetail({ message }: { message: HttpMessage | null }) {
 
   return (
     <div className="h-full overflow-auto">
+      <div className="flex items-center justify-end px-4 py-1.5 border-b border-border sticky top-0 bg-background z-10">
+        <CopyAsDropdown message={message} />
+      </div>
+
       <CollapsibleSection
         title="REQUEST"
         badge={
