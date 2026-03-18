@@ -1,7 +1,7 @@
 import { createFileRoute, useParams } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
-import { ClipboardCheck, Download, Plus, Search, Trash2 } from 'lucide-react'
+import { ClipboardCheck, Download, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
@@ -11,6 +11,7 @@ import { createFinding, updateFinding, deleteFinding } from '@/features/sessions
 import { FindingsList } from '@/components/findings/FindingsList'
 import { FindingDetail } from '@/components/findings/FindingDetail'
 import { FindingDialog } from '@/components/findings/FindingDialog'
+import { cn } from '@/lib/utils'
 import type { Finding, FindingSeverity, FindingsResponse } from '@/types/session'
 
 export const Route = createFileRoute('/devices/$deviceId/findings')({
@@ -23,10 +24,11 @@ function FindingsPage() {
   const sessionId = selectedApp?.sessionId ?? null
   const queryClient = useQueryClient()
 
-  const { data } = useQuery<FindingsResponse>({
+  const { data, refetch, isRefetching } = useQuery<FindingsResponse>({
     queryKey: ['findings', deviceId],
     queryFn: () => fetchDeviceFindings(deviceId),
     refetchInterval: 10000,
+    refetchOnMount: 'always',
   })
 
   const findings = data?.findings ?? []
@@ -143,6 +145,15 @@ function FindingsPage() {
         >
           <Trash2 className="mr-1.5 h-3 w-3" />
           {clearing ? 'Clearing...' : 'Clear'}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8"
+          onClick={() => refetch()}
+          disabled={isRefetching}
+        >
+          <RefreshCw className={cn('h-3 w-3', isRefetching && 'animate-spin')} />
         </Button>
         <span className="text-xs text-muted-foreground ml-auto tabular-nums">
           {findings.length} finding{findings.length !== 1 ? 's' : ''}
