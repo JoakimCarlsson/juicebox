@@ -141,6 +141,17 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
     updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_chat_conversations_device ON chat_conversations(device_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS findings (
+    id          TEXT PRIMARY KEY,
+    session_id  TEXT NOT NULL REFERENCES sessions(id),
+    title       TEXT NOT NULL,
+    severity    TEXT NOT NULL DEFAULT 'info',
+    description TEXT NOT NULL DEFAULT '',
+    created_at  INTEGER NOT NULL,
+    updated_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_findings_session ON findings(session_id, created_at DESC);
 `
 
 func (d *DB) Migrate() error {

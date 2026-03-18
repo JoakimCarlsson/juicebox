@@ -13,6 +13,7 @@ import (
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/detach"
 	exportpkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/export"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/filesystem"
+	findingspkg "github.com/joakimcarlsson/juicebox/internal/features/sessions/findings"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/intercept"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/list"
 	"github.com/joakimcarlsson/juicebox/internal/features/sessions/logs"
@@ -60,6 +61,7 @@ func RegisterRoutes(
 	memoryHandler := memorypkg.NewHandler(manager)
 	exportHandler := exportpkg.NewHandler(database)
 	convoHandler := conversations.NewHandler(database, chatStore)
+	findingsHandler := findingspkg.NewHandler(database)
 
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
 	r.PATCH("/sessions/{sessionId}", renameHandler.Handle)
@@ -120,4 +122,9 @@ func RegisterRoutes(
 	r.POST("/devices/{deviceId}/conversations", convoHandler.Create)
 	r.PATCH("/conversations/{conversationId}", convoHandler.Update)
 	r.DELETE("/conversations/{conversationId}", convoHandler.Delete)
+
+	r.POST("/sessions/{sessionId}/findings", findingsHandler.Create)
+	r.PATCH("/findings/{findingId}", findingsHandler.Update)
+	r.DELETE("/findings/{findingId}", findingsHandler.Delete)
+	r.GET("/devices/{deviceId}/findings/export", findingsHandler.Export)
 }

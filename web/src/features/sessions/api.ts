@@ -11,6 +11,8 @@ import type {
   InterceptDecision,
   InterceptRule,
   PendingRequest,
+  Finding,
+  FindingSeverity,
 } from '@/types/session'
 
 export async function detachSession(sessionId: string): Promise<void> {
@@ -297,4 +299,38 @@ export async function stopMemoryScan(sessionId: string): Promise<{ stopped: bool
     throw new Error(data.error || 'Failed to stop memory scan')
   }
   return res.json()
+}
+
+export async function createFinding(
+  sessionId: string,
+  data: { title: string; severity: FindingSeverity; description: string }
+): Promise<Finding> {
+  const res = await fetch(`/api/v1/sessions/${sessionId}/findings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to create finding')
+  }
+  return res.json()
+}
+
+export async function updateFinding(
+  findingId: string,
+  data: { title?: string; severity?: string; description?: string }
+): Promise<Finding> {
+  const res = await fetch(`/api/v1/findings/${findingId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error('Failed to update finding')
+  return res.json()
+}
+
+export async function deleteFinding(findingId: string): Promise<void> {
+  const res = await fetch(`/api/v1/findings/${findingId}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error('Failed to delete finding')
 }

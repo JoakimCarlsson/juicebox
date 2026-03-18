@@ -256,6 +256,11 @@ func (h *Handler) Handle(c *router.Context) {
 	}
 
 	if activeSessionID != "" {
+		rootTools = append(rootTools,
+			chattools.NewSaveFinding(h.db, activeSessionID),
+			chattools.NewListFindings(h.db, activeSessionID),
+		)
+
 		trafficTools = append(trafficTools,
 			chattools.NewGetRequestDetail(h.db),
 			chattools.NewSearchTraffic(h.db, activeSessionID),
