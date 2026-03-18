@@ -26,7 +26,9 @@ func NewListKeystoreEntries(
 func (t *ListKeystoreEntriesTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"list_keystore_entries",
-		"Enumerate keys stored in the Android Keystore for the target app. Returns alias, key type (AES/RSA/EC), key size, creation date, usage purposes, authentication requirements, and hardware backing status. Use to assess key management security: flag software-backed keys, keys without auth, ECB mode, or keys used for both signing and encryption.",
+		`Enumerate keys stored in the Android Keystore for the target app on the device.
+Returns alias, key type (AES/RSA/EC), key size, creation date, usage purposes, authentication requirements, and hardware backing status.
+Use to assess key management security: flag software-backed keys, keys without auth, ECB mode, or keys used for both signing and encryption.`,
 		ListKeystoreEntriesParams{},
 	)
 }

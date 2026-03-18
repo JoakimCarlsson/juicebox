@@ -25,7 +25,8 @@ func NewGetRequestDetail(database *db.DB) *GetRequestDetailTool {
 func (t *GetRequestDetailTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"get_request_detail",
-		"Retrieve the full details of a specific HTTP request/response by its message ID. Returns method, URL, headers, request body, response status, response headers, and response body.",
+		`Retrieve the full details of a specific HTTP request/response by its message ID.
+Returns method, URL, headers, request body, response status, response headers, and response body.`,
 		GetRequestDetailParams{},
 	)
 }

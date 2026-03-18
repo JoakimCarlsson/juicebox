@@ -25,7 +25,9 @@ func NewAttachApp(manager *session.Manager, deviceID string) *AttachAppTool {
 func (t *AttachAppTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"attach_app",
-		"Attach Frida to an app on the device by bundle ID. Spawns the app suspended, injects all matching scripts from the hooks editor, then resumes it. Returns the session ID and PID.",
+		`Attach Frida to an app on the target device by bundle ID.
+Spawns the app suspended, injects all matching scripts from the hooks editor, then resumes it.
+Returns the session ID and PID.`,
 		AttachAppParams{},
 	)
 }

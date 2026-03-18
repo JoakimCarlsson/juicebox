@@ -26,7 +26,10 @@ func NewListSharedPreferences(
 func (t *ListSharedPreferencesTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"list_shared_preferences",
-		"Enumerate all SharedPreferences files for the target app, including EncryptedSharedPreferences. Returns file names, whether they are encrypted (Jetpack Security / Tink), and all key-value pairs with types. For encrypted prefs, values are returned decrypted. Correlate encrypted prefs with list_keystore_entries to check whether the master key (typically _androidx_security_master_key_) is hardware-backed.",
+		`Enumerate all SharedPreferences files for the target app on the device, including EncryptedSharedPreferences.
+Returns file names, whether they are encrypted (Jetpack Security / Tink), and all key-value pairs with types.
+For encrypted prefs, values are returned decrypted.
+Correlate encrypted prefs with list_keystore_entries to check whether the master key is hardware-backed.`,
 		ListSharedPreferencesParams{},
 	)
 }

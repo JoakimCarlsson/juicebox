@@ -29,7 +29,9 @@ func NewListClasses(
 func (t *ListClassesTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"list_classes",
-		"Search loaded Java classes in the running app. Returns fully qualified class names matching the query substring. Useful for finding classes related to authentication, networking, crypto, etc.",
+		`Search loaded Java classes in the running app on the device.
+Returns fully qualified class names matching the query substring.
+Useful for finding classes related to authentication, networking, crypto, or any specific functionality.`,
 		ListClassesParams{},
 	)
 }
