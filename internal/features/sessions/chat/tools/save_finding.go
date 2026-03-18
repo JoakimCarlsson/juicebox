@@ -10,6 +10,7 @@ import (
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/tool"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 )
 
 var validSeverities = map[string]bool{
@@ -29,10 +30,21 @@ type SaveFindingParams struct {
 type SaveFindingTool struct {
 	db        *db.DB
 	sessionID string
+	deviceID  string
+	hub       *devicehub.Hub
 }
 
-func NewSaveFinding(database *db.DB, sessionID string) *SaveFindingTool {
-	return &SaveFindingTool{db: database, sessionID: sessionID}
+func NewSaveFinding(
+	database *db.DB,
+	sessionID, deviceID string,
+	hub *devicehub.Hub,
+) *SaveFindingTool {
+	return &SaveFindingTool{
+		db:        database,
+		sessionID: sessionID,
+		deviceID:  deviceID,
+		hub:       hub,
+	}
 }
 
 func (t *SaveFindingTool) Info() tool.ToolInfo {
@@ -83,6 +95,12 @@ func (t *SaveFindingTool) Run(
 		return tool.NewTextErrorResponse(
 			fmt.Sprintf("failed to save finding: %v", err),
 		), nil
+	}
+
+	if t.hub != nil {
+		if data, err := devicehub.Marshal("finding", t.sessionID, finding); err == nil {
+			t.hub.Broadcast(data)
+		}
 	}
 
 	return tool.NewJSONResponse(finding), nil

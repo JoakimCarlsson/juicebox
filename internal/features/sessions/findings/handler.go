@@ -10,6 +10,7 @@ import (
 
 	"github.com/joakimcarlsson/go-router/router/v2"
 	"github.com/joakimcarlsson/juicebox/internal/db"
+	"github.com/joakimcarlsson/juicebox/internal/devicehub"
 	"github.com/joakimcarlsson/juicebox/internal/response"
 )
 
@@ -22,11 +23,26 @@ var validSeverities = map[string]bool{
 }
 
 type Handler struct {
-	db *db.DB
+	db         *db.DB
+	hubManager *devicehub.Manager
 }
 
-func NewHandler(database *db.DB) *Handler {
-	return &Handler{db: database}
+func NewHandler(database *db.DB, hubManager *devicehub.Manager) *Handler {
+	return &Handler{db: database, hubManager: hubManager}
+}
+
+func (h *Handler) broadcastFinding(sessionID string, finding *db.FindingRow) {
+	sess, err := h.db.GetSession(sessionID)
+	if err != nil || sess == nil {
+		return
+	}
+	data, err := devicehub.Marshal("finding", sessionID, finding)
+	if err != nil {
+		return
+	}
+	if hub := h.hubManager.Get(sess.DeviceID); hub != nil {
+		hub.Broadcast(data)
+	}
 }
 
 func newID() string {
@@ -76,6 +92,7 @@ func (h *Handler) Create(c *router.Context) {
 		return
 	}
 
+	h.broadcastFinding(sessionID, finding)
 	c.JSON(http.StatusCreated, finding)
 }
 

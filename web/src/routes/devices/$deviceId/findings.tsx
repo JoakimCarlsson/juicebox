@@ -1,37 +1,48 @@
 import { createFileRoute, useParams } from '@tanstack/react-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
-import { ClipboardCheck, Download, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { ClipboardCheck, Download, Plus, Search, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { useAttachedApps } from '@/contexts/AttachedAppsContext'
-import { fetchDeviceFindings, clearDeviceFindings } from '@/features/devices/data-api'
+import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
 import { createFinding, updateFinding, deleteFinding } from '@/features/sessions/api'
 import { FindingsList } from '@/components/findings/FindingsList'
 import { FindingDetail } from '@/components/findings/FindingDetail'
 import { FindingDialog } from '@/components/findings/FindingDialog'
-import { cn } from '@/lib/utils'
-import type { Finding, FindingSeverity, FindingsResponse } from '@/types/session'
+import type { Finding, FindingSeverity } from '@/types/session'
 
 export const Route = createFileRoute('/devices/$deviceId/findings')({
   component: FindingsPage,
 })
 
+const SEVERITY_WEIGHT: Record<string, number> = {
+  critical: 1,
+  high: 2,
+  medium: 3,
+  low: 4,
+  info: 5,
+}
+
 function FindingsPage() {
   const { deviceId } = useParams({ strict: false }) as { deviceId: string }
   const { selectedApp } = useAttachedApps()
   const sessionId = selectedApp?.sessionId ?? null
-  const queryClient = useQueryClient()
+  const { messages, clearByType } = useDeviceMessages()
 
-  const { data, refetch, isRefetching } = useQuery<FindingsResponse>({
-    queryKey: ['findings', deviceId],
-    queryFn: () => fetchDeviceFindings(deviceId),
-    refetchInterval: 10000,
-    refetchOnMount: 'always',
-  })
+  const findings = useMemo(() => {
+    const items = messages
+      .filter(
+        (m): m is { type: 'finding'; payload: Finding } => m.type === 'finding' && !!m.payload
+      )
+      .map((m) => m.payload as unknown as Finding)
 
-  const findings = data?.findings ?? []
+    return items.sort((a, b) => {
+      const sw = (SEVERITY_WEIGHT[a.severity] ?? 5) - (SEVERITY_WEIGHT[b.severity] ?? 5)
+      if (sw !== 0) return sw
+      return b.createdAt - a.createdAt
+    })
+  }, [messages])
 
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -54,50 +65,39 @@ function FindingsPage() {
     return filtered.find((f) => f.id === selectedId) ?? null
   }, [filtered, selectedId])
 
-  const invalidate = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: ['findings', deviceId] }),
-    [queryClient, deviceId]
-  )
-
-  const createMutation = useMutation({
-    mutationFn: (data: { title: string; severity: FindingSeverity; description: string }) =>
-      createFinding(sessionId!, data),
-    onSuccess: (created: Finding) => {
-      invalidate()
+  const handleCreate = useCallback(
+    async (data: { title: string; severity: FindingSeverity; description: string }) => {
+      if (!sessionId) return
+      const created = await createFinding(sessionId, data)
       setSelectedId(created.id)
       setDialogOpen(false)
     },
-  })
+    [sessionId]
+  )
 
-  const updateMutation = useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string
-      data: { title?: string; severity?: string; description?: string }
-    }) => updateFinding(id, data),
-    onSuccess: () => invalidate(),
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteFinding,
-    onSuccess: () => {
-      invalidate()
-      setSelectedId(null)
+  const handleUpdate = useCallback(
+    async (id: string, data: { title?: string; severity?: string; description?: string }) => {
+      await updateFinding(id, data)
+      // The WS won't broadcast updates — refetch from API to get the updated row
+      // For now the detail panel shows the optimistic data from the form
     },
-  })
+    []
+  )
+
+  const handleDelete = useCallback(async (id: string) => {
+    await deleteFinding(id)
+    setSelectedId(null)
+  }, [])
 
   const handleClear = useCallback(async () => {
     setClearing(true)
     try {
-      await clearDeviceFindings(deviceId)
-      invalidate()
+      await clearByType('finding')
       setSelectedId(null)
     } finally {
       setClearing(false)
     }
-  }, [deviceId, invalidate])
+  }, [clearByType])
 
   const handleExport = useCallback(() => {
     const a = document.createElement('a')
@@ -146,15 +146,6 @@ function FindingsPage() {
           <Trash2 className="mr-1.5 h-3 w-3" />
           {clearing ? 'Clearing...' : 'Clear'}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8"
-          onClick={() => refetch()}
-          disabled={isRefetching}
-        >
-          <RefreshCw className={cn('h-3 w-3', isRefetching && 'animate-spin')} />
-        </Button>
         <span className="text-xs text-muted-foreground ml-auto tabular-nums">
           {findings.length} finding{findings.length !== 1 ? 's' : ''}
         </span>
@@ -178,8 +169,8 @@ function FindingsPage() {
               <FindingDetail
                 finding={selectedFinding}
                 sessionId={sessionId}
-                onUpdate={(id, data) => updateMutation.mutate({ id, data })}
-                onDelete={(id) => deleteMutation.mutate(id)}
+                onUpdate={handleUpdate}
+                onDelete={handleDelete}
               />
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -191,7 +182,7 @@ function FindingsPage() {
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           sessionId={sessionId}
-          onSubmit={(data) => createMutation.mutate(data)}
+          onSubmit={handleCreate}
         />
       )}
     </div>

@@ -8,12 +8,14 @@ import {
   fetchDeviceCrypto,
   fetchDeviceClipboard,
   fetchDeviceFlutterChannels,
+  fetchDeviceFindings,
   clearDeviceMessages,
   clearDeviceLogs,
   clearDeviceCrashes,
   clearDeviceCrypto,
   clearDeviceClipboard,
   clearDeviceFlutterChannels,
+  clearDeviceFindings,
 } from '@/features/devices/data-api'
 import type { AgentMessage, DeviceEnvelope } from '@/types/session'
 
@@ -24,6 +26,7 @@ const clearApiFns: Record<string, (id: string) => Promise<void>> = {
   crypto: clearDeviceCrypto,
   clipboard: clearDeviceClipboard,
   flutter_channel: clearDeviceFlutterChannels,
+  finding: clearDeviceFindings,
 }
 
 interface DeviceMessageContextValue {
@@ -61,81 +64,93 @@ export function DeviceMessageProvider({ children }: { children: React.ReactNode 
       fetchDeviceCrypto(deviceId).catch(() => null),
       fetchDeviceClipboard(deviceId).catch(() => null),
       fetchDeviceFlutterChannels(deviceId).catch(() => null),
-    ]).then(([msgResp, logResp, crashResp, cryptoResp, clipboardResp, flutterResp]) => {
-      const historical: AgentMessage[] = []
+      fetchDeviceFindings(deviceId).catch(() => null),
+    ]).then(
+      ([msgResp, logResp, crashResp, cryptoResp, clipboardResp, flutterResp, findingsResp]) => {
+        const historical: AgentMessage[] = []
 
-      if (msgResp?.messages) {
-        for (const m of msgResp.messages) {
-          if (!seenIds.current.has(m.id)) {
-            seenIds.current.add(m.id)
-            historical.push({ type: 'http', payload: m })
+        if (msgResp?.messages) {
+          for (const m of msgResp.messages) {
+            if (!seenIds.current.has(m.id)) {
+              seenIds.current.add(m.id)
+              historical.push({ type: 'http', payload: m })
+            }
           }
         }
-      }
 
-      if (logResp?.entries) {
-        for (const e of logResp.entries) {
-          if (!seenIds.current.has(e.id)) {
-            seenIds.current.add(e.id)
-            historical.push({ type: 'logcat', payload: e })
+        if (logResp?.entries) {
+          for (const e of logResp.entries) {
+            if (!seenIds.current.has(e.id)) {
+              seenIds.current.add(e.id)
+              historical.push({ type: 'logcat', payload: e })
+            }
           }
         }
-      }
 
-      if (crashResp?.crashes) {
-        for (const c of crashResp.crashes) {
-          if (!seenIds.current.has(c.id)) {
-            seenIds.current.add(c.id)
-            historical.push({ type: 'crash', payload: c })
+        if (crashResp?.crashes) {
+          for (const c of crashResp.crashes) {
+            if (!seenIds.current.has(c.id)) {
+              seenIds.current.add(c.id)
+              historical.push({ type: 'crash', payload: c })
+            }
           }
         }
-      }
 
-      if (cryptoResp?.events) {
-        for (const e of cryptoResp.events) {
-          if (!seenIds.current.has(e.id)) {
-            seenIds.current.add(e.id)
-            historical.push({ type: 'crypto', payload: e })
+        if (cryptoResp?.events) {
+          for (const e of cryptoResp.events) {
+            if (!seenIds.current.has(e.id)) {
+              seenIds.current.add(e.id)
+              historical.push({ type: 'crypto', payload: e })
+            }
           }
         }
-      }
 
-      if (clipboardResp?.events) {
-        for (const e of clipboardResp.events) {
-          if (!seenIds.current.has(e.id)) {
-            seenIds.current.add(e.id)
-            historical.push({ type: 'clipboard', payload: e })
+        if (clipboardResp?.events) {
+          for (const e of clipboardResp.events) {
+            if (!seenIds.current.has(e.id)) {
+              seenIds.current.add(e.id)
+              historical.push({ type: 'clipboard', payload: e })
+            }
           }
         }
-      }
 
-      if (flutterResp?.events) {
-        for (const e of flutterResp.events) {
-          if (!seenIds.current.has(e.id)) {
-            seenIds.current.add(e.id)
-            historical.push({ type: 'flutter_channel', payload: e })
+        if (flutterResp?.events) {
+          for (const e of flutterResp.events) {
+            if (!seenIds.current.has(e.id)) {
+              seenIds.current.add(e.id)
+              historical.push({ type: 'flutter_channel', payload: e })
+            }
           }
         }
-      }
 
-      if (historical.length > 0) {
-        setMessages((prev) => {
-          const existingIds = new Set(
-            prev
-              .map((m) => {
-                const p = m.payload as { id?: string } | undefined
-                return p?.id
-              })
-              .filter(Boolean)
-          )
-          const newMsgs = historical.filter((h) => {
-            const p = h.payload as { id?: string } | undefined
-            return p?.id && !existingIds.has(p.id)
+        if (findingsResp?.findings) {
+          for (const f of findingsResp.findings) {
+            if (!seenIds.current.has(f.id)) {
+              seenIds.current.add(f.id)
+              historical.push({ type: 'finding', payload: f })
+            }
+          }
+        }
+
+        if (historical.length > 0) {
+          setMessages((prev) => {
+            const existingIds = new Set(
+              prev
+                .map((m) => {
+                  const p = m.payload as { id?: string } | undefined
+                  return p?.id
+                })
+                .filter(Boolean)
+            )
+            const newMsgs = historical.filter((h) => {
+              const p = h.payload as { id?: string } | undefined
+              return p?.id && !existingIds.has(p.id)
+            })
+            return [...newMsgs, ...prev]
           })
-          return [...newMsgs, ...prev]
-        })
+        }
       }
-    })
+    )
   }, [connected, deviceId])
 
   useEffect(() => {

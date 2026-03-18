@@ -61,7 +61,7 @@ func RegisterRoutes(
 	memoryHandler := memorypkg.NewHandler(manager)
 	exportHandler := exportpkg.NewHandler(database)
 	convoHandler := conversations.NewHandler(database, chatStore)
-	findingsHandler := findingspkg.NewHandler(database)
+	findingsHandler := findingspkg.NewHandler(database, hubManager)
 
 	r.DELETE("/sessions/{sessionId}", detachHandler.Handle)
 	r.PATCH("/sessions/{sessionId}", renameHandler.Handle)
