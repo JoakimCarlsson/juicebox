@@ -25,6 +25,11 @@ export type SSEEvent =
   | { type: 'content'; data: { delta: string } }
   | { type: 'tool_start'; data: { name: string; id: string } }
   | { type: 'tool_end'; data: { name: string; id: string; result: string } }
+  | {
+      type: 'subagent_tool_start'
+      data: { agent_name: string; tool_name: string; tool_id: string }
+    }
+  | { type: 'subagent_tool_end'; data: { agent_name: string; tool_name: string; tool_id: string } }
   | { type: 'edit_applied'; data: { success: boolean } }
   | { type: 'edit_failed'; data: { error: string } }
   | { type: 'done'; data: { input_tokens: number; output_tokens: number } }
@@ -104,6 +109,14 @@ export async function deleteConversation(conversationId: string): Promise<void> 
     method: 'DELETE',
   })
   if (!res.ok) throw new Error('Failed to delete conversation')
+}
+
+export async function cancelChat(deviceId: string, conversationId: string): Promise<void> {
+  await fetch(`/api/v1/devices/${deviceId}/chat/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conversationId }),
+  })
 }
 
 export function streamChat(

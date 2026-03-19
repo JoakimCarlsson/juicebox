@@ -7,6 +7,7 @@ import {
   TextBlock,
   ToolCallBlock,
   StreamingCursor,
+  ThinkingIndicator,
 } from '@/components/chat/ChatMessage'
 
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   Send,
+  Square,
   BotMessageSquare,
   Settings,
   Plus,
@@ -235,8 +237,10 @@ export function ChatPanel() {
   const {
     messages,
     isStreaming,
+    isThinking,
     configured,
     sendMessage,
+    stopStreaming,
     startNewConversation,
     activeConversationId,
     selectedModel,
@@ -353,6 +357,7 @@ export function ChatPanel() {
                   return <StreamingCursor key={item.key} />
               }
             })}
+            {isThinking && <ThinkingIndicator />}
           </div>
         )}
       </div>
@@ -365,18 +370,24 @@ export function ChatPanel() {
             onChange={handleInput}
             onKeyDown={handleKeyDown}
             placeholder="Ask about this session..."
-            disabled={isStreaming || configured !== true || !selectedModel}
+            disabled={configured !== true || !selectedModel}
             rows={1}
             className="flex-1 resize-none rounded-md border border-input bg-background px-2.5 py-1.5 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
           />
-          <Button
-            size="icon"
-            className="h-9 w-9 shrink-0"
-            onClick={handleSend}
-            disabled={!input.trim() || isStreaming || configured !== true || !selectedModel}
-          >
-            <Send className="h-3 w-3" />
-          </Button>
+          {isStreaming ? (
+            <Button size="icon" className="h-9 w-9 shrink-0" onClick={stopStreaming}>
+              <Square className="h-3 w-3" />
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              className="h-9 w-9 shrink-0"
+              onClick={handleSend}
+              disabled={!input.trim() || configured !== true || !selectedModel}
+            >
+              <Send className="h-3 w-3" />
+            </Button>
+          )}
         </div>
         <div className="px-2 pb-1.5">
           <ModelPicker />

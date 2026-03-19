@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/joakimcarlsson/ai/agent"
 	"github.com/joakimcarlsson/ai/message"
@@ -32,6 +33,7 @@ type Handler struct {
 	sqliteService *sqlite.Service
 	hubManager    *devicehub.Manager
 	runner        *scripting.Runner
+	activeChats   sync.Map
 }
 
 func NewHandler(
@@ -324,16 +326,22 @@ func (h *Handler) Handle(c *router.Context) {
 		"SessionID": activeSessionID,
 	}
 
+	subagentCh := make(chan subagentRelayEvent, 64)
+
 	juiceboxSubAgents := []agent.SubAgentConfig{}
 	if len(fridaTools) > 0 {
 		juiceboxSubAgents = append(juiceboxSubAgents, agent.SubAgentConfig{
 			Name:        "frida_instrumentation",
 			Description: "Frida instrumentation specialist. Handles Frida scripts, class/memory inspection, and Frida-backed telemetry. Supports background=true for long-running hooks.",
-			Agent: agent.New(llmClient,
+			Agent: agent.New(
+				llmClient,
 				agent.WithSystemPrompt(FridaInstrumentationPromptTemplate),
 				agent.WithTools(fridaTools...),
 				agent.WithState(state),
 				agent.WithSession(req.ConversationID, chatSession),
+				agent.WithHooks(
+					subagentHooks("frida_instrumentation", subagentCh),
+				),
 			),
 		})
 	}
@@ -347,6 +355,7 @@ func (h *Handler) Handle(c *router.Context) {
 				agent.WithTools(trafficTools...),
 				agent.WithState(state),
 				agent.WithSession(req.ConversationID, chatSession),
+				agent.WithHooks(subagentHooks("traffic_analyst", subagentCh)),
 			),
 		})
 	}
@@ -355,11 +364,15 @@ func (h *Handler) Handle(c *router.Context) {
 		juiceboxSubAgents = append(juiceboxSubAgents, agent.SubAgentConfig{
 			Name:        "filesystem_analyst",
 			Description: "Filesystem and SQLite specialist. Handles sandbox exploration, schema inspection, and SQL analysis.",
-			Agent: agent.New(llmClient,
+			Agent: agent.New(
+				llmClient,
 				agent.WithSystemPrompt(FilesystemAnalystPromptTemplate),
 				agent.WithTools(filesystemTools...),
 				agent.WithState(state),
 				agent.WithSession(req.ConversationID, chatSession),
+				agent.WithHooks(
+					subagentHooks("filesystem_analyst", subagentCh),
+				),
 			),
 		})
 	}
@@ -403,6 +416,31 @@ func (h *Handler) Handle(c *router.Context) {
 	c.SSEHandler(
 		router.DefaultSSEConfig(),
 		func(ctx context.Context, send router.SSESendFunc) error {
+			chatCtx, chatCancel := context.WithCancel(ctx)
+			defer chatCancel()
+
+			h.activeChats.Store(convoID, chatCancel)
+			defer h.activeChats.Delete(convoID)
+
+			var sendMu sync.Mutex
+			safeSend := func(event string, data any) error {
+				sendMu.Lock()
+				defer sendMu.Unlock()
+				return send(event, data)
+			}
+
+			relayDone := make(chan struct{})
+			go func() {
+				defer close(relayDone)
+				for evt := range subagentCh {
+					_ = safeSend(evt.eventType, evt.data)
+				}
+			}()
+			defer func() {
+				close(subagentCh)
+				<-relayDone
+			}()
+
 			msg := userMsg
 			totalUsage := sseDoneEvent{}
 
@@ -415,25 +453,25 @@ func (h *Handler) Handle(c *router.Context) {
 				var streamErr error
 				var complete bool
 
-				for event := range a.ChatStream(ctx, msg) {
+				for event := range a.ChatStream(chatCtx, msg) {
 					switch event.Type {
 					case types.EventContentDelta:
 						applier.accumulate(event.Content)
-						if err := send("content", sseContentEvent{Delta: event.Content}); err != nil {
+						if err := safeSend("content", sseContentEvent{Delta: event.Content}); err != nil {
 							return err
 						}
 
 					case types.EventToolUseStart:
 						if editErr := applier.flush(); editErr != "" {
-							_ = send(
+							_ = safeSend(
 								"edit_failed",
 								sseEditResultEvent{Error: editErr},
 							)
 						} else if applier.applied > 0 {
-							_ = send("edit_applied", sseEditResultEvent{Success: true})
+							_ = safeSend("edit_applied", sseEditResultEvent{Success: true})
 						}
 						if event.ToolCall != nil {
-							if err := send("tool_start", sseToolStartEvent{
+							if err := safeSend("tool_start", sseToolStartEvent{
 								Name: event.ToolCall.Name,
 								ID:   event.ToolCall.ID,
 							}); err != nil {
@@ -443,7 +481,7 @@ func (h *Handler) Handle(c *router.Context) {
 
 					case types.EventToolUseStop:
 						if event.ToolResult != nil {
-							if err := send("tool_end", sseToolEndEvent{
+							if err := safeSend("tool_end", sseToolEndEvent{
 								Name:   event.ToolResult.ToolName,
 								ID:     event.ToolResult.ToolCallID,
 								Result: event.ToolResult.Output,
@@ -454,12 +492,12 @@ func (h *Handler) Handle(c *router.Context) {
 
 					case types.EventComplete:
 						if editErr := applier.flush(); editErr != "" {
-							_ = send(
+							_ = safeSend(
 								"edit_failed",
 								sseEditResultEvent{Error: editErr},
 							)
 						} else if applier.applied > 0 {
-							_ = send("edit_applied", sseEditResultEvent{Success: true})
+							_ = safeSend("edit_applied", sseEditResultEvent{Success: true})
 						}
 						if event.Response != nil {
 							totalUsage.InputTokens += event.Response.Usage.InputTokens
@@ -477,18 +515,18 @@ func (h *Handler) Handle(c *router.Context) {
 				}
 
 				if streamErr != nil {
-					return send(
+					return safeSend(
 						"error",
 						sseErrorEvent{Message: streamErr.Error()},
 					)
 				}
 				if !complete {
-					return send("done", totalUsage)
+					return safeSend("done", totalUsage)
 				}
 
 				scripts := applier.scriptFiles()
 				if len(scripts) == 0 || attempt == maxLintRetries {
-					return send("done", totalUsage)
+					return safeSend("done", totalUsage)
 				}
 
 				compileErr := compileModifiedScripts(
@@ -498,7 +536,7 @@ func (h *Handler) Handle(c *router.Context) {
 					scripts,
 				)
 				if compileErr == "" {
-					return send("done", totalUsage)
+					return safeSend("done", totalUsage)
 				}
 
 				slog.Info("auto-lint retry",
@@ -506,7 +544,7 @@ func (h *Handler) Handle(c *router.Context) {
 					"device", deviceID,
 					"scripts", scripts,
 				)
-				_ = send(
+				_ = safeSend(
 					"content",
 					sseContentEvent{
 						Delta: "\n\n---\n*Compilation error detected, retrying...*\n\n",
@@ -515,8 +553,8 @@ func (h *Handler) Handle(c *router.Context) {
 				msg = autoLintPrefix + compileErr
 			}
 
-			h.autoNameConversation(ctx, convoID, userMsg)
-			return send("done", totalUsage)
+			h.autoNameConversation(chatCtx, convoID, userMsg)
+			return safeSend("done", totalUsage)
 		},
 	)
 }
@@ -637,4 +675,55 @@ func (h *Handler) History(c *router.Context) {
 	}
 
 	c.JSON(http.StatusOK, map[string]any{"messages": result})
+}
+
+func (h *Handler) Cancel(c *router.Context) {
+	var req cancelRequest
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.ConversationID == "" {
+		response.Error(c, http.StatusBadRequest, "conversationId is required")
+		return
+	}
+	if cancel, ok := h.activeChats.Load(req.ConversationID); ok {
+		cancel.(context.CancelFunc)()
+		c.JSON(http.StatusOK, map[string]any{"cancelled": true})
+		return
+	}
+	c.JSON(http.StatusNotFound, map[string]any{"error": "no active chat"})
+}
+
+func subagentHooks(agentName string, ch chan<- subagentRelayEvent) agent.Hooks {
+	return agent.Hooks{
+		PreToolUse: func(_ context.Context, tc agent.ToolUseContext) (agent.PreToolUseResult, error) {
+			select {
+			case ch <- subagentRelayEvent{
+				eventType: "subagent_tool_start",
+				data: sseSubagentToolStartEvent{
+					AgentName: agentName,
+					ToolName:  tc.ToolName,
+					ToolID:    tc.ToolCallID,
+				},
+			}:
+			default:
+			}
+			return agent.PreToolUseResult{Action: agent.HookAllow}, nil
+		},
+		PostToolUse: func(_ context.Context, tc agent.PostToolUseContext) (agent.PostToolUseResult, error) {
+			select {
+			case ch <- subagentRelayEvent{
+				eventType: "subagent_tool_end",
+				data: sseSubagentToolEndEvent{
+					AgentName: agentName,
+					ToolName:  tc.ToolName,
+					ToolID:    tc.ToolCallID,
+				},
+			}:
+			default:
+			}
+			return agent.PostToolUseResult{Action: agent.HookAllow}, nil
+		},
+	}
 }
