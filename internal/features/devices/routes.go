@@ -63,6 +63,8 @@ func RegisterRoutes(
 			"/{deviceId}/data/flutter-channels",
 			dataHandler.ClearFlutterChannels,
 		)
+		d.GET("/{deviceId}/data/findings", dataHandler.Findings)
+		d.DELETE("/{deviceId}/data/findings", dataHandler.ClearFindings)
 	})
 	r.GET("/ws/devices/{deviceId}", streamHandler.Handle)
 }

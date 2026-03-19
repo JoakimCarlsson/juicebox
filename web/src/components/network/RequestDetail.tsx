@@ -1,5 +1,14 @@
 import { useState, useCallback } from 'react'
-import { ChevronDown, ChevronRight, Copy, Check, Terminal, Code, FileJson } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Check,
+  Terminal,
+  Code,
+  FileJson,
+  Flag,
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,6 +21,7 @@ import {
 import { cn } from '@/lib/utils'
 import { generateCurl, generateFetch, generatePythonRequests, generateHarEntry } from '@/lib/export'
 import type { HttpMessage } from '@/types/session'
+import { FindingDialog } from '@/components/findings/FindingDialog'
 import { BodyViewer } from './BodyViewer'
 import { formatBytes, formatDuration, statusColor, methodColor } from './helpers'
 
@@ -112,7 +122,17 @@ function CopyAsDropdown({ message }: { message: HttpMessage }) {
   )
 }
 
-export function RequestDetail({ message }: { message: HttpMessage | null }) {
+export function RequestDetail({
+  message,
+  sessionId,
+  onFindingCreated,
+}: {
+  message: HttpMessage | null
+  sessionId?: string | null
+  onFindingCreated?: () => void
+}) {
+  const [findingOpen, setFindingOpen] = useState(false)
+
   if (!message) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -126,9 +146,34 @@ export function RequestDetail({ message }: { message: HttpMessage | null }) {
 
   return (
     <div className="h-full overflow-auto">
-      <div className="flex items-center justify-end px-4 py-1.5 border-b border-border sticky top-0 bg-background z-10">
+      <div className="flex items-center justify-end gap-1 px-4 py-1.5 border-b border-border sticky top-0 bg-background z-10">
+        {sessionId && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            onClick={() => setFindingOpen(true)}
+          >
+            <Flag className="h-3 w-3" />
+            Add Finding
+          </Button>
+        )}
         <CopyAsDropdown message={message} />
       </div>
+      {sessionId && (
+        <FindingDialog
+          open={findingOpen}
+          onOpenChange={setFindingOpen}
+          sessionId={sessionId}
+          defaultTitle={`${message.method} ${new URL(message.url).pathname}`}
+          onSubmit={async (data) => {
+            const { createFinding } = await import('@/features/sessions/api')
+            await createFinding(sessionId, data)
+            setFindingOpen(false)
+            onFindingCreated?.()
+          }}
+        />
+      )}
 
       <CollapsibleSection
         title="REQUEST"

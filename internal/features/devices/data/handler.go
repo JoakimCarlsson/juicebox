@@ -344,3 +344,35 @@ func (h *Handler) FlutterChannels(c *router.Context) {
 		"total":  len(events),
 	})
 }
+
+func (h *Handler) Findings(c *router.Context) {
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
+		return
+	}
+
+	findings, err := h.db.ListFindingsByDevice(c.Request.Context(), deviceID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, map[string]any{
+		"findings": findings,
+		"total":    len(findings),
+	})
+}
+
+func (h *Handler) ClearFindings(c *router.Context) {
+	deviceID := c.Param("deviceId")
+	if deviceID == "" {
+		response.Error(c, http.StatusBadRequest, "missing deviceId")
+		return
+	}
+	if err := h.db.ClearFindingsByDevice(c.Request.Context(), deviceID); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.Writer.WriteHeader(http.StatusNoContent)
+}

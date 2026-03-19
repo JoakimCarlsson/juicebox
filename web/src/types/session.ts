@@ -259,3 +259,20 @@ export interface InterceptDecision {
   responseHeaders?: Record<string, string>
   responseBody?: string
 }
+
+export type FindingSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info'
+
+export interface Finding {
+  id: string
+  sessionId: string
+  title: string
+  severity: FindingSeverity
+  description: string
+  createdAt: number
+  updatedAt: number
+}
+
+export interface FindingsResponse {
+  findings: Finding[]
+  total: number
+}

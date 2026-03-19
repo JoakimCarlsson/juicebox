@@ -216,7 +216,7 @@ function NetworkPageInner({ sessionId }: { sessionId: string }) {
               {selectedPending ? (
                 <PendingRequestEditor pending={selectedPending} onDecision={sendDecision} />
               ) : (
-                <RequestDetail message={selectedMessage} />
+                <RequestDetail message={selectedMessage} sessionId={sessionId} />
               )}
             </ResizablePanel>
           </ResizablePanelGroup>

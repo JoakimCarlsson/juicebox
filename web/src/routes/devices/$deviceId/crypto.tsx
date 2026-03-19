@@ -16,6 +16,7 @@ import {
   Check,
   FileText,
   LockKeyhole,
+  Flag,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,7 @@ import { useDeviceMessages } from '@/contexts/DeviceMessageContext'
 import { useAttachedApps } from '@/contexts/AttachedAppsContext'
 import { NoAppAttachedState } from '@/components/devices/NoAppAttachedState'
 import type { CryptoEvent, KeystoreEntry, SharedPrefsFile } from '@/types/session'
+import { FindingDialog } from '@/components/findings/FindingDialog'
 import {
   enableCryptoHooks,
   fetchKeystoreEntries,
@@ -196,6 +198,7 @@ function CryptoPage() {
                     event={selectedEvent}
                     showDecoded={showDecoded}
                     onToggleDecoded={() => setShowDecoded((v) => !v)}
+                    sessionId={sessionId}
                   />
                 )}
               </div>
@@ -290,11 +293,15 @@ function EventDetail({
   event,
   showDecoded,
   onToggleDecoded,
+  sessionId,
 }: {
   event: CryptoEvent
   showDecoded: boolean
   onToggleDecoded: () => void
+  sessionId?: string | null
 }) {
+  const [findingOpen, setFindingOpen] = useState(false)
+
   return (
     <div className="border-t border-border bg-muted/20 px-4 py-3 space-y-2 max-h-[50%] overflow-auto">
       <div className="flex items-center gap-2 mb-2">
@@ -305,14 +312,35 @@ function EventDetail({
           {event.operation}
         </Badge>
         <span className="text-xs font-mono text-foreground">{event.algorithm}</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 text-[10px] ml-auto"
-          onClick={onToggleDecoded}
-        >
-          {showDecoded ? 'Hex' : 'Decoded'}
-        </Button>
+        <div className="ml-auto flex items-center gap-1">
+          {sessionId && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[10px]"
+                onClick={() => setFindingOpen(true)}
+              >
+                <Flag className="h-3 w-3 mr-1" />
+                Add Finding
+              </Button>
+              <FindingDialog
+                open={findingOpen}
+                onOpenChange={setFindingOpen}
+                sessionId={sessionId}
+                defaultTitle={`${event.operation} — ${event.algorithm}`}
+                onSubmit={async (data) => {
+                  const { createFinding } = await import('@/features/sessions/api')
+                  await createFinding(sessionId, data)
+                  setFindingOpen(false)
+                }}
+              />
+            </>
+          )}
+          <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={onToggleDecoded}>
+            {showDecoded ? 'Hex' : 'Decoded'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-1.5">

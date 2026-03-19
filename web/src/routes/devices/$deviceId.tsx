@@ -34,6 +34,7 @@ import {
   ChevronLeft,
   Settings,
   Smartphone,
+  ClipboardCheck,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/devices/$deviceId')({
@@ -51,6 +52,7 @@ const TABS = [
   { value: 'memory', label: 'Memory', icon: Search },
   { value: 'hooks', label: 'Hooks', icon: Code },
   { value: 'flutter', label: 'Flutter', icon: Smartphone },
+  { value: 'findings', label: 'Findings', icon: ClipboardCheck },
 ] as const
 
 function DeviceLayout() {
