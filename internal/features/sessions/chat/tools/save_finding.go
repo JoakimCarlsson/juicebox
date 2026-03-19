@@ -22,9 +22,9 @@ var validSeverities = map[string]bool{
 }
 
 type SaveFindingParams struct {
-	Title       string `json:"title"       description:"Title of the finding"`
-	Severity    string `json:"severity"    description:"Severity: critical, high, medium, low, or info"`
-	Description string `json:"description" description:"Detailed description of the finding"`
+	Title       string `json:"title"       description:"Short, descriptive title summarising the finding (e.g. 'Hardcoded AWS key in SharedPreferences', 'Missing certificate pinning on /api/auth')"`
+	Severity    string `json:"severity"    description:"Risk severity: critical, high, medium, low, or info"`
+	Description string `json:"description" description:"Full description of the finding. Include: what was found, where (endpoint, class, file), why it matters, technical details, and reproduction steps if applicable. Write as a self-contained report."`
 }
 
 type SaveFindingTool struct {
@@ -50,9 +50,18 @@ func NewSaveFinding(
 func (t *SaveFindingTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"save_finding",
-		`Save a security finding for the current session.
-Use this when you discover something notable — a vulnerability, misconfiguration, hardcoded secret, insecure API usage, etc.
-The finding is persisted and visible in the Findings tab.`,
+		`Save a security finding for the current session. Call this whenever you identify something the tester should know about — vulnerabilities, misconfigurations, hardcoded secrets, insecure API patterns, missing certificate pinning, weak crypto, IDOR issues, excessive permissions, PII exposure, etc.
+
+Severity guide:
+- critical: Remote code execution, authentication bypass, full data breach potential
+- high: Significant data exposure, privilege escalation, hardcoded credentials, SQL injection
+- medium: Information disclosure, weak crypto, missing security headers, IDOR on non-sensitive resources
+- low: Minor information leaks, verbose error messages, outdated dependencies with no known exploit
+- info: Observations, notes, areas for further investigation, positive findings (e.g. pinning correctly implemented)
+11
+Write the description as a self-contained report: include what was found, where it was found, why it matters, and any relevant technical details (endpoints, parameter names, algorithms, etc). The description should be useful on its own without needing to reference other data.
+
+The finding is persisted across conversations and visible in the Findings tab in real-time.`,
 		SaveFindingParams{},
 	)
 }

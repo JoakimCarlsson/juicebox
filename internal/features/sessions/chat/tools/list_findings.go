@@ -25,8 +25,15 @@ func NewListFindings(database *db.DB, sessionID string) *ListFindingsTool {
 func (t *ListFindingsTool) Info() tool.ToolInfo {
 	return tool.NewToolInfo(
 		"list_findings",
-		`List all saved findings for the current session.
-Optionally filter by severity. Use to review what has been found so far or to summarise the assessment.`,
+		`List all saved findings for the current session. Returns every finding with its title, severity, description, and timestamps.
+
+Use this to:
+- Review what has been discovered so far before continuing analysis
+- Summarise the assessment at the end of a session
+- Check if a particular issue has already been recorded to avoid duplicates
+- Generate a final report by reading all findings and producing a structured summary
+
+Optionally filter by severity to focus on specific risk levels (e.g. only "critical" and "high" findings).`,
 		ListFindingsParams{},
 	)
 }
