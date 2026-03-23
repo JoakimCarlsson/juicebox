@@ -97,8 +97,8 @@ github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.7 h1:X+2YciYSxvMQK0UZ7sg45ZVabVZ
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.7/go.mod h1:lW34nIZuQ8UDPdkon5fmfp2l3+ZkQ2me/+oecHYLOII=
 github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs4luLUK2k=
 github.com/hashicorp/golang-lru/v2 v2.0.7/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
-github.com/joakimcarlsson/ai v0.13.0 h1:ijoN0NwqJVaKIk52jL6JcBwuvZEeh4S60eFvnJ2muaM=
-github.com/joakimcarlsson/ai v0.13.0/go.mod h1:wuHjxL8/xNwItEce46sqco1XS/7dxOm5ekoY6X9Gc5E=
+github.com/joakimcarlsson/ai v0.14.0 h1:J8e9+YKsR6b7cB8MVgpexU02hlgjeaxNU9v9p2E3DWA=
+github.com/joakimcarlsson/ai v0.14.0/go.mod h1:wuHjxL8/xNwItEce46sqco1XS/7dxOm5ekoY6X9Gc5E=
 github.com/joakimcarlsson/ai/integrations/sqlite v1.0.0 h1:Vk0lvT1QoohmyAOU268RahkpNK2dVtNMAffbYe4GbR4=
 github.com/joakimcarlsson/ai/integrations/sqlite v1.0.0/go.mod h1:M304VgQ+Hm8FZzOnWZXLkz2Ez1YOTcy3yNTWw8jwcHI=
 github.com/joakimcarlsson/go-router/router/v2 v2.0.1 h1:eUulVY8glQ5MdS268xsKm79odfPsZu4niT4bNwPdeMU=
