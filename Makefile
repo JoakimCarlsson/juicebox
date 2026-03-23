@@ -18,6 +18,7 @@ install:
 	go mod tidy
 
 dev: kill-ports build-agent
+	@mkdir -p web/dist
 	@echo "Starting Air, Vite dev server, and Frida sidecar..."
 	@(cd web && bun run dev) & $(shell go env GOPATH)/bin/air & (cd sidecar && $(DENO) task dev) & wait
 
@@ -28,6 +29,7 @@ build-web:
 	cd web && bun run build
 
 build-agent:
+	@mkdir -p agent/dist
 	cd agent && $(DENO) task build
 
 sidecar:
