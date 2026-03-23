@@ -5,7 +5,7 @@ go 1.26
 require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/joakimcarlsson/ai v0.13.0
+	github.com/joakimcarlsson/ai v0.14.0
 	github.com/joakimcarlsson/ai/integrations/sqlite v1.0.0
 	github.com/joakimcarlsson/go-router/router/v2 v2.0.1
 	github.com/joakimcarlsson/squeeze v0.0.0-20260305170128-b507c9aa4b6c

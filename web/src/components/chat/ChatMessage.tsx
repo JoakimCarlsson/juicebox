@@ -5,7 +5,13 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Loader2, Check, ChevronRight, FileDiff, FilePlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { MessagePart } from '@/contexts/ChatPanelContext'
+import type { MessagePart, SubAgentTool } from '@/contexts/ChatPanelContext'
+
+const SUB_AGENT_LABELS: Record<string, string> = {
+  frida_instrumentation: 'Frida Instrumentation',
+  traffic_analyst: 'Traffic Analyst',
+  filesystem_analyst: 'Filesystem Analyst',
+}
 
 const markdownComponents = {
   code({ className, children, ...props }: React.ComponentProps<'code'>) {
@@ -47,23 +53,43 @@ const proseClasses = cn(
   'prose-hr:my-3'
 )
 
+function SubAgentToolRow({ tool }: { tool: SubAgentTool }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {tool.status === 'running' ? (
+        <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground shrink-0" />
+      ) : (
+        <Check className="h-2.5 w-2.5 text-green-500 shrink-0" />
+      )}
+      <span className="font-mono text-[10px] text-muted-foreground">{tool.name}</span>
+    </div>
+  )
+}
+
 export function ToolCallBlock({ part }: { part: Extract<MessagePart, { type: 'tool_call' }> }) {
   const [expanded, setExpanded] = useState(false)
+  const subAgentLabel = SUB_AGENT_LABELS[part.name]
+  const hasChildren = part.children && part.children.length > 0
+  const canExpand = part.result || hasChildren
 
   return (
     <div className="rounded-md border border-border bg-muted/30 text-xs">
       <button
         type="button"
         className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left hover:bg-muted/50 transition-colors"
-        onClick={() => part.result && setExpanded(!expanded)}
+        onClick={() => canExpand && setExpanded(!expanded)}
       >
         {part.status === 'running' ? (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
         ) : (
           <Check className="h-3 w-3 text-green-500 shrink-0" />
         )}
-        <span className="font-mono text-muted-foreground">{part.name}</span>
-        {part.result && (
+        {subAgentLabel ? (
+          <span className="font-medium text-foreground">{subAgentLabel}</span>
+        ) : (
+          <span className="font-mono text-muted-foreground">{part.name}</span>
+        )}
+        {canExpand && (
           <ChevronRight
             className={cn(
               'h-3 w-3 ml-auto text-muted-foreground shrink-0 transition-transform',
@@ -72,6 +98,13 @@ export function ToolCallBlock({ part }: { part: Extract<MessagePart, { type: 'to
           />
         )}
       </button>
+      {hasChildren && (
+        <div className="border-t border-border px-2.5 py-1.5 space-y-0.5">
+          {part.children!.map((child) => (
+            <SubAgentToolRow key={child.id} tool={child} />
+          ))}
+        </div>
+      )}
       {expanded && part.result && (
         <div className="border-t border-border px-2.5 py-2 max-h-48 overflow-auto">
           <pre className="whitespace-pre-wrap break-all font-mono text-[10px] text-muted-foreground">
@@ -331,4 +364,14 @@ export function UserMessage({ content }: { content: string }) {
 
 export function StreamingCursor() {
   return <span className="inline-block w-1.5 h-4 bg-foreground animate-pulse" />
+}
+
+export function ThinkingIndicator() {
+  return (
+    <div className="flex items-center gap-1 py-1">
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:0ms]" />
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:150ms]" />
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:300ms]" />
+    </div>
+  )
 }

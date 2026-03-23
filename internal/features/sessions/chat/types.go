@@ -36,6 +36,27 @@ type sseEditResultEvent struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type sseSubagentToolStartEvent struct {
+	AgentName string `json:"agent_name"`
+	ToolName  string `json:"tool_name"`
+	ToolID    string `json:"tool_id"`
+}
+
+type sseSubagentToolEndEvent struct {
+	AgentName string `json:"agent_name"`
+	ToolName  string `json:"tool_name"`
+	ToolID    string `json:"tool_id"`
+}
+
+type cancelRequest struct {
+	ConversationID string `json:"conversationId"`
+}
+
+type subagentRelayEvent struct {
+	eventType string
+	data      any
+}
+
 type historyPart struct {
 	Type    string `json:"type"`
 	Content string `json:"content,omitempty"`

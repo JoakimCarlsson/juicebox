@@ -4,6 +4,7 @@ import {
   fetchChatStatus,
   fetchChatHistory,
   streamChat,
+  cancelChat,
   fetchConversations,
   createConversation,
   deleteConversation,
@@ -15,9 +16,22 @@ import {
 import { fetchAvailableModels, type AvailableModel } from '@/features/settings/api'
 import { useAttachedApps } from '@/contexts/AttachedAppsContext'
 
+export type SubAgentTool = {
+  id: string
+  name: string
+  status: 'running' | 'done'
+}
+
 export type MessagePart =
   | { type: 'text'; content: string }
-  | { type: 'tool_call'; id: string; name: string; status: 'running' | 'done'; result?: string }
+  | {
+      type: 'tool_call'
+      id: string
+      name: string
+      status: 'running' | 'done'
+      result?: string
+      children?: SubAgentTool[]
+    }
 
 export interface ChatMessage {
   id: string
@@ -31,11 +45,13 @@ interface ChatPanelContextValue {
   isOpen: boolean
   messages: ChatMessage[]
   isStreaming: boolean
+  isThinking: boolean
   configured: boolean | null
   panelRef: React.RefObject<PanelImperativeHandle | null>
   toggle: () => void
   onPanelResize: (sizePercent: number) => void
   sendMessage: (text: string) => void
+  stopStreaming: () => void
   clearChat: () => void
   conversations: Conversation[]
   activeConversationId: string | null
@@ -68,6 +84,7 @@ export function ChatPanelProvider({
   const [isOpen, setIsOpen] = useState(true)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
+  const [isThinking, setIsThinking] = useState(false)
   const [configured, setConfigured] = useState<boolean | null>(null)
   const panelRef = useRef<PanelImperativeHandle | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -260,6 +277,7 @@ export function ChatPanelProvider({
 
     setMessages((prev) => [...prev, userMsg, assistantMsg])
     setIsStreaming(true)
+    setIsThinking(true)
 
     const controller = streamChat(
       deviceId,
@@ -270,6 +288,7 @@ export function ChatPanelProvider({
       (event: SSEEvent) => {
         switch (event.type) {
           case 'content': {
+            setIsThinking(false)
             setMessages((prev) =>
               prev.map((m) => {
                 if (m.id !== assistantId) return m
@@ -287,6 +306,7 @@ export function ChatPanelProvider({
           }
 
           case 'tool_start': {
+            setIsThinking(false)
             setMessages((prev) =>
               prev.map((m) => {
                 if (m.id !== assistantId) return m
@@ -320,11 +340,61 @@ export function ChatPanelProvider({
             break
           }
 
+          case 'subagent_tool_start': {
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.id !== assistantId) return m
+                const parts = [...(m.parts || [])]
+                for (let i = parts.length - 1; i >= 0; i--) {
+                  const p = parts[i]
+                  if (
+                    p.type === 'tool_call' &&
+                    p.name === event.data.agent_name &&
+                    p.status === 'running'
+                  ) {
+                    parts[i] = {
+                      ...p,
+                      children: [
+                        ...(p.children || []),
+                        {
+                          id: event.data.tool_id,
+                          name: event.data.tool_name,
+                          status: 'running',
+                        },
+                      ],
+                    }
+                    break
+                  }
+                }
+                return { ...m, parts }
+              })
+            )
+            break
+          }
+
+          case 'subagent_tool_end': {
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.id !== assistantId) return m
+                const parts = (m.parts || []).map((p) => {
+                  if (p.type !== 'tool_call' || p.name !== event.data.agent_name) return p
+                  const children = (p.children || []).map((child) =>
+                    child.id === event.data.tool_id ? { ...child, status: 'done' as const } : child
+                  )
+                  return { ...p, children }
+                })
+                return { ...m, parts }
+              })
+            )
+            break
+          }
+
           case 'edit_applied':
           case 'edit_failed':
             break
 
           case 'done':
+            setIsThinking(false)
             setMessages((prev) =>
               prev.map((m) => (m.id === assistantId ? { ...m, isStreaming: false } : m))
             )
@@ -333,6 +403,7 @@ export function ChatPanelProvider({
             break
 
           case 'error':
+            setIsThinking(false)
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
@@ -376,6 +447,20 @@ export function ChatPanelProvider({
     [deviceId, bundleId, isStreaming, selectedModel, activeConversationId]
   )
 
+  const stopStreaming = useCallback(() => {
+    if (!isStreaming) return
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
+    if (activeConversationId && deviceId) {
+      cancelChat(deviceId, activeConversationId).catch(() => {})
+    }
+    setMessages((prev) => prev.map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m)))
+    setIsStreaming(false)
+    setIsThinking(false)
+  }, [isStreaming, activeConversationId, deviceId])
+
   const clearChat = useCallback(() => {
     if (abortRef.current) {
       abortRef.current.abort()
@@ -383,6 +468,7 @@ export function ChatPanelProvider({
     }
     setMessages([])
     setIsStreaming(false)
+    setIsThinking(false)
   }, [])
 
   return (
@@ -391,11 +477,13 @@ export function ChatPanelProvider({
         isOpen,
         messages,
         isStreaming,
+        isThinking,
         configured,
         panelRef,
         toggle,
         onPanelResize,
         sendMessage,
+        stopStreaming,
         clearChat,
         conversations,
         activeConversationId,
